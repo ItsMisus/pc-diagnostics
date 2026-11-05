@@ -13,8 +13,12 @@ list a live API test as a next step.
 
 ## State of the project
 
-- `master` includes the UI redesign, the open-source groundwork and the Italian/English
-  translation (merged from `chore/open-source`). No agent worktrees left.
+- Public repository: https://github.com/ItsMisus/pc-diagnostics (published 2026-11-05).
+  `master` there starts from a single commit "PC Diagnostics 0.1.0" (fresh history, so the
+  author's personal e-mail and old fixtures are not public). The full development history
+  stays only in the local branch `archive/full-history`: never push it.
+- This clone has a repo-local `user.email` set to the GitHub noreply address; keep commits
+  on that identity.
 - Installed release: `%LOCALAPPDATA%\PC Diagnostics` (built 2026-11-05 from the i18n work,
   installed silently with `/S`; unsigned).
 - Full check: `npm run check`, last result Rust 461 passed / 6 ignored, web 282 passed,
@@ -43,13 +47,13 @@ list a live API test as a next step.
   `v<version>`: checks, installer, SHA-256, draft release), issue templates (bug, hardware
   report), PR template, `SECURITY.md` (private vulnerability reporting), README "Download".
 - Secondary pages are lazy-loaded and preloaded when idle (main chunk 665 → 405 kB).
-- Before publishing: the git history contains the author's personal e-mail on every commit
-  and the Windows user name in old test fixtures (removed from the current tree in 78dff97).
+- Private vulnerability reporting is enabled on the repository; topics and a `hardware`
+  label are set.
 
 ## Open items
 
-- Publishing: there is no git remote yet. Creating the public GitHub repository and pushing
-  is the next outward-facing step (the user decides where and under which account).
+- First release: push tag `v0.1.0` to get a draft release with the installer; review and
+  publish it on GitHub.
 - Publicly trusted code signing (needs a certificate or Azure Trusted Signing); until then
   SmartScreen may warn.
 - Testing on other machines: Windows 10, Intel GPUs, laptops on battery, older WebView2.
