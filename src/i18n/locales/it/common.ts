@@ -1,0 +1,23 @@
+/** Italian (reference) texts for the "common" namespace: shared components. */
+export default {
+  stateLoading: "Caricamento…",
+  stateEmpty: "Nessun dato disponibile",
+  stateUnsupported: "Non supportato su questo sistema",
+  statePermission: "Permessi insufficienti",
+  stateConsent: "Consenso richiesto",
+  stateNotImplemented: "Non ancora implementato",
+  stateError: "Errore",
+  whatYouCanDo: "Cosa puoi fare:",
+  technicalDetails: "Dettagli tecnici",
+  errorCode: "codice: {code}",
+  retry: "Riprova",
+  close: "Chiudi",
+  closeNotification: "Chiudi notifica",
+  notAvailable: "n/d",
+  notReported: "non riportato dal sistema",
+  source: "fonte: {source}",
+  viewModeLabel: "Visualizzazione",
+  viewModeSimple: "Semplice",
+  viewModeAdvanced: "Avanzata",
+  viewModeHint: "Semplice: spiegazioni in parole semplici. Avanzata: tutti i dettagli tecnici. Si cambia anche in Settings.",
+} satisfies Record<string, string>;

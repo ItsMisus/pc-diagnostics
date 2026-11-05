@@ -1,0 +1,39 @@
+{
+  "name": "pc-diagnostics",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": "github:ItsMisus/pc-diagnostics",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "gen:types": "cargo test -p models --quiet",
+    "tauri": "tauri",
+    "check:rust": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace",
+    "check:web": "npm run typecheck && npm run test && npm run build",
+    "check": "npm run check:rust && npm run check:web"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "motion": "14.5.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.4",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "tailwindcss": "^4.3.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}

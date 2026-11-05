@@ -1,0 +1,51 @@
+name: Bug report
+description: Something does not work or shows wrong data.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please don't paste exported reports without checking them first:
+        use the redacted export (it removes the user name, computer name and device IDs).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → About.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 Pro 24H2
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: CPU and GPU
+      placeholder: AMD Ryzen 7 5800X, NVIDIA GeForce RTX 3060
+  - type: dropdown
+    id: language
+    attributes:
+      label: App language
+      options:
+        - English
+        - Italiano
+  - type: textarea
+    id: details
+    attributes:
+      label: Technical details
+      description: >-
+        If the app showed an error, switch the view to "Advanced" and copy the technical
+        details here.
+      render: text

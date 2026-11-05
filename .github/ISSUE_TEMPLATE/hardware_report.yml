@@ -1,0 +1,47 @@
+name: Hardware report
+description: A sensor or value shows "n/a" on your PC, or your hardware behaves differently.
+labels: [hardware]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The app has been tested on few machines. Reports from other hardware (Intel GPUs,
+        laptops, Windows 10, older PCs) are very useful, including "everything works".
+  - type: input
+    id: value
+    attributes:
+      label: Which value
+      description: Page and field, for example "Hardware → GPU → Temperature".
+    validations:
+      required: true
+  - type: textarea
+    id: shown
+    attributes:
+      label: What the app shows
+      description: The value or "n/a", plus the reason shown in the tooltip (Advanced view).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Where you can see the real value
+      description: For example Task Manager, the GPU vendor's app, HWiNFO.
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: Intel Arc A750 / Lenovo ThinkPad T14 Gen 3 (Intel Iris Xe)
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 10 22H2
+    validations:
+      required: true
+  - type: input
+    id: driver
+    attributes:
+      label: Driver version
+      description: Shown on the Hardware page for GPUs.

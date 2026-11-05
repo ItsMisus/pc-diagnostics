@@ -1,0 +1,19 @@
+[package]
+name = "monitor"
+description = "Live sampler: provider scheduling, bounded ring buffer, app overhead."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+models.workspace = true
+platform.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

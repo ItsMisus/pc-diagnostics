@@ -1,0 +1,41 @@
+[workspace]
+resolver = "3"
+members = ["crates/models", "crates/platform", "crates/monitor", "crates/processes", "crates/drivers", "crates/bench", "crates/diagnostics", "crates/persistence", "crates/assistant", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+license = "MIT"
+repository = "https://github.com/ItsMisus/pc-diagnostics"
+
+[workspace.dependencies]
+models = { path = "crates/models" }
+platform = { path = "crates/platform" }
+monitor = { path = "crates/monitor" }
+processes = { path = "crates/processes" }
+drivers = { path = "crates/drivers" }
+bench = { path = "crates/bench" }
+diagnostics = { path = "crates/diagnostics" }
+persistence = { path = "crates/persistence" }
+assistant = { path = "crates/assistant" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+ts-rs = "12"
+tracing = "0.1"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true

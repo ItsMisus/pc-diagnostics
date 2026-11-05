@@ -1,0 +1,25 @@
+[package]
+name = "bench"
+description = "Benchmark engine: safety controller and CPU/RAM/storage/GPU workloads."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+models.workspace = true
+platform.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# GPU compute workload (runs only in the isolated worker process). DX12 first, Vulkan
+# as fallback; no GL/Metal/WebGPU backends.
+wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "dx12", "vulkan", "wgsl"] }
+pollster = "0.4"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+monitor.workspace = true

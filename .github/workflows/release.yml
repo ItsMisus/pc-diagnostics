@@ -1,0 +1,58 @@
+name: Release
+
+# Builds the Windows installer when a version tag is pushed (for example `v0.2.0`) and
+# attaches it to a draft GitHub release. A maintainer reviews the draft and publishes it.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches the app version
+        shell: bash
+        run: |
+          app="v$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          if [ "$app" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the version in tauri.conf.json ($app)"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Checks
+        run: npm run check
+
+      # Unsigned unless PCDIAG_SIGN_THUMBPRINT is set (it needs a certificate on the
+      # runner, which this workflow does not provision). See README "Code signing".
+      - name: Build installer
+        run: npx tauri build
+
+      - name: Draft release with the installer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          installer=$(ls target/release/bundle/nsis/*-setup.exe)
+          sha256sum "$installer" > "$installer.sha256"
+          gh release create "$GITHUB_REF_NAME" "$installer" "$installer.sha256" \
+            --draft --title "PC Diagnostics $GITHUB_REF_NAME" --generate-notes

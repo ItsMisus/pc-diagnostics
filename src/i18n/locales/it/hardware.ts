@@ -1,0 +1,77 @@
+/** Italian (reference) texts for the "hardware" namespace. */
+export default {
+  pageDescription: "Componenti rilevati e metriche in tempo reale",
+  inventoryAt: "Inventario rilevato alle {time}",
+  refreshing: "Aggiornamento…",
+  refresh: "Aggiorna inventario",
+  refreshFailed: "Aggiornamento dell'inventario non riuscito: sono mostrati i dati precedenti",
+  liveUnavailable: "Valori in tempo reale non disponibili.",
+
+  // Shared section headings and labels.
+  specs: "Caratteristiche",
+  live: "In tempo reale",
+  model: "Modello",
+  manufacturer: "Produttore",
+  usage: "Utilizzo",
+  totalUsage: "Utilizzo totale",
+  inUse: "In uso",
+  ofTotal: "{used} di {total}",
+  capacity: "Capacità",
+
+  // CPU.
+  architecture: "Architettura",
+  physicalCores: "Core fisici",
+  logicalThreads: "Thread logici",
+  maxNominalFrequency: "Frequenza massima nominale",
+  perCoreUsage: "Utilizzo per processore logico",
+  currentFrequency: "Frequenza attuale",
+  frequencyLimit: "Limite di frequenza",
+  frequencyLimitTitle: "Limite di frequenza segnalato dal sistema operativo",
+  frequencyLimitBody:
+    "Windows riporta un limite di {limit} rispetto a un massimo nominale di {max}. Il sistema non ne indica la causa (ad esempio piano energetico, temperatura o alimentazione): questa applicazione non la conosce.",
+  logicalProcessor: "Processore logico {n}",
+
+  // GPU.
+  noGpuAdapters: "Nessun adattatore grafico rilevato",
+  softwareAdapter: "Adattatore software",
+  virtualDisplay: "Display virtuale (nessuna telemetria)",
+  dedicatedVram: "VRAM dedicata",
+  sharedMemory: "Memoria condivisa",
+  driverVersion: "Versione driver",
+  telemetry: "Telemetria",
+  noProvider: "Nessun provider",
+  noSample: "Nessun campione per questo adattatore.",
+  vramInUse: "VRAM in uso",
+
+  // Memory.
+  totalInstalled: "Totale installato",
+  modules: "Moduli",
+  committedMemory: "Memoria impegnata",
+  pagesFromDisk: "Pagine lette da disco",
+  noModules: "Nessun modulo riportato dal sistema",
+  modulesCaption: "Moduli di memoria installati",
+  slot: "Slot",
+  ratedSpeed: "Velocità nominale",
+  configuredSpeed: "Velocità configurata",
+  partNumber: "Part number",
+
+  // Storage.
+  storageLive: "Attività in tempo reale (tutti i dischi fisici)",
+  physicalDisks: "Dischi fisici",
+  volumes: "Volumi",
+  activeTime: "Tempo attivo",
+  noDisks: "Nessun disco fisico riportato dal sistema",
+  bus: "Bus",
+  media: "Supporto",
+  firmware: "Firmware",
+  healthNote: "“Stato Windows” è il riepilogo di Windows Storage, non una valutazione completa dei dati SMART.",
+  drive: "Unità",
+  label: "Etichetta",
+  fileSystem: "File system",
+  occupancy: "Occupazione",
+  removable: "Rimovibile",
+  freeOfTotal: "{free} liberi di {total}",
+  usedWithSummary: "{percent} occupato, {summary}",
+  yes: "Sì",
+  no: "No",
+} satisfies Record<string, string>;
