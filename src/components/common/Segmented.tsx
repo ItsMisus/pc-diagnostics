@@ -36,7 +36,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className="inline-flex shrink-0 rounded-lg border border-line bg-surface-2/60 p-0.5"
+      className="inline-flex shrink-0 rounded-lg border border-line bg-surface-2 p-0.5"
     >
       {options.map((o, i) => {
         const selected = o.value === value;
@@ -61,7 +61,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
                 layoutId={layoutId}
                 transition={spring.indicator}
                 aria-hidden="true"
-                className="absolute inset-0 rounded-md border border-line-strong bg-surface shadow-xs"
+                className="absolute inset-0 rounded-md border border-line-strong bg-surface-3"
               />
             )}
             <span className="relative">{o.label}</span>

@@ -13,12 +13,4 @@ export default {
   section_diagnostics: "Diagnostics",
   section_history: "History",
   section_settings: "Settings",
-  sectionDesc_overview: "Stato sintetico del sistema",
-  sectionDesc_hardware: "Componenti rilevati e metriche in tempo reale",
-  sectionDesc_benchmarks: "Test selettivi di CPU, GPU, RAM e SSD",
-  sectionDesc_processes: "Processi che esercitano pressione sulle risorse",
-  sectionDesc_drivers: "Stato dei dispositivi e dei driver (sola lettura)",
-  sectionDesc_diagnostics: "Diagnosi basate su regole verificabili",
-  sectionDesc_history: "Storico e confronto dei benchmark",
-  sectionDesc_settings: "Preferenze dell'applicazione",
 } satisfies Record<string, string>;

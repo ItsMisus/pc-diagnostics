@@ -7,7 +7,7 @@ export interface Series {
   id: string;
   label: string;
   points: readonly Point[];
-  /** Primary series use the accent with a soft area fill, secondary ones a muted line. */
+  /** Monochrome: primary series in `fg-muted` with a soft area fill, secondary ones in `meter`. */
   tone?: "primary" | "secondary";
 }
 
@@ -78,8 +78,8 @@ function LineChartImpl({
         <svg width={width} height={height} role="img" aria-label={ariaLabel} className="block overflow-visible">
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.22} />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--fg-muted)" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="var(--fg-muted)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <g transform={`translate(${AXIS_W},${PAD_TOP})`}>
@@ -106,7 +106,7 @@ function LineChartImpl({
                 key={series[i]?.id ?? i}
                 d={line}
                 fill="none"
-                stroke={series[i]?.tone === "secondary" ? "var(--fg-subtle)" : "var(--accent)"}
+                stroke={series[i]?.tone === "secondary" ? "var(--meter)" : "var(--fg-muted)"}
                 strokeWidth={series[i]?.tone === "secondary" ? 1.25 : 1.5}
                 strokeDasharray={series[i]?.tone === "secondary" ? "3 2" : undefined}
                 strokeLinejoin="round"
@@ -126,7 +126,7 @@ function LineChartImpl({
                       cy={Math.min(plotH, Math.max(0, yScale(p.v)))}
                       r={3}
                       fill="var(--surface)"
-                      stroke={s.tone === "secondary" ? "var(--fg-subtle)" : "var(--accent)"}
+                      stroke={s.tone === "secondary" ? "var(--meter)" : "var(--fg-muted)"}
                       strokeWidth={1.5}
                     />
                   );
@@ -159,7 +159,7 @@ function LineChartImpl({
                 <span className="flex min-w-0 items-center gap-1.5 text-fg-muted">
                   <span
                     aria-hidden="true"
-                    className={`h-0.5 w-2.5 shrink-0 rounded-full ${s.tone === "secondary" ? "bg-fg-subtle" : "bg-accent"}`}
+                    className={`h-0.5 w-2.5 shrink-0 rounded-full ${s.tone === "secondary" ? "bg-meter" : "bg-fg-muted"}`}
                   />
                   <span className="truncate">{s.label}</span>
                 </span>

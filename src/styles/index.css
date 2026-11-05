@@ -3,114 +3,122 @@
 /*
  * Design system tokens.
  *
- * Neutral graphite palette with a single, discreet indigo accent used for selection,
- * focus and primary actions. Status colors (ok / warn / bad) appear only where they carry
+ * Monitoring-dashboard palette: neutral dark greys, flat panels with a visible hairline,
+ * monochrome meters, gauges and charts (`--meter`). A muted violet accent is kept for focus,
+ * the selected option and the one primary action per view; status colours (ok / warn /
+ * bad) only where they carry meaning, never as the only signal. Status colors (ok / warn / bad) appear only where they carry
  * meaning, and never as the only signal. `data-theme` on <html> overrides the OS
  * preference; the dark values are declared twice (OS preference and explicit choice).
  *
  * Motion tokens mirror `src/lib/motion.ts` (the JS side used by Motion for React).
  */
 :root {
-  --canvas: #f7f7f8;
-  --sidebar: #f1f1f3;
-  --surface: #ffffff;
-  --surface-2: #f4f4f6;
-  --surface-3: #ebebee;
-  --line: #e5e5e9;
-  --line-strong: #d4d4da;
-  --fg: #16161a;
-  --fg-muted: #5f5f6b;
-  --fg-subtle: #74747f;
-  --accent: #5157d4;
-  --accent-hover: #454bc4;
-  --accent-solid: #5157d4;
-  --accent-solid-hover: #454bc4;
+  --canvas: #eeeff1;
+  --sidebar: #e7e8eb;
+  --surface: #fafafb;
+  --surface-2: #f0f1f3;
+  --surface-3: #e3e4e7;
+  --line: #d6d7db;
+  --line-strong: #c3c4c9;
+  --fg: #18191b;
+  --fg-muted: #54565c;
+  --fg-subtle: #66686e;
+  --accent: #5b3fc4;
+  --accent-hover: #4f35b0;
+  --accent-solid: #5b3fc4;
+  --accent-solid-hover: #4f35b0;
   --accent-fg: #ffffff;
-  --accent-soft: rgb(81 87 212 / 0.1);
-  --accent-text: #4349c4;
+  --accent-soft: rgb(91 63 196 / 0.1);
+  --accent-text: #5b3fc4;
   --ok: #217a4f;
   --warn: #9a5f0c;
   --bad: #b42318;
   --ok-soft: rgb(33 122 79 / 0.1);
   --warn-soft: rgb(154 95 12 / 0.1);
   --bad-soft: rgb(180 35 24 / 0.08);
-  --focus: rgb(81 87 212 / 0.55);
-  --scrollbar: rgb(22 22 26 / 0.18);
-  --scrollbar-hover: rgb(22 22 26 / 0.32);
-  --backdrop: rgb(16 16 20 / 0.32);
-  --chart-fill: rgb(81 87 212 / 0.1);
+  --focus: rgb(91 63 196 / 0.5);
+  --scrollbar: rgb(24 25 27 / 0.2);
+  --scrollbar-hover: rgb(24 25 27 / 0.34);
+  --backdrop: rgb(16 17 19 / 0.35);
+  --chart-fill: rgb(84 86 92 / 0.12);
+  --gauge-track: #e0e1e4;
   --highlight: rgb(255 255 255 / 0);
-  --shadow-color: 220 10% 20%;
+  --shadow-color: 220 6% 20%;
+  --meter: #7c7e85;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #0b0b0d;
-    --sidebar: #0e0e11;
-    --surface: #131316;
-    --surface-2: #19191d;
-    --surface-3: #212126;
-    --line: #232328;
-    --line-strong: #303037;
-    --fg: #ececef;
-    --fg-muted: #a2a2ad;
-    --fg-subtle: #80808b;
-    --accent: #7178f0;
-    --accent-hover: #8288f4;
-    --accent-solid: #5b63e4;
-    --accent-solid-hover: #666dea;
+    --canvas: #1b1c1f;
+    --sidebar: #161719;
+    --surface: #222326;
+    --surface-2: #2a2b2f;
+    --surface-3: #323337;
+    --line: #36373b;
+    --line-strong: #46474c;
+    --fg: #ececee;
+    --fg-muted: #aeafb4;
+    --fg-subtle: #939499;
+    --accent: #a78bfa;
+    --accent-hover: #b8a1fb;
+    --accent-solid: #6d4fd6;
+    --accent-solid-hover: #7a5ddd;
     --accent-fg: #ffffff;
-    --accent-soft: rgb(113 120 240 / 0.14);
-    --accent-text: #a3a8ff;
+    --accent-soft: rgb(167 139 250 / 0.14);
+    --accent-text: #c4b5fd;
     --ok: #4fbf87;
     --warn: #dfa543;
     --bad: #ef6b60;
     --ok-soft: rgb(79 191 135 / 0.12);
     --warn-soft: rgb(223 165 67 / 0.12);
     --bad-soft: rgb(239 107 96 / 0.12);
-    --focus: rgb(130 136 244 / 0.7);
+    --focus: rgb(167 139 250 / 0.6);
     --scrollbar: rgb(255 255 255 / 0.12);
     --scrollbar-hover: rgb(255 255 255 / 0.22);
-    --backdrop: rgb(0 0 0 / 0.55);
-    --chart-fill: rgb(113 120 240 / 0.14);
-    --highlight: rgb(255 255 255 / 0.035);
+    --backdrop: rgb(0 0 0 / 0.6);
+    --chart-fill: rgb(174 175 180 / 0.12);
+    --gauge-track: #323337;
+    --highlight: rgb(255 255 255 / 0);
     --shadow-color: 0 0% 0%;
+    --meter: #8c8d93;
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0b0b0d;
-  --sidebar: #0e0e11;
-  --surface: #131316;
-  --surface-2: #19191d;
-  --surface-3: #212126;
-  --line: #232328;
-  --line-strong: #303037;
-  --fg: #ececef;
-  --fg-muted: #a2a2ad;
-  --fg-subtle: #80808b;
-  --accent: #7178f0;
-  --accent-hover: #8288f4;
-  --accent-solid: #5b63e4;
-  --accent-solid-hover: #666dea;
+  --canvas: #1b1c1f;
+  --sidebar: #161719;
+  --surface: #222326;
+  --surface-2: #2a2b2f;
+  --surface-3: #323337;
+  --line: #36373b;
+  --line-strong: #46474c;
+  --fg: #ececee;
+  --fg-muted: #aeafb4;
+  --fg-subtle: #939499;
+  --accent: #a78bfa;
+  --accent-hover: #b8a1fb;
+  --accent-solid: #6d4fd6;
+  --accent-solid-hover: #7a5ddd;
   --accent-fg: #ffffff;
-  --accent-soft: rgb(113 120 240 / 0.14);
-  --accent-text: #a3a8ff;
+  --accent-soft: rgb(167 139 250 / 0.14);
+  --accent-text: #c4b5fd;
   --ok: #4fbf87;
   --warn: #dfa543;
   --bad: #ef6b60;
   --ok-soft: rgb(79 191 135 / 0.12);
   --warn-soft: rgb(223 165 67 / 0.12);
   --bad-soft: rgb(239 107 96 / 0.12);
-  --focus: rgb(130 136 244 / 0.7);
+  --focus: rgb(167 139 250 / 0.6);
   --scrollbar: rgb(255 255 255 / 0.12);
   --scrollbar-hover: rgb(255 255 255 / 0.22);
-  --backdrop: rgb(0 0 0 / 0.55);
-  --chart-fill: rgb(113 120 240 / 0.14);
-  --highlight: rgb(255 255 255 / 0.035);
+  --backdrop: rgb(0 0 0 / 0.6);
+  --chart-fill: rgb(174 175 180 / 0.12);
+  --gauge-track: #323337;
+  --highlight: rgb(255 255 255 / 0);
   --shadow-color: 0 0% 0%;
+  --meter: #8c8d93;
   color-scheme: dark;
 }
 
@@ -118,6 +126,8 @@
   --color-canvas: var(--canvas);
   --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
+  --color-gauge-track: var(--gauge-track);
+  --color-meter: var(--meter);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
   --color-line: var(--line);

@@ -1,8 +1,11 @@
 # Design system
 
-The visual and motion language of PC Diagnostics. Direction: quiet, precise, desktop-native
-(Linear / Raycast / macOS), graphite neutrals with one discreet indigo accent. Data first;
-no decoration that does not carry meaning.
+The visual and motion language of PC Diagnostics. Direction (since 2026-11-05): a
+monitoring dashboard. Neutral dark greys, flat panels with a visible hairline, monochrome
+meters, ring gauges and charts, big light numbers with small units, dense layouts with
+almost no explanatory text. A muted violet accent only for focus, selection and the primary
+action. See `docs/ui-dashboard-brief.md` for the rules (one home per value, no
+redundancy).
 
 Sources of truth:
 
@@ -53,7 +56,7 @@ Rules:
 | Component | Notes |
 | --- | --- |
 | `Button` | `primary` / `secondary` / `ghost` / `danger`, sizes `sm` / `md`. Press = 3 % scale. |
-| `Card` | `title`, `description`, `aside`, `flush`. |
+| `Card` | Flat panel (radius 6, hairline). `title` (component name, bold), `description`, `aside`, `flush`. |
 | `Segmented` | Radio group, sliding thumb, arrow keys. `size="sm"` for dense headers. |
 | `Switch` | Spring thumb. Settings' `Toggle` delegates to it. |
 | `Tooltip` | Label tooltips (delay 350 ms, instant on keyboard focus, Esc). Supplementary only. |
@@ -61,6 +64,8 @@ Rules:
 | `Skeleton` / `SkeletonLines` | First-load placeholders. Never for refreshes of data already shown. |
 | `Spinner` (in `StateView`) | Indeterminate activity. |
 | `StatusBadge` | Tinted chip + dot + text. |
+| `RingGauge` | Open 270° monochrome gauge for headline live values; number + small unit in the centre, caption in the opening. Not animated. |
+| `Readout` | Big light number + small unit. |
 | `UsageBar` / `ProgressBar` | Transform-scaled fill. `UsageBar` (live) is not animated; `ProgressBar` (benchmark) eases. |
 | `Disclosure` | Native `<details>`; height animates via global CSS, chevron rotates. |
 | Native `select`, text inputs, checkboxes | Styled globally in `index.css`; just use the element. Add only sizing utilities (`h-8`, `w-56`, `px-2.5`). |

@@ -26,10 +26,10 @@ export function UsageBar({ percent, label, valueText, className = "" }: UsageBar
       aria-valuemax={100}
       aria-valuenow={percent === null ? undefined : Math.round(p)}
       aria-valuetext={valueText}
-      className={`h-1 w-full overflow-hidden rounded-full bg-surface-3 ${className}`}
+      className={`h-1.5 w-full overflow-hidden rounded-[2px] bg-gauge-track ${className}`}
     >
       <div
-        className="h-full origin-left rounded-full bg-accent"
+        className="h-full origin-left bg-meter"
         style={{ transform: `scaleX(${p / 100})` }}
       />
     </div>

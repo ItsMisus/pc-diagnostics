@@ -29,5 +29,3 @@ export const SECTIONS: readonly Section[] = [
 
 /** Translated navigation label (call at render time so it follows the language). */
 export const sectionLabel = (id: SectionId): string => tr("shell", `section_${id}`);
-/** Translated one-line description of a section. */
-export const sectionDescription = (id: SectionId): string => tr("shell", `sectionDesc_${id}`);

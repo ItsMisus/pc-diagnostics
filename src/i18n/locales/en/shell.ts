@@ -16,12 +16,4 @@ export default {
   section_diagnostics: "Diagnostics",
   section_history: "History",
   section_settings: "Settings",
-  sectionDesc_overview: "System at a glance",
-  sectionDesc_hardware: "Detected components and live metrics",
-  sectionDesc_benchmarks: "Selective CPU, GPU, RAM and SSD tests",
-  sectionDesc_processes: "Processes putting pressure on resources",
-  sectionDesc_drivers: "Device and driver status (read-only)",
-  sectionDesc_diagnostics: "Diagnostics based on verifiable rules",
-  sectionDesc_history: "Benchmark history and comparison",
-  sectionDesc_settings: "Application preferences",
 } satisfies Translation<typeof it>;
