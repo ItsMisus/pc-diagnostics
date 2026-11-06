@@ -13,7 +13,7 @@ interface TableProps {
   className?: string;
 }
 
-const TH = "pr-4 pb-2 text-left text-2xs font-medium whitespace-nowrap text-fg-subtle";
+const TH = "pr-4 pb-2 text-2xs font-medium whitespace-nowrap text-fg-subtle";
 
 /** Compact data table with thin row separators; scrolls horizontally on narrow widths. */
 export function Table({ caption, headers = [], head, children, className = "" }: TableProps) {
@@ -25,7 +25,7 @@ export function Table({ caption, headers = [], head, children, className = "" }:
           <tr>
             {head ??
               headers.map((h) => (
-                <th key={h} scope="col" className={TH}>
+                <th key={h} scope="col" className={`${TH} text-left`}>
                   {h}
                 </th>
               ))}
@@ -57,7 +57,7 @@ interface SortHeaderProps {
 export function SortHeader({ label, direction, onSort, align = "left", title, className = "" }: SortHeaderProps) {
   const ariaSort = direction === "asc" ? "ascending" : direction === "desc" ? "descending" : "none";
   return (
-    <th scope="col" aria-sort={ariaSort} className={`${TH} ${align === "right" ? "text-right" : ""} ${className}`}>
+    <th scope="col" aria-sort={ariaSort} className={`${TH} ${align === "right" ? "text-right" : "text-left"} ${className}`}>
       <button
         type="button"
         onClick={onSort}
@@ -81,8 +81,9 @@ export function SortHeader({ label, direction, onSort, align = "left", title, cl
   );
 }
 
+/** Body cell. Dense by default (dashboard tables); pass `pr-0` etc. via `className` for the last column. */
 export function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`border-t border-line py-2 pr-4 align-middle ${className}`}>{children}</td>;
+  return <td className={`border-t border-line py-1.5 align-middle ${/(^|\s)pr-/.test(className) ? "" : "pr-4"} ${className}`}>{children}</td>;
 }
 
 /** A field the OS did not report. Visible dash, spoken explanation. */

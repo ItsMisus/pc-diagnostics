@@ -25,7 +25,7 @@ export function ProgressBar({ fraction, label, className = "" }: ProgressBarProp
       className={`h-1.5 w-full overflow-hidden rounded-full bg-surface-3 ${className}`}
     >
       <div
-        className="h-full origin-left rounded-full bg-accent transition-transform duration-300 ease-out"
+        className="h-full origin-left rounded-full bg-meter transition-transform duration-300 ease-out"
         style={{ transform: `scaleX(${f})` }}
       />
     </div>
