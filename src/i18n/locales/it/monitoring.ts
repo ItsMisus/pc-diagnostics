@@ -47,9 +47,6 @@ export default {
   livePermission: "Monitoraggio non consentito",
   liveUnavailable: "Monitoraggio non disponibile",
   waitingFirstSample: "In attesa del primo campione…",
-  badgeLive: "In tempo reale",
-  badgeConnecting: "Connessione…",
-  badgeStopped: "Monitoraggio interrotto",
   detectingHardware: "Rilevamento dell'hardware…",
   inventoryUnsupported: "Inventario non supportato",
   inventoryUnsupportedDesc:
