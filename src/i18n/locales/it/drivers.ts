@@ -25,16 +25,6 @@ export default {
   filter_problems: "Problemi",
   filter_updates: "Aggiornamenti",
   filter_notVerifiable: "Non verificabili",
-  card_total: "Totale dispositivi",
-  cardHint_total: "Dispositivi collegati rilevati da Windows",
-  card_working: "Funzionanti",
-  cardHint_working: "Windows non segnala problemi: non significa che il driver sia aggiornato",
-  card_problems: "Con problemi",
-  cardHint_problems: "{problems} con problema rilevato, {missing} senza driver associato",
-  card_updates: "Aggiornamenti verificati disponibili",
-  cardHint_updates: "Offerti da Windows Update per i dispositivi presenti",
-  card_unverified: "Verifiche non completate",
-  cardHint_unverified: "{notChecked} non ancora verificati, {notVerifiable} non verificabili",
 
   // simple.ts: safe actions ("Cosa puoi fare")
   action_restart: "Riavvia il PC.",
@@ -121,18 +111,10 @@ export default {
   noInstallNote: "Questa app non installa né modifica driver: questi passaggi li fai tu da Windows.",
 
   // DriversPage
-  pageDescription: "Stato dei dispositivi e dei driver. Sola lettura: nessun driver viene installato, aggiornato o rimosso.",
   collectedAt: "Elenco rilevato il {date}",
   emptyTitle: "Nessun dispositivo rilevato",
-  disabledNote_one: "{count} dispositivo disabilitato (non conteggiati come problemi).",
-  disabledNote_other: "{count} dispositivi disabilitati (non conteggiati come problemi).",
   summaryAria: "Riepilogo",
   problemDevicesTitle: "Dispositivi da sistemare",
-  howToReadTitle: "Come leggere questa pagina",
-  howToRead1: "«Funzionante» significa che Windows non segnala problemi per il dispositivo: non significa che il driver sia aggiornato.",
-  howToRead2: "La data di un driver, da sola, non indica che sia obsoleto: molti driver stabili hanno date di diversi anni fa.",
-  howToRead3: "I driver Microsoft inclusi in Windows sono spesso la scelta corretta e non sono considerati un problema.",
-  howToRead4: "Un aggiornamento è «disponibile» solo se Windows Update lo offre per questo computer.",
   loadingTitle: "Enumerazione dei dispositivi…",
   loadingDescription: "La prima lettura può richiedere alcuni secondi.",
   unsupportedTitle: "Inventario driver non supportato",
@@ -146,6 +128,7 @@ export default {
 
   // DeviceList
   devicesTitle: "Dispositivi",
+  readingNote: "«Funzionante» vuol dire che Windows non segnala problemi, non che il driver sia aggiornato. Un aggiornamento è «disponibile» solo se Windows Update lo offre.",
   colName: "Nome",
   colVersion: "Versione installata",
   colProvider: "Provider",
@@ -192,10 +175,10 @@ export default {
   // UpdateCheckPanel
   consentCopy: "Consente all'app di interrogare Windows Update. Nessun driver viene installato.",
   updatesTitle: "Aggiornamenti driver",
-  updatesDescription:
-    "Chiede a Windows Update quali aggiornamenti driver sono offerti per i dispositivi presenti. Richiede la rete e può durare oltre un minuto. Nessun driver viene scaricato o installato.",
+  updatesDescription: "Chiede a Windows Update quali driver offre per questo PC. Serve la rete e può durare oltre un minuto; non installa nulla.",
   checking: "Ricerca in corso…",
-  checkButton: "Cerca aggiornamenti (Windows Update)",
+  runningNote: "Puoi continuare a usare l'app.",
+  checkButton: "Cerca aggiornamenti",
   settingsLoading: "Lettura delle impostazioni…",
   settingsError: "Impostazioni non disponibili: impossibile verificare il consenso alle verifiche online",
   onlineOff: "Le verifiche online sono disattivate.",
@@ -203,14 +186,11 @@ export default {
   saving: "Salvataggio…",
   allowOnline: "Consenti verifiche online",
   settingNotSaved: "Impostazione non salvata",
-  runningText: "Ricerca su Windows Update in corso{elapsed}. Può richiedere oltre un minuto; l'app resta utilizzabile.",
   elapsed: "· trascorsi {time}",
   consentDeniedTitle: "Verifiche online non consentite",
   busyTitle: "Una ricerca di aggiornamenti è già in corso",
   busyDescription: "Attendi che termini, poi riprova.",
   checkFailedTitle: "Ricerca degli aggiornamenti non riuscita",
-  lastCheck: "Ultima verifica: {date} · durata {duration} · fonte {source} · {offered}",
-  offered_one: "{count} aggiornamento driver offerto",
-  offered_other: "{count} aggiornamenti driver offerti",
+  lastCheck: "Ultima verifica: {date} · durata {duration}",
   lastCheckIncomplete: "L'ultima verifica non è stata completata",
 } satisfies Record<string, string>;

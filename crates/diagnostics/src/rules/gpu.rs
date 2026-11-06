@@ -65,7 +65,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
         format!("utilizzo e memoria video valutati su {w}"),
         format!("usage and video memory evaluated over {w}"),
     ));
-    window_notes(&mut cov, lang, ctx.window_s);
+    window_notes(&mut cov, ctx.window_s);
 
     for id in ids {
         let info = inv_gpus.iter().find(|g| g.id == id).copied();

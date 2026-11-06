@@ -106,7 +106,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
         format!("memoria disponibile, commit e paginazione valutati su {w}"),
         format!("available memory, commit and paging evaluated over {w}"),
     ));
-    window_notes(&mut cov, lang, ctx.window_s);
+    window_notes(&mut cov, ctx.window_s);
     if !commit.usable() {
         cov.partial(lang.pick(
             "memoria impegnata (commit) non disponibile",

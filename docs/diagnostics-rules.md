@@ -112,9 +112,9 @@ this order: CPU, GPU, Memory, Storage, Drivers, Processes, System.
   available. The check uses integer arithmetic, so exactly 60 % counts.
 - **Usable metric**: available in at least 50 % of the samples. If it is not, the rule is
   skipped and coverage notes the gap.
-- **Coverage notes**: a window under `SHORT_WINDOW_S = 30` s is noted as insufficient
-  history. A window of 30–59 s is noted as too short for sustained rules. Both give
-  `partial`.
+- **Short window**: a window under `SUSTAINED_MIN_WINDOW_S` makes the CPU, GPU and memory
+  coverage `partial`, without a per-component note: the window and the 60 s minimum are
+  stated once (the app shows one warning; the HTML export adds it to the observed window).
 
 Rationale: 60 s is long enough to rule out short spikes, such as an app launch, and the
 monitor keeps 5 minutes of history. The 60 % share tolerates gaps and brief dips without

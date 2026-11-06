@@ -2,7 +2,6 @@ import type { Tone } from "@/components/common/StatusBadge";
 import type { DeviceCategory } from "@/types/generated/DeviceCategory";
 import type { DeviceHealth } from "@/types/generated/DeviceHealth";
 import type { DeviceRecord } from "@/types/generated/DeviceRecord";
-import type { DriverSummary } from "@/types/generated/DriverSummary";
 import type { UpdateSource } from "@/types/generated/UpdateSource";
 import type { UpdateStatus } from "@/types/generated/UpdateStatus";
 import { localeTag, type Translator, translatorFor } from "@/i18n";
@@ -155,49 +154,4 @@ export function groupDevices(devices: readonly DeviceRecord[], t: T = drivers())
     list.sort((a, b) => rank(a) - rank(b) || names.compare(a.name, b.name));
     return [{ category, label: categoryLabel(category, t), devices: list }];
   });
-}
-
-export interface SummaryCard {
-  id: "total" | "working" | "problems" | "updates" | "unverified";
-  label: string;
-  value: number;
-  /** Status tone only when the number carries meaning (problems > 0, updates > 0). */
-  tone: Tone;
-  hint: string;
-}
-
-export function summaryCards(s: DriverSummary, t: T = drivers()): SummaryCard[] {
-  const problems = s.problems + s.driverMissing;
-  const unverified = s.notVerifiable + s.notChecked;
-  return [
-    { id: "total", label: t("card_total"), value: s.total, tone: "neutral", hint: t("cardHint_total") },
-    {
-      id: "working",
-      label: t("card_working"),
-      value: s.working,
-      tone: "neutral",
-      hint: t("cardHint_working"),
-    },
-    {
-      id: "problems",
-      label: t("card_problems"),
-      value: problems,
-      tone: problems > 0 ? "bad" : "neutral",
-      hint: t("cardHint_problems", { problems: s.problems, missing: s.driverMissing }),
-    },
-    {
-      id: "updates",
-      label: t("card_updates"),
-      value: s.updatesAvailable,
-      tone: s.updatesAvailable > 0 ? "warn" : "neutral",
-      hint: t("cardHint_updates"),
-    },
-    {
-      id: "unverified",
-      label: t("card_unverified"),
-      value: unverified,
-      tone: "neutral",
-      hint: t("cardHint_unverified", { notChecked: s.notChecked, notVerifiable: s.notVerifiable }),
-    },
-  ];
 }

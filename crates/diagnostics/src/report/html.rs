@@ -158,7 +158,7 @@ pub fn render(doc: &ExportDocument) -> String {
                 "Finestra di monitoraggio osservata",
                 "Observed monitoring window",
             ),
-            fmt::seconds(r.observed_window_s),
+            observed_window(lang, r.observed_window_s),
         ),
         (lang.pick("Identificativo", "ID"), r.id.clone()),
         (
@@ -770,6 +770,23 @@ fn benchmark_html(lang: Language, b: &BenchmarkResult, utc_offset_minutes: Optio
     }
     s.push_str("</div>");
     s
+}
+
+/// The observed window, with the sustained-rules minimum when it is shorter: the one place
+/// the export explains why the live-window components are `partial` in that case.
+fn observed_window(lang: Language, window_s: u32) -> String {
+    let w = fmt::seconds(window_s);
+    let min = crate::SUSTAINED_MIN_WINDOW_S;
+    if window_s < min {
+        lang.pick(
+            format!(
+                "{w} (le regole di carico prolungato richiedono {min} s e non sono state valutate)"
+            ),
+            format!("{w} (sustained-load rules need {min} s and were not evaluated)"),
+        )
+    } else {
+        w
+    }
 }
 
 fn media_label(m: MediaKind) -> &'static str {

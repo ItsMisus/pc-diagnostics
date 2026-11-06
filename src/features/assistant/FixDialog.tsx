@@ -93,16 +93,14 @@ export function FixDialog() {
         else close();
       }}
       inert={!open}
-      className="m-auto max-h-[85vh] w-[min(44rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-line-strong bg-surface p-0 text-fg shadow-lg"
+      className="m-auto max-h-[85vh] w-[min(44rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-fg shadow-lg"
     >
       {shown.phase.kind !== "closed" && (
         <div className="flex max-h-[85vh] flex-col">
-          <header className="flex items-start gap-3 border-b border-line px-5 py-3.5">
-            <span aria-hidden="true" className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-text">
-              <Icon name="sparkle" />
-            </span>
+          <header className="flex items-start gap-2.5 border-b border-line px-5 py-3.5">
+            <Icon name="sparkle" className="mt-0.5 shrink-0 text-fg-muted" />
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="font-display text-[15px] leading-5 font-semibold">
+              <h2 id={titleId} className="text-[15px] leading-5 font-semibold">
                 {t("dialogTitle")}
               </h2>
               {shown.target && <p className="mt-0.5 truncate text-xs text-fg-muted">{shown.target.title}</p>}
@@ -197,8 +195,8 @@ function Actions({ children }: { children: ReactNode }) {
 /** Warning-toned note. Text first; the icon only reinforces it. */
 function Callout({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <div role="note" className="mt-4 flex items-start gap-2.5 rounded-lg border border-warn/25 bg-warn-soft px-3.5 py-3 text-[13px] text-fg">
-      <Icon name="alert" className="mt-0.5 shrink-0 text-warn" />
+    <div role="note" className="mt-4 flex items-start gap-2 rounded-md border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
+      <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
         {title && <p className="font-medium">{title}</p>}
         {children}
@@ -224,13 +222,13 @@ function NotReady({ reason, onClose }: { reason: "disabled" | "noKey"; onClose: 
           <h3 className="text-sm font-medium">{text.title}</h3>
         </div>
         <p className="mt-1.5 max-w-prose text-sm text-fg-muted">{text.explanation}</p>
-        <p className="eyebrow mt-5">{t("howToEnable")}</p>
+        <h3 className="mt-5 text-[13px] font-semibold">{t("howToEnable")}</h3>
         <ol className="mt-2 flex flex-col gap-2">
           {text.steps.map((s, i) => (
             <li key={s} className="flex items-start gap-2.5 text-sm">
               <span
                 aria-hidden="true"
-                className="mt-px grid size-5 shrink-0 place-items-center rounded-full border border-line bg-surface-2 text-2xs font-medium text-fg-muted tabular"
+                className="mt-px grid size-5 shrink-0 place-items-center rounded-sm border border-line bg-surface-2 text-2xs font-medium text-fg-muted tabular"
               >
                 {i + 1}
               </span>
@@ -259,7 +257,7 @@ function PreviewView({ preview, refreshed, onClose }: { preview: FixPreview; ref
       id={payloadId}
       tabIndex={0}
       aria-label={t("exactDataAria")}
-      className="max-h-64 overflow-auto rounded-lg border border-line bg-surface-2/50 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all text-fg"
+      className="max-h-64 overflow-auto rounded-md border border-line bg-canvas p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all text-fg"
     >
       {preview.payload}
     </pre>
@@ -267,10 +265,10 @@ function PreviewView({ preview, refreshed, onClose }: { preview: FixPreview; ref
   return (
     <>
       <Body>
-        <h3 className="text-sm font-medium">{t("whatWillBeSent")}</h3>
+        <h3 className="text-[13px] font-semibold">{t("whatWillBeSent")}</h3>
         <p className="mt-1 max-w-prose text-sm text-fg-muted">{t("previewIntro")}</p>
         {refreshed && <Callout>{t("previewRefreshed")}</Callout>}
-        <dl className="mt-4 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-lg border border-line px-3.5 py-3 text-[13px]">
+        <dl className="mt-4 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-md border border-line px-3 py-2.5 text-[13px]">
           <dt className="text-fg-muted">{t("destination")}</dt>
           <dd className="break-words">{preview.destination}</dd>
           <dt className="text-fg-muted">{t("model")}</dt>
@@ -290,7 +288,7 @@ function PreviewView({ preview, refreshed, onClose }: { preview: FixPreview; ref
             <Disclosure summary={t("showExactData")}>{payload}</Disclosure>
           ) : (
             <>
-              <p className="eyebrow mb-1.5">{t("exactData")}</p>
+              <h3 className="mb-1.5 text-[13px] font-semibold">{t("exactData")}</h3>
               {payload}
             </>
           )}
@@ -379,7 +377,7 @@ function PlanView({
   const t = useT("assistant");
   return (
     <Body>
-      <h3 className="eyebrow">{t("proposal")}</h3>
+      <h3 className="text-[13px] font-semibold">{t("proposal")}</h3>
       <p className="mt-1.5 text-sm">{plan.summary}</p>
       <p className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
         <StatusBadge tone="neutral" label={planConfidenceShort(plan.confidence)} />
@@ -400,7 +398,7 @@ function PlanView({
         <p className="mt-5 text-sm text-fg-muted">{t("noSteps")}</p>
       ) : (
         <>
-          <h3 id={stepsLabelId} className="eyebrow mt-5">
+          <h3 id={stepsLabelId} className="mt-5 text-[13px] font-semibold">
             {t("proposedSteps")}
           </h3>
           <ol className="mt-2 flex flex-col gap-2.5" aria-labelledby={stepsLabelId}>
@@ -452,7 +450,7 @@ function stepState(step: FixStep, run: StepRun, done: boolean): StepState {
 
 const MARKER: Record<StepState, string> = {
   pending: "border-line bg-surface-2 text-fg-muted",
-  confirming: "border-accent/40 bg-accent-soft text-accent-text",
+  confirming: "border-fg-muted bg-surface-3 text-fg",
   running: "border-line-strong bg-surface-2 text-fg-muted",
   done: "border-ok/30 bg-ok-soft text-ok",
   failed: "border-bad/30 bg-bad-soft text-bad",
@@ -466,7 +464,7 @@ function StepMarker({ index, state }: { index: number; state: StepState }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-6 shrink-0 place-items-center rounded-full border text-2xs font-semibold tabular transition-colors duration-200 ${MARKER[state]}`}
+      className={`grid size-6 shrink-0 place-items-center rounded-sm border text-2xs font-semibold tabular transition-colors duration-200 ${MARKER[state]}`}
     >
       {state === "running" ? (
         <Spinner size={14} />
@@ -507,7 +505,7 @@ function StepItem({
   const state = stepState(step, run, done);
   return (
     <li
-      className={`flex gap-3 rounded-lg border p-3.5 transition-colors duration-200 ${
+      className={`flex gap-3 rounded-md border p-3.5 transition-colors duration-200 ${
         state === "confirming" ? "border-line-strong bg-surface-2/30" : "border-line"
       }`}
     >
@@ -540,7 +538,7 @@ function StepItem({
                 <div
                   role="group"
                   aria-label={t("confirmStepAria", { n: index })}
-                  className="rounded-lg border border-line bg-surface p-3 shadow-xs"
+                  className="rounded-md border border-line-strong bg-surface p-3"
                 >
                   <p className="text-[13px]">
                     <span className="font-medium">{t("whatWillHappen")} </span>
@@ -596,7 +594,7 @@ function StepItem({
         ) : (
           <div className="mt-3 flex flex-col items-start gap-2.5">
             {step.manualInstructions && (
-              <div className="w-full rounded-lg border border-line bg-surface-2/50 p-3 text-[13px] whitespace-pre-line">
+              <div className="w-full rounded-md border border-line bg-surface-2/50 p-3 text-[13px] whitespace-pre-line">
                 <span className="font-medium">{t("manualStep")} </span>
                 {step.manualInstructions}
               </div>

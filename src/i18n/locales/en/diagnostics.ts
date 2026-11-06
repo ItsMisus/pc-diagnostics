@@ -4,7 +4,6 @@ import type { Translation } from "../types";
 /** English texts for the "diagnostics" namespace. */
 export default {
   // Page and run states
-  pageDescription: "Diagnostics based on deterministic, verifiable rules. No overall health score.",
   run: "Run diagnostics",
   running: "Running diagnostics…",
   runningDescription: "The rules are analyzing the collected data; this can take a few seconds.",
@@ -24,29 +23,23 @@ export default {
   whatWeFound: "What we found",
   whatWasChecked: "What was checked",
   coverageNotReported: "The app didn't say which parts of the PC were checked.",
-  simpleCoverageCaveat:
-    "If a part was only partly checked, or not checked at all, the lack of warnings doesn't mean there are no problems.",
   simpleLimitations: "Limits of this check",
 
   // "Advanced" report
-  reportMeta: "Report from {date} · observed window {window} · rules v{rules} · app {version}",
-  shortWindow:
-    "The observed monitoring window is short ({window}): rules based on trends over time have little data. Leave the app open for a few minutes and run diagnostics again.",
+  reportMeta: "Report from {date} · rules v{rules} · app {version}",
+  shortWindow: "Short observed window ({window}): sustained-load rules need {min} s and were not evaluated. Leave the app open for a few minutes and run diagnostics again.",
   coverageTitle: "Diagnostic coverage",
-  coverageCaveat: "Where coverage is partial or missing, a lack of findings doesn't mean there are no problems.",
+  coverageBadge: "{name} · {status}",
   findingsTitle: "Findings",
-  noFindingsDescription:
-    "The available rules found no conditions to report in the collected data. This is not a guarantee that the system has no problems.",
+  noFindingsDescription: "This is not a guarantee: it covers only the collected data and the evaluated parts.",
   limitationsTitle: "Diagnostic limitations",
-  severitySummaryLabel: "Findings summary",
 
   // Export
   exportTitle: "Export report",
   exportAs: "Export {format}",
   exporting: "Exporting…",
   redact: "Remove personal data",
-  exportHint:
-    "The file is saved in Documents\\PC Diagnostics. With “Remove personal data” on, the computer name, paths and device identifiers are left out.",
+  exportHint: "Saved in Documents\\PC Diagnostics. “Remove personal data” leaves out the computer name, paths and device IDs.",
   exportSavedToast: "Report saved",
   exportSavedRedacted: "{format} report saved (personal data removed)",
   exportSavedPersonal: "{format} report saved (includes personal data)",
@@ -124,24 +117,9 @@ export default {
   simpleComponent_drivers: "Device drivers",
   simpleComponent_processes: "Running programs",
   simpleComponent_system: "System",
-  simpleChecked_cpu: "checked",
-  simpleChecked_gpu: "checked",
-  simpleChecked_memory: "checked",
-  simpleChecked_storage: "checked",
-  simpleChecked_drivers: "checked",
-  simpleChecked_processes: "checked",
-  simpleChecked_system: "checked",
-  simpleNotChecked_cpu: "not checked",
-  simpleNotChecked_gpu: "not checked",
-  simpleNotChecked_memory: "not checked",
-  simpleNotChecked_storage: "not checked",
-  simpleNotChecked_drivers: "not checked",
-  simpleNotChecked_processes: "not checked",
-  simpleNotChecked_system: "not checked",
-  simpleCoverageEvaluated: "{name}: {checked}",
-  simpleCoveragePartial: "{name}: only partly {checked}",
-  simpleCoverageNotEvaluated: "{name}: {notChecked}",
-  simpleCoverageWithNote: "{line} ({note})",
+  simpleCoverage_evaluated: "Fully checked",
+  simpleCoverage_partial: "Partly checked",
+  simpleCoverage_notEvaluated: "Not checked",
   simplePartialDefaultNote: "some data wasn't available",
   simpleNotEvaluatedDefaultNote: "the data needed is missing",
   simpleNothingFound: "We didn't find any problems.",

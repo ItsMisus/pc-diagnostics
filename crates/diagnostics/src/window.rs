@@ -5,7 +5,7 @@ use models::{Metric, Source};
 
 /// Minimum observed window for every "sustained" rule.
 pub const SUSTAINED_MIN_WINDOW_S: u32 = 60;
-/// Below this window, coverage notes that the live history is insufficient.
+/// Below this process analysis window, the processes coverage is noted as short.
 pub const SHORT_WINDOW_S: u32 = 30;
 /// A condition is sustained when it holds in at least this share of the available samples.
 pub const SUSTAINED_SHARE_PERCENT: usize = 60;
