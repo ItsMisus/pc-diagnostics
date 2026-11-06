@@ -71,9 +71,9 @@ export function InsightsCard({ className = "" }: { className?: string }) {
 }
 
 /**
- * One top finding: severity dot (its label is read out to assistive technology, so color
- * is not the only signal), title, then the kind marker and "Risolvi" on their own row so
- * the title keeps the width of a narrow column.
+ * One top finding in one compact row: severity dot (its label is read out to assistive
+ * technology, so color is not the only signal), title, then the kind marker and "Risolvi",
+ * which wrap under the title only in a narrow column.
  */
 function TopFinding({
   finding,
@@ -90,14 +90,14 @@ function TopFinding({
   action: ReactNode;
 }) {
   return (
-    <li className="flex items-start gap-2.5 border-t border-line py-2.5 first:border-t-0 first:pt-0 last:pb-0">
+    <li className="flex items-start gap-2.5 border-t border-line py-2 first:border-t-0 first:pt-0 last:pb-0">
       <span aria-hidden="true" className={`mt-[7px] size-1.5 shrink-0 rounded-full ${DOT[severityTone(finding.severity)]}`} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] leading-5 text-fg">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+        <p className="min-w-[min(100%,12rem)] flex-1 text-[13px] leading-5 text-fg">
           <span className="sr-only">{severity}: </span>
           {title}
         </p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 empty:hidden">
+        <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
           {kind}
           {action}
         </div>
@@ -118,11 +118,13 @@ function Summary({ report }: { report: DiagnosticReport }) {
     const badge = (n: number, s: "critical" | "warning" | "info") => `${n} ${simpleSeverityLabel(s).toLowerCase()}`;
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-xs text-fg-muted tabular">{t("insightsCheckedAt", { date: formatDateTime(report.generatedAt) })}</p>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <StatusBadge tone={counts.critical > 0 ? "bad" : "neutral"} label={badge(counts.critical, "critical")} />
           <StatusBadge tone={counts.warning > 0 ? "warn" : "neutral"} label={badge(counts.warning, "warning")} />
           <StatusBadge tone="neutral" label={badge(counts.info, "info")} />
+          <span className="ml-auto text-2xs text-fg-subtle tabular">
+            {t("insightsCheckedAt", { date: formatDateTime(report.generatedAt) })}
+          </span>
         </div>
         {top.length === 0 ? (
           <p className="text-sm text-fg-muted">
@@ -151,11 +153,13 @@ function Summary({ report }: { report: DiagnosticReport }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-fg-muted tabular">{t("insightsReportAt", { date: formatDateTime(report.generatedAt) })}</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <StatusBadge tone={counts.critical > 0 ? "bad" : "neutral"} label={t.plural("insightsCritical", counts.critical)} />
         <StatusBadge tone={counts.warning > 0 ? "warn" : "neutral"} label={t.plural("insightsWarning", counts.warning)} />
         <StatusBadge tone="neutral" label={t.plural("insightsInfo", counts.info)} />
+        <span className="ml-auto text-2xs text-fg-subtle tabular">
+          {t("insightsReportAt", { date: formatDateTime(report.generatedAt) })}
+        </span>
       </div>
       {top.length === 0 ? (
         <p className="text-sm text-fg-muted">{noFindingsCopy()}.</p>
@@ -173,7 +177,7 @@ function Summary({ report }: { report: DiagnosticReport }) {
           ))}
         </ul>
       )}
-      <p className="border-t border-line pt-3 text-xs text-fg-subtle">
+      <p className="border-t border-line pt-2.5 text-xs text-fg-subtle">
         {t("insightsCoverage", { sentence: coverageSentence(coverage) })}
       </p>
     </div>

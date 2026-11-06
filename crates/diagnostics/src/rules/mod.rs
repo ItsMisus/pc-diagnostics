@@ -24,7 +24,6 @@ use models::process::{ProcessRow, ProcessSnapshot};
 use models::settings::Language;
 
 use crate::DiagnosticInput;
-use crate::fmt;
 use crate::window::{self, val};
 
 /// Shared evaluation context.
@@ -135,10 +134,15 @@ impl Cov {
     }
 
     pub fn partial(&mut self, note: impl Into<String>) {
+        self.degrade();
+        self.note(note);
+    }
+
+    /// `partial` without a note, for a reason the report states once elsewhere.
+    pub fn degrade(&mut self) {
         if self.status == CoverageStatus::Evaluated {
             self.status = CoverageStatus::Partial;
         }
-        self.note(note);
     }
 
     pub fn not_evaluated(&mut self, note: impl Into<String>) {
@@ -155,19 +159,12 @@ impl Cov {
     }
 }
 
-/// Adds the standard notes for a live-window based component.
-pub fn window_notes(cov: &mut Cov, lang: Language, window_s: u32) {
-    let (w, min) = (fmt::seconds(window_s), window::SUSTAINED_MIN_WINDOW_S);
-    if window_s < window::SHORT_WINDOW_S {
-        cov.partial(lang.pick(
-            format!("storico di monitoraggio insufficiente ({w}, minimo {min} s): regole di carico prolungato non valutate"),
-            format!("monitoring history too short ({w}, minimum {min} s): sustained-load rules not evaluated"),
-        ));
-    } else if window_s < window::SUSTAINED_MIN_WINDOW_S {
-        cov.partial(lang.pick(
-            format!("finestra osservata di {w}: le regole di carico prolungato richiedono {min} s"),
-            format!("observed window of {w}: sustained-load rules need {min} s"),
-        ));
+/// Degrades a live-window based component to `partial` when the window is shorter than the
+/// sustained rules need. No note: the window and its minimum are stated once for the whole
+/// report (observed window, export header), not repeated in every component.
+pub fn window_notes(cov: &mut Cov, window_s: u32) {
+    if window_s < window::SUSTAINED_MIN_WINDOW_S {
+        cov.degrade();
     }
 }
 

@@ -262,7 +262,11 @@ fn device_finding(lang: Language, d: &DeviceRecord) -> models::diagnostics::Find
         code_text,
         Source::ConfigManager,
     )];
-    if let Some(c) = d.problem_code {
+    // The status text already reads "Code 28: …"; a separate code row only when it does not.
+    if let Some(c) = d
+        .problem_code
+        .filter(|c| !f.evidence[0].value.contains(&c.to_string()))
+    {
         f.evidence.push(ev(
             lang.pick("Codice problema", "Problem code"),
             c.to_string(),
@@ -604,6 +608,8 @@ mod tests {
         assert_eq!(wifi.severity, Severity::Critical);
         assert_eq!(wifi.kind, FindingKind::Confirmed);
         assert!(wifi.evidence.iter().any(|e| e.value.contains("Code 43")));
+        // The code is in the status text: no second row repeating it.
+        assert!(!wifi.evidence.iter().any(|e| e.label == "Problem code"));
         let cam = get("drivers.device.driver_missing");
         assert_eq!(cam.severity, Severity::Warning);
         let gpu = get("gpu.driver.problem");

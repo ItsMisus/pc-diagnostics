@@ -76,9 +76,11 @@ export function DeviceList({ devices }: { devices: readonly DeviceRecord[] }) {
   );
 
   return (
-    <Card title={t("devicesTitle")}>
+    // The reading notes live here, once: in "Semplice" the plain summary already says them.
+    <Card title={t("devicesTitle")} {...(simple ? {} : { description: t("readingNote") })}>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <FilterGroup value={filter} counts={counts} onChange={setFilter} />
+        {/* In "Semplice" the plain summary states the counts, so the tabs do not repeat them. */}
+        <FilterGroup value={filter} counts={simple ? null : counts} onChange={setFilter} />
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <label>
             <span className="sr-only">{t("categorySelect")}</span>
@@ -131,8 +133,8 @@ export function DeviceList({ devices }: { devices: readonly DeviceRecord[] }) {
 
 /**
  * Status filter: toggle buttons (`aria-pressed`, exactly one pressed) drawn like the
- * `Segmented` control, with the same sliding thumb. Counts are tabular so the labels do
- * not shift when the inventory changes.
+ * `Segmented` control, with the same sliding thumb. The tabs are the page's one home of the
+ * counts ("Avanzata"); they are tabular so the labels do not shift when the inventory changes.
  */
 function FilterGroup({
   value,
@@ -140,7 +142,8 @@ function FilterGroup({
   onChange,
 }: {
   value: DeviceFilter;
-  counts: Record<DeviceFilter, number>;
+  /** null: labels only (the counts are stated elsewhere on the page). */
+  counts: Record<DeviceFilter, number> | null;
   onChange: (filter: DeviceFilter) => void;
 }) {
   const t = useT("drivers");
@@ -149,7 +152,7 @@ function FilterGroup({
     <div
       role="group"
       aria-label={t("filterGroupLabel")}
-      className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-surface-2/60 p-0.5"
+      className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-surface-2 p-0.5"
     >
       {FILTERS.map((f) => {
         const selected = value === f;
@@ -168,14 +171,16 @@ function FilterGroup({
                 layoutId={layoutId}
                 transition={spring.indicator}
                 aria-hidden="true"
-                className="absolute inset-0 rounded-md border border-line-strong bg-surface shadow-xs"
+                className="absolute inset-0 rounded-md border border-line-strong bg-surface-3"
               />
             )}
             <span className="relative">
-              {filterLabel(f, t)}{" "}
-              <span className={`ml-0.5 tabular transition-colors duration-150 ${selected ? "text-fg-muted" : "text-fg-subtle"}`}>
-                {counts[f]}
-              </span>
+              {filterLabel(f, t)}
+              {counts && (
+                <span className={`ml-1.5 tabular transition-colors duration-150 ${selected ? "text-fg-muted" : "text-fg-subtle"}`}>
+                  {counts[f]}
+                </span>
+              )}
             </span>
           </button>
         );
@@ -281,9 +286,7 @@ const DeviceRow = memo(function DeviceRow({ device }: { device: DeviceRecord }) 
         <Td>
           <StatusBadge tone={update.tone} label={update.label} />
           {device.update.kind === "updateAvailable" && (
-            <div className="mt-1 text-2xs text-fg-subtle">
-              {updateSourceLabel(device.update.source)} · {device.update.title}
-            </div>
+            <div className="mt-1 text-2xs text-fg-subtle">{device.update.title}</div>
           )}
         </Td>
       </tr>
@@ -392,7 +395,7 @@ export function ProblemExplanationView({
                 ? [
                     {
                       label: t("problemCode"),
-                      value: `${device.problemCode}${device.problemDescription ? ` — ${device.problemDescription}` : ""}`,
+                      value: problemText(device),
                     },
                   ]
                 : []),
@@ -408,6 +411,11 @@ export function ProblemExplanationView({
       )}
     </div>
   );
+}
+
+/** Windows' text already starts with the code ("Code 43: …"): show the code alone only without it. */
+function problemText(d: DeviceRecord): string {
+  return d.problemDescription ?? String(d.problemCode);
 }
 
 function detailItems(d: DeviceRecord, t: T): DefinitionItem[] {
@@ -461,7 +469,7 @@ function detailItems(d: DeviceRecord, t: T): DefinitionItem[] {
   if (d.problemCode !== null) {
     items.push({
       label: t("problemCode"),
-      value: `${d.problemCode}${d.problemDescription ? ` — ${d.problemDescription}` : ""}`,
+      value: problemText(d),
     });
   }
 

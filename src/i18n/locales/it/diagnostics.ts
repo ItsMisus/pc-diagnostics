@@ -1,7 +1,6 @@
 /** Italian (reference) texts for the "diagnostics" namespace. */
 export default {
   // Page and run states
-  pageDescription: "Diagnosi basate su regole deterministiche e verificabili. Nessun punteggio globale di salute.",
   run: "Esegui diagnosi",
   running: "Diagnosi in corso…",
   runningDescription: "Le regole analizzano i dati raccolti; può richiedere qualche secondo.",
@@ -21,29 +20,23 @@ export default {
   whatWeFound: "Cosa abbiamo trovato",
   whatWasChecked: "Cosa è stato controllato",
   coverageNotReported: "L'app non ha indicato quali parti del PC sono state controllate.",
-  simpleCoverageCaveat:
-    "Se una parte è stata controllata solo in parte, o non è stata controllata, l'assenza di segnalazioni non vuol dire che non ci siano problemi.",
   simpleLimitations: "Limiti di questo controllo",
 
   // "Avanzata" report
-  reportMeta: "Report del {date} · finestra osservata {window} · regole v{rules} · app {version}",
-  shortWindow:
-    "La finestra di monitoraggio osservata è breve ({window}): le regole basate sull'andamento nel tempo hanno pochi dati. Lascia l'app aperta qualche minuto e ripeti la diagnosi.",
+  reportMeta: "Report del {date} · regole v{rules} · app {version}",
+  shortWindow: "Finestra osservata breve ({window}): le regole di carico prolungato richiedono {min} s e non sono state valutate. Lascia l'app aperta qualche minuto e ripeti la diagnosi.",
   coverageTitle: "Copertura della diagnosi",
-  coverageCaveat: "Dove la copertura è parziale o assente, l'assenza di segnalazioni non significa assenza di problemi.",
+  coverageBadge: "{name} · {status}",
   findingsTitle: "Segnalazioni",
-  noFindingsDescription:
-    "Le regole disponibili non hanno trovato condizioni da segnalare nei dati raccolti. Non è una garanzia che il sistema sia privo di problemi.",
+  noFindingsDescription: "Non è una garanzia: vale solo per i dati raccolti e per le parti valutate.",
   limitationsTitle: "Limitazioni della diagnosi",
-  severitySummaryLabel: "Riepilogo segnalazioni",
 
   // Export
   exportTitle: "Esporta report",
   exportAs: "Esporta {format}",
   exporting: "Esportazione…",
   redact: "Rimuovi dati personali",
-  exportHint:
-    "Il file viene salvato in Documenti\\PC Diagnostics. Con «Rimuovi dati personali» attivo, nome del computer, percorsi e identificativi dei dispositivi vengono omessi.",
+  exportHint: "Salvato in Documenti\\PC Diagnostics. «Rimuovi dati personali» omette nome del computer, percorsi e ID dei dispositivi.",
   exportSavedToast: "Report salvato",
   exportSavedRedacted: "Report {format} salvato (dati personali rimossi)",
   exportSavedPersonal: "Report {format} salvato (con dati personali)",
@@ -121,24 +114,9 @@ export default {
   simpleComponent_drivers: "Driver dei dispositivi",
   simpleComponent_processes: "Programmi in esecuzione",
   simpleComponent_system: "Sistema",
-  simpleChecked_cpu: "controllato",
-  simpleChecked_gpu: "controllata",
-  simpleChecked_memory: "controllata",
-  simpleChecked_storage: "controllati",
-  simpleChecked_drivers: "controllati",
-  simpleChecked_processes: "controllati",
-  simpleChecked_system: "controllato",
-  simpleNotChecked_cpu: "non controllato",
-  simpleNotChecked_gpu: "non controllata",
-  simpleNotChecked_memory: "non controllata",
-  simpleNotChecked_storage: "non controllati",
-  simpleNotChecked_drivers: "non controllati",
-  simpleNotChecked_processes: "non controllati",
-  simpleNotChecked_system: "non controllato",
-  simpleCoverageEvaluated: "{name}: {checked}",
-  simpleCoveragePartial: "{name}: {checked} solo in parte",
-  simpleCoverageNotEvaluated: "{name}: {notChecked}",
-  simpleCoverageWithNote: "{line} ({note})",
+  simpleCoverage_evaluated: "Controllo completo",
+  simpleCoverage_partial: "Controllo parziale",
+  simpleCoverage_notEvaluated: "Nessun controllo",
   simplePartialDefaultNote: "alcuni dati non erano disponibili",
   simpleNotEvaluatedDefaultNote: "mancano i dati necessari",
   simpleNothingFound: "Non abbiamo trovato problemi.",

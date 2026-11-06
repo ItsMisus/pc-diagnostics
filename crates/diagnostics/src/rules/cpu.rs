@@ -63,7 +63,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             format!("utilizzo e limite di frequenza valutati su {w}"),
             format!("usage and frequency limit evaluated over {w}"),
         ));
-        window_notes(&mut cov, lang, ctx.window_s);
+        window_notes(&mut cov, ctx.window_s);
         if usage.is_sustained(ctx.window_s) {
             let high = fmt::pct(lang, CPU_HIGH_PERCENT);
             let share = fmt::pct(lang, usage.hit_percent());
@@ -681,6 +681,8 @@ mod tests {
         let r = evaluate(&input(&with_usage(59, 59, 99.0)));
         assert!(!ids(&r).contains(&"cpu.utilization.sustained"));
         assert_eq!(cpu_cov(&r), CoverageStatus::Partial);
+        // The short window is stated once for the report, not in every component's note.
+        assert!(r.coverage.iter().all(|c| !c.note.contains("sustained")));
     }
 
     #[test]

@@ -6,7 +6,6 @@ import { Icon } from "@/components/common/Icon";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { toast } from "@/components/common/Toast";
-import { ViewModeToggle } from "@/components/common/ViewModeToggle";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
@@ -15,10 +14,9 @@ import type { CoverageItem } from "@/types/generated/CoverageItem";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
 import type { Finding } from "@/types/generated/Finding";
 import type { ReportFormat } from "@/types/generated/ReportFormat";
-import type { Severity } from "@/types/generated/Severity";
 import { useT } from "@/i18n";
 import { diagStore, useDiag } from "./diagStore";
-import { FindingCard, SeverityRail, SimpleFindingCard } from "./FindingCard";
+import { FindingCard, SimpleFindingCard } from "./FindingCard";
 import {
   componentKindLabel,
   coverageLabel,
@@ -27,38 +25,26 @@ import {
   coverageTone,
   groupFindings,
   noFindingsCopy,
-  SEVERITY_ORDER,
-  severityCounts,
   severityGroupLabel,
-  severityTone,
   sortFindings,
 } from "./model";
-import { simpleCoverageSentence, simpleShortWindowNote, simpleSummary } from "./simple";
+import { simpleComponentName, simpleCoverageLabel, simpleCoverageNote, simpleShortWindowNote, simpleSummary } from "./simple";
 
-/** Below this the trend-based rules have little history to look at. */
+/**
+ * Below this the sustained-load rules are not evaluated (`SUSTAINED_MIN_WINDOW_S` in the
+ * diagnostics crate). The page says so once, in one note; component notes do not repeat it.
+ */
 const SHORT_WINDOW_S = 60;
-
-const DOT = { bad: "bg-bad", warn: "bg-warn", ok: "bg-ok", neutral: "bg-fg-subtle" } as const;
 
 export function DiagnosticsPage() {
   const ensureLoaded = useDiag((s) => s.ensureLoaded);
   useEffect(() => ensureLoaded(), [ensureLoaded]);
   const status = useDiag((s) => s.status);
   const report = useDiag((s) => s.report);
-  const t = useT("diagnostics");
 
   return (
     <>
-      <PageHeader
-        title="Diagnostics"
-        description={t("pageDescription")}
-        actions={
-          <>
-            <ViewModeToggle />
-            <RunButton />
-          </>
-        }
-      />
+      <PageHeader title="Diagnostics" actions={<RunButton />} />
       <RunError />
       {status === "ready" && report ? <ReportSwitch report={report} /> : <LoadState />}
     </>
@@ -140,90 +126,66 @@ function ReportSwitch({ report }: { report: DiagnosticReport }) {
   return useIsSimple() ? <SimpleReportView report={report} /> : <ReportView report={report} />;
 }
 
-/** Warning-toned note (short observation window). Text first; the icon only reinforces it. */
-function Note({ children }: { children: ReactNode }) {
+/** The page's one short-window warning. Text first; the icon only reinforces it. */
+function ShortWindowNote({ children }: { children: ReactNode }) {
   return (
-    <div role="note" className="flex items-start gap-2.5 rounded-lg border border-warn/25 bg-warn-soft px-3.5 py-3 text-[13px] text-fg">
-      <Icon name="alert" className="mt-0.5 shrink-0 text-warn" />
+    <div role="note" className="flex items-start gap-2 rounded-md border border-warn/25 bg-warn-soft px-3 py-2 text-[13px] text-fg">
+      <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-warn" />
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
 function MetaLine({ children }: { children: ReactNode }) {
-  return <p className="text-xs text-fg-muted tabular">{children}</p>;
+  return <p className="text-xs text-fg-subtle tabular">{children}</p>;
 }
 
-/** Heading of a group of finding cards, with its count. */
-function GroupHeading({ label, count }: { label: string; count: number }) {
+/** Heading of a group of finding cards; `count` only where no summary already states it. */
+function GroupHeading({ id, label, count }: { id: string; label: string; count?: number }) {
   return (
-    <h2 className="flex items-center gap-2 text-[13px] leading-5 font-medium text-fg">
+    <h2 id={id} className="flex items-baseline gap-2 text-[15px] leading-6 font-semibold text-fg">
       {label}
-      <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-3 px-1.5 text-2xs font-medium text-fg-muted tabular">
-        {count}
-      </span>
+      {count !== undefined && <span className="text-[13px] font-normal text-fg-subtle tabular">{count}</span>}
     </h2>
   );
 }
 
 const LIST = "flex list-disc flex-col gap-0.5 pl-4 marker:text-fg-subtle";
 
-/** "Semplice": plain summary, one card per finding, coverage as plain sentences. */
+/** "Semplice": plain summary (it carries the counts), one card per finding, compact coverage. */
 function SimpleReportView({ report }: { report: DiagnosticReport }) {
   const t = useT("diagnostics");
   const findings = useMemo(() => sortFindings(report.findings), [report.findings]);
   const indexOf = useFindingIndex(report);
   // `t` changes with the language, so the summary is rebuilt in the new language.
   const summary = useMemo(() => simpleSummary(report.findings, report.coverage), [report.findings, report.coverage, t]);
-  const counts = useMemo(() => severityCounts(report.findings), [report.findings]);
-  const tone = counts.critical > 0 ? "bad" : counts.warning > 0 ? "warn" : null;
+  const headingId = useId();
 
   return (
     <div className="flex flex-col gap-4">
       <MetaLine>{t("simpleCheckedAt", { date: formatDateTime(report.generatedAt) })}</MetaLine>
 
-      <section
-        aria-label={t("summaryLabel")}
-        className="relative rounded-xl border border-line bg-surface p-4 pl-5 shadow-[inset_0_1px_0_var(--highlight)]"
-      >
-        {tone && <SeverityRail tone={tone} />}
+      <Card title={t("summaryLabel")}>
         <p className="text-[15px] leading-6 font-medium text-fg">{summary[0]}</p>
         {summary.slice(1).map((line) => (
           <p key={line} className="mt-1 text-sm text-fg-muted">
             {line}
           </p>
         ))}
-      </section>
+      </Card>
 
-      {report.observedWindowS < SHORT_WINDOW_S && <Note>{simpleShortWindowNote()}</Note>}
+      {report.observedWindowS < SHORT_WINDOW_S && <ShortWindowNote>{simpleShortWindowNote()}</ShortWindowNote>}
 
       {findings.length > 0 && (
-        <section aria-label={t("whatWeFound")} className="mt-2 flex flex-col gap-3">
-          <GroupHeading label={t("whatWeFound")} count={findings.length} />
+        <section aria-labelledby={headingId} className="flex flex-col gap-3">
+          <GroupHeading id={headingId} label={t("whatWeFound")} />
           {findings.map((f, i) => (
             <SimpleFindingCard key={`${f.ruleId}-${i}`} finding={f} findingIndex={indexOf(f)} />
           ))}
         </section>
       )}
 
-      <Card title={t("whatWasChecked")} className={findings.length > 0 ? "mt-2" : ""}>
-        {report.coverage.length === 0 ? (
-          <p className="text-sm text-fg-muted">{t("coverageNotReported")}</p>
-        ) : (
-          <ul className="flex flex-col gap-2 text-sm">
-            {report.coverage.map((c, i) => (
-              <li key={`${c.component}-${i}`} className="flex items-start gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className={`mt-[7px] size-1.5 shrink-0 rounded-full ${c.status === "evaluated" ? "bg-fg-subtle" : "bg-warn"}`}
-                />
-                <span>{simpleCoverageSentence(c)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-3 border-t border-line pt-3 text-xs text-fg-muted">{t("simpleCoverageCaveat")}</p>
-      </Card>
+      <CoverageCard items={report.coverage} simple />
 
       {report.limitations.length > 0 && (
         <Card>
@@ -242,74 +204,49 @@ function SimpleReportView({ report }: { report: DiagnosticReport }) {
   );
 }
 
+/** "Avanzata": coverage, then the findings grouped by severity (each heading carries its count). */
 function ReportView({ report }: { report: DiagnosticReport }) {
   const t = useT("diagnostics");
   const groups = useMemo(() => groupFindings(report.findings), [report.findings]);
   const indexOf = useFindingIndex(report);
-  const coverage = useMemo(() => coverageSummary(report.coverage), [report.coverage]);
-  const counts = useMemo(() => severityCounts(report.findings), [report.findings]);
+  const baseId = useId();
 
   return (
     <div className="flex flex-col gap-4">
       <MetaLine>
         {t("reportMeta", {
           date: formatDateTime(report.generatedAt),
-          window: formatDuration(report.observedWindowS),
           rules: report.rulesVersion,
           version: report.appVersion,
         })}
       </MetaLine>
       {report.observedWindowS < SHORT_WINDOW_S && (
-        <Note>{t("shortWindow", { window: formatDuration(report.observedWindowS) })}</Note>
+        <ShortWindowNote>{t("shortWindow", { window: formatDuration(report.observedWindowS), min: SHORT_WINDOW_S })}</ShortWindowNote>
       )}
 
-      <Card title={t("coverageTitle")}>
-        <p className="mb-3 text-sm">{coverageSentence(coverage)}</p>
-        {report.coverage.length > 0 && <CoverageList items={report.coverage} />}
-        {!coverage.complete && (
-          <p className="mt-3 text-xs text-fg-muted">{t("coverageCaveat")}</p>
-        )}
-      </Card>
+      <CoverageCard items={report.coverage} simple={false} />
 
       {report.findings.length === 0 ? (
         <Card title={t("findingsTitle")}>
-          <StateView
-            kind="empty"
-            title={noFindingsCopy()}
-            description={
-              <div className="flex flex-col gap-2">
-                <p>{t("noFindingsDescription")}</p>
-                {coverage.gaps.length > 0 && (
-                  <ul className={LIST}>
-                    {coverage.gaps.map((g, i) => (
-                      <li key={`${g.component}-${i}`}>
-                        {componentKindLabel(g.component)} — {coverageLabel(g.status).toLowerCase()}
-                        {g.note ? `: ${g.note}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            }
-          />
+          <StateView compact kind="empty" title={noFindingsCopy()} description={t("noFindingsDescription")} />
         </Card>
       ) : (
-        <>
-          <SeveritySummary counts={counts} />
-          {groups.map((g) => (
-            <section key={g.severity} aria-label={severityGroupLabel(g.severity)} className="mt-2 flex flex-col gap-3">
-              <GroupHeading label={severityGroupLabel(g.severity)} count={g.findings.length} />
+        groups.map((g) => {
+          const id = `${baseId}-${g.severity}`;
+          return (
+            <section key={g.severity} aria-labelledby={id} className="flex flex-col gap-3">
+              <GroupHeading id={id} label={severityGroupLabel(g.severity)} count={g.findings.length} />
               {g.findings.map((f, i) => (
                 <FindingCard key={`${f.ruleId}-${i}`} finding={f} findingIndex={indexOf(f)} />
               ))}
             </section>
-          ))}
-        </>
+          );
+        })
       )}
 
       {report.limitations.length > 0 && (
-        <Card title={t("limitationsTitle")} className="mt-2">
-          <ul className={`${LIST} text-sm text-fg-muted`}>
+        <Card title={t("limitationsTitle")}>
+          <ul className={`${LIST} text-[13px] text-fg-muted`}>
             {report.limitations.map((l) => (
               <li key={l}>{l}</li>
             ))}
@@ -319,34 +256,6 @@ function ReportView({ report }: { report: DiagnosticReport }) {
 
       <ExportPanel />
     </div>
-  );
-}
-
-/** Counts per severity, one tile each. The dot is tinted only when the count is non-zero. */
-function SeveritySummary({ counts }: { counts: Record<Severity, number> }) {
-  const t = useT("diagnostics");
-  return (
-    <section
-      aria-label={t("severitySummaryLabel")}
-      className="rounded-xl border border-line bg-surface shadow-[inset_0_1px_0_var(--highlight)]"
-    >
-      <dl className="grid grid-cols-3 divide-x divide-line">
-        {SEVERITY_ORDER.map((s) => {
-          const n = counts[s];
-          return (
-            <div key={s} className="min-w-0 px-4 py-3">
-              <dt className="flex items-center gap-1.5 text-xs text-fg-muted">
-                <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${n > 0 ? DOT[severityTone(s)] : "bg-line-strong"}`} />
-                {severityGroupLabel(s)}
-              </dt>
-              <dd className={`mt-1 font-display text-2xl leading-7 font-semibold tabular ${n > 0 ? "text-fg" : "text-fg-subtle"}`}>
-                {n}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-    </section>
   );
 }
 
@@ -361,21 +270,50 @@ export function useFindingIndex(report: DiagnosticReport): (f: Finding) => numbe
   }, [report.findings]);
 }
 
-function CoverageList({ items }: { items: readonly CoverageItem[] }) {
-  // Subscribes to the language: the labels below come from the model helpers.
-  useT("diagnostics");
+/**
+ * Coverage at a glance: a summary line ("Avanzata"), one badge per component, and a note
+ * only for the components that were not fully evaluated (the note says what is missing).
+ */
+function CoverageCard({ items, simple }: { items: readonly CoverageItem[]; simple: boolean }) {
+  const t = useT("diagnostics");
+  const summary = useMemo(() => coverageSummary(items), [items]);
+  const name = (c: CoverageItem) => (simple ? simpleComponentName(c.component) : componentKindLabel(c.component));
+  const notes = summary.gaps
+    .map((c) => ({ c, note: simple ? simpleCoverageNote(c) : c.note.trim() }))
+    .filter((x) => x.note !== "");
+
   return (
-    <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
-      {items.map((c, i) => (
-        <li key={`${c.component}-${i}`} className="flex flex-col gap-1 rounded-lg border border-line bg-surface-2/30 px-3 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[13px] font-medium">{componentKindLabel(c.component)}</span>
-            <StatusBadge tone={coverageTone(c.status)} label={coverageLabel(c.status)} />
-          </div>
-          {c.note && <span className="text-xs text-fg-muted">{c.note}</span>}
-        </li>
-      ))}
-    </ul>
+    <Card title={simple ? t("whatWasChecked") : t("coverageTitle")}>
+      {items.length === 0 ? (
+        <p className="text-sm text-fg-muted">{simple ? t("coverageNotReported") : coverageSentence(summary)}</p>
+      ) : (
+        <>
+          {!simple && <p className="mb-2.5 text-[13px] text-fg-muted">{coverageSentence(summary)}</p>}
+          <ul className="flex flex-wrap gap-1.5">
+            {items.map((c, i) => (
+              <li key={`${c.component}-${i}`}>
+                <StatusBadge
+                  tone={coverageTone(c.status)}
+                  label={t("coverageBadge", {
+                    name: name(c),
+                    status: simple ? simpleCoverageLabel(c.status) : coverageLabel(c.status),
+                  })}
+                />
+              </li>
+            ))}
+          </ul>
+          {notes.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1 border-t border-line pt-3 text-xs text-fg-muted">
+              {notes.map(({ c, note }, i) => (
+                <li key={`${c.component}-${i}`}>
+                  <span className="font-medium text-fg">{name(c)}</span>: {note}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -412,9 +350,9 @@ function ExportPanel() {
           {t("redact")}
         </label>
       </div>
-      <p className="mt-2.5 max-w-prose text-xs text-fg-muted">{t("exportHint")}</p>
+      <p className="mt-2 max-w-prose text-xs text-fg-subtle">{t("exportHint")}</p>
       {state.status === "done" && (
-        <div role="status" className="mt-3 flex items-start gap-2.5 rounded-lg border border-line bg-surface-2/40 px-3 py-2.5">
+        <div role="status" className="mt-3 flex items-start gap-2 rounded-md border border-line bg-surface-2/40 px-3 py-2">
           <Icon name="check" className="mt-0.5 shrink-0 text-ok" />
           <div className="min-w-0 text-[13px]">
             <p>

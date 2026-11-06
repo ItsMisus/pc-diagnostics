@@ -1,5 +1,6 @@
 import type { ComponentKind } from "@/types/generated/ComponentKind";
 import type { CoverageItem } from "@/types/generated/CoverageItem";
+import type { CoverageStatus } from "@/types/generated/CoverageStatus";
 import type { Finding } from "@/types/generated/Finding";
 import type { FindingKind } from "@/types/generated/FindingKind";
 import type { Severity } from "@/types/generated/Severity";
@@ -54,33 +55,21 @@ export function simpleComponentName(c: ComponentKind): string {
   return dt()(`simpleComponent_${c}`);
 }
 
+/** Coverage status in everyday words ("Controllo parziale"); never claims "all good". */
+export function simpleCoverageLabel(s: CoverageStatus): string {
+  return dt()(`simpleCoverage_${s}`);
+}
+
 /**
- * One plain sentence per component, e.g.
- * "Processore (CPU): controllato solo in parte (temperatura non leggibile su questo PC)".
- * The note comes from the backend, already in the effective language.
+ * What is missing for a component that was not fully checked: the backend note (already in
+ * the effective language) or a plain default. Empty for a fully checked component: its
+ * badge says everything.
  */
-export function simpleCoverageSentence(item: CoverageItem): string {
-  const t = dt();
-  const c = item.component;
-  const name = simpleComponentName(c);
+export function simpleCoverageNote(item: CoverageItem): string {
+  if (item.status === "evaluated") return "";
   const note = item.note.trim();
-  let line: string;
-  let fallbackNote = "";
-  switch (item.status) {
-    case "evaluated":
-      line = t("simpleCoverageEvaluated", { name, checked: t(`simpleChecked_${c}`) });
-      break;
-    case "partial":
-      line = t("simpleCoveragePartial", { name, checked: t(`simpleChecked_${c}`) });
-      fallbackNote = t("simplePartialDefaultNote");
-      break;
-    case "notEvaluated":
-      line = t("simpleCoverageNotEvaluated", { name, notChecked: t(`simpleNotChecked_${c}`) });
-      fallbackNote = t("simpleNotEvaluatedDefaultNote");
-      break;
-  }
-  const shown = note || fallbackNote;
-  return shown ? t("simpleCoverageWithNote", { line, note: shown }) : line;
+  if (note) return note;
+  return dt()(item.status === "partial" ? "simplePartialDefaultNote" : "simpleNotEvaluatedDefaultNote");
 }
 
 /** "Non abbiamo trovato problemi." */

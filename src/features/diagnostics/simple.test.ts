@@ -7,7 +7,8 @@ import type { Severity } from "@/types/generated/Severity";
 import { severityTone } from "./model";
 import {
   simpleComponentName,
-  simpleCoverageSentence,
+  simpleCoverageLabel,
+  simpleCoverageNote,
   simpleFindingText,
   simpleKindHint,
   simpleNotAGuarantee,
@@ -92,25 +93,25 @@ describe("simpleFindingText", () => {
   });
 });
 
-describe("simpleCoverageSentence", () => {
-  it("writes one plain sentence per component", () => {
-    expect(simpleCoverageSentence(coverage("cpu", "partial", "temperatura non leggibile su questo PC"))).toBe(
-      "Processore (CPU): controllato solo in parte (temperatura non leggibile su questo PC)",
+describe("simple coverage", () => {
+  it("labels each status in plain words and notes only what is missing", () => {
+    expect(simpleCoverageLabel("partial")).toBe("Controllo parziale");
+    expect(simpleCoverageNote(coverage("cpu", "partial", "temperatura non leggibile su questo PC"))).toBe(
+      "temperatura non leggibile su questo PC",
     );
-    expect(simpleCoverageSentence(coverage("memory", "evaluated"))).toBe("Memoria (RAM): controllata");
-    expect(simpleCoverageSentence(coverage("drivers", "notEvaluated"))).toBe(
-      "Driver dei dispositivi: non controllati (mancano i dati necessari)",
-    );
+    expect(simpleCoverageNote(coverage("memory", "evaluated", "valutata su 120 s"))).toBe("");
+    expect(simpleCoverageNote(coverage("drivers", "notEvaluated"))).toBe("mancano i dati necessari");
+    expect(simpleCoverageNote(coverage("gpu", "partial"))).toBe("alcuni dati non erano disponibili");
   });
 
   it("never uses the technical status words", () => {
     for (const c of Object.keys(COMPONENTS) as ComponentKind[]) {
       expect(simpleComponentName(c).length).toBeGreaterThan(0);
-      for (const s of STATUSES) {
-        const text = simpleCoverageSentence(coverage(c, s));
-        expect(text).not.toMatch(/Valutato|Parziale|Non valutato/);
-        expect(containsJargon(text), text).toBe(false);
-      }
+    }
+    for (const s of STATUSES) {
+      const text = `${simpleCoverageLabel(s)} ${simpleCoverageNote(coverage("cpu", s))}`;
+      expect(text).not.toMatch(/Valutato|Parziale|Non valutato/);
+      expect(containsJargon(text), text).toBe(false);
     }
   });
 });
@@ -166,13 +167,9 @@ describe("English", () => {
     setLang("en");
     expect(simpleSeverityLabel("critical")).toBe("Important");
     expect(simpleKindHint("hypothesis")).toBe("Possible cause, not certain");
-    expect(simpleCoverageSentence(coverage("cpu", "partial", "temperature not readable on this PC"))).toBe(
-      "Processor (CPU): only partly checked (temperature not readable on this PC)",
-    );
-    expect(simpleCoverageSentence(coverage("memory", "evaluated"))).toBe("Memory (RAM): checked");
-    expect(simpleCoverageSentence(coverage("drivers", "notEvaluated"))).toBe(
-      "Device drivers: not checked (the data needed is missing)",
-    );
+    expect(simpleComponentName("cpu")).toBe("Processor (CPU)");
+    expect(simpleCoverageLabel("evaluated")).toBe("Fully checked");
+    expect(simpleCoverageNote(coverage("drivers", "notEvaluated"))).toBe("the data needed is missing");
     expect(simpleNothingFound()).toBe("We didn't find any problems.");
     expect(simpleSummary([], [coverage("cpu", "evaluated")])).toEqual([
       "We didn't find any problems.",
@@ -195,12 +192,10 @@ describe("English", () => {
 
   it("keeps the English copy free of jargon and of technical status words", () => {
     setLang("en");
-    for (const c of Object.keys(COMPONENTS) as ComponentKind[]) {
-      for (const s of STATUSES) {
-        const text = simpleCoverageSentence(coverage(c, s));
-        expect(text).not.toMatch(/Evaluated|Partial|Not evaluated/);
-        expect(containsJargon(text), text).toBe(false);
-      }
+    for (const s of STATUSES) {
+      const text = `${simpleCoverageLabel(s)} ${simpleCoverageNote(coverage("cpu", s))}`;
+      expect(text).not.toMatch(/Evaluated|Partial|Not evaluated/);
+      expect(containsJargon(text), text).toBe(false);
     }
     expect(containsJargon(simpleShortWindowNote())).toBe(false);
   });

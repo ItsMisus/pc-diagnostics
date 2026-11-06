@@ -10,7 +10,6 @@ import { formatDateTime, formatElapsed } from "@/lib/format";
 import type { AppError } from "@/types/generated/AppError";
 import type { UpdateCheckInfo } from "@/types/generated/UpdateCheckInfo";
 import { useDrivers } from "./driverStore";
-import { updateSourceLabel } from "./model";
 
 /** Online update search. Gated by the explicit "Consenti verifiche online" setting. */
 export function UpdateCheckPanel() {
@@ -24,8 +23,8 @@ export function UpdateCheckPanel() {
 
   return (
     <Card title={t("updatesTitle")}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <p id="update-check-desc" className="max-w-prose text-sm text-fg-muted">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <p id="update-check-desc" className="max-w-prose text-[13px] text-fg-muted">
           {t("updatesDescription")}
         </p>
         <Button
@@ -71,20 +70,16 @@ function ConsentNotice() {
   return (
     <div
       id="update-check-consent"
-      className="mt-4 flex flex-col gap-2 rounded-lg border border-line bg-surface-2/60 p-3 text-sm"
+      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3 text-[13px]"
     >
-      <div className="flex items-center gap-2">
-        <Icon name="lock" className="shrink-0 text-fg-subtle" />
-        <span className="font-medium text-fg">{t("onlineOff")}</span>
-      </div>
-      <p className="pl-6 text-fg-muted">
-        {t("consentCopy")} {t("consentRevoke")}
+      <Icon name="lock" className="shrink-0 text-fg-subtle" />
+      <p className="min-w-0 flex-1">
+        <span className="font-medium text-fg">{t("onlineOff")}</span>{" "}
+        <span className="text-fg-muted">{t("consentRevoke")}</span>
       </p>
-      <div className="pt-1 pl-6">
-        <Button onClick={() => void updateSettings({ allowOnlineChecks: true })} disabled={settings.saving}>
-          {settings.saving ? t("saving") : t("allowOnline")}
-        </Button>
-      </div>
+      <Button size="sm" onClick={() => void updateSettings({ allowOnlineChecks: true })} disabled={settings.saving}>
+        {settings.saving ? t("saving") : t("allowOnline")}
+      </Button>
       {settings.saveError && (
         <StateView compact kind="error" title={t("settingNotSaved")} error={settings.saveError} />
       )}
@@ -101,17 +96,13 @@ function Running({ startedAt }: { startedAt: number }) {
     return () => clearInterval(id);
   }, []);
   return (
-    <div role="status" className="mt-4 flex items-start gap-2 text-sm text-fg-muted">
+    <div role="status" className="mt-3 flex items-start gap-2 text-[13px] text-fg-muted">
       <Spinner className="mt-0.5" />
       <p>
-        {t.rich("runningText", {
-          elapsed: (
-            <span aria-live="off" className="tabular">
-              {" "}
-              {t("elapsed", { time: formatElapsed(now - startedAt) })}
-            </span>
-          ),
-        })}
+        {t("runningNote")}{" "}
+        <span aria-live="off" className="tabular">
+          {t("elapsed", { time: formatElapsed(now - startedAt) })}
+        </span>
       </p>
     </div>
   );
@@ -157,12 +148,10 @@ function CheckError({ error, onRetry }: { error: AppError; onRetry: () => void }
 function LastCheck({ info }: { info: UpdateCheckInfo }) {
   const t = useT("drivers");
   return (
-    <div className="mt-4 border-t border-line pt-3 text-xs text-fg-muted tabular">
+    <div className="mt-3 border-t border-line pt-3 text-xs text-fg-subtle tabular">
       {t("lastCheck", {
         date: formatDateTime(info.checkedAt),
         duration: formatElapsed(info.durationMs),
-        source: updateSourceLabel(info.source),
-        offered: t.plural("offered", info.offered),
       })}
       {info.error && (
         <div className="mt-2">

@@ -28,16 +28,6 @@ export default {
   filter_problems: "Problems",
   filter_updates: "Updates",
   filter_notVerifiable: "Not verifiable",
-  card_total: "Total devices",
-  cardHint_total: "Connected devices detected by Windows",
-  card_working: "Working",
-  cardHint_working: "Windows reports no problems: it doesn't mean the driver is up to date",
-  card_problems: "With problems",
-  cardHint_problems: "{problems} with a detected problem, {missing} without an associated driver",
-  card_updates: "Verified updates available",
-  cardHint_updates: "Offered by Windows Update for the devices present",
-  card_unverified: "Checks not completed",
-  cardHint_unverified: "{notChecked} not checked yet, {notVerifiable} not verifiable",
 
   // simple.ts: safe actions ("What you can do")
   action_restart: "Restart the PC.",
@@ -121,18 +111,10 @@ export default {
   noInstallNote: "This app doesn't install or change drivers: you take these steps yourself in Windows.",
 
   // DriversPage
-  pageDescription: "Device and driver status. Read-only: no driver is installed, updated or removed.",
   collectedAt: "List collected on {date}",
   emptyTitle: "No devices detected",
-  disabledNote_one: "{count} disabled device (not counted as a problem).",
-  disabledNote_other: "{count} disabled devices (not counted as problems).",
   summaryAria: "Summary",
   problemDevicesTitle: "Devices to fix",
-  howToReadTitle: "How to read this page",
-  howToRead1: "“Working” means Windows reports no problems for the device: it doesn't mean the driver is up to date.",
-  howToRead2: "A driver's date alone doesn't mean it's outdated: many stable drivers are several years old.",
-  howToRead3: "Microsoft drivers included in Windows are often the right choice and are not considered a problem.",
-  howToRead4: "An update is “available” only if Windows Update offers it for this computer.",
   loadingTitle: "Enumerating devices…",
   loadingDescription: "The first read can take a few seconds.",
   unsupportedTitle: "Driver inventory not supported",
@@ -145,6 +127,7 @@ export default {
 
   // DeviceList
   devicesTitle: "Devices",
+  readingNote: "“Working” means Windows reports no problem, not that the driver is up to date. An update is “available” only when Windows Update offers it.",
   colName: "Name",
   colVersion: "Installed version",
   colProvider: "Provider",
@@ -190,10 +173,10 @@ export default {
   // UpdateCheckPanel
   consentCopy: "Lets the app query Windows Update. No driver is installed.",
   updatesTitle: "Driver updates",
-  updatesDescription:
-    "Asks Windows Update which driver updates are offered for the devices present. Requires the network and can take more than a minute. No driver is downloaded or installed.",
+  updatesDescription: "Asks Windows Update which drivers it offers for this PC. Needs the network and can take over a minute; nothing is installed.",
   checking: "Searching…",
-  checkButton: "Check for updates (Windows Update)",
+  runningNote: "You can keep using the app.",
+  checkButton: "Check for updates",
   settingsLoading: "Reading settings…",
   settingsError: "Settings unavailable: can't verify consent to online checks",
   onlineOff: "Online checks are turned off.",
@@ -201,14 +184,11 @@ export default {
   saving: "Saving…",
   allowOnline: "Allow online checks",
   settingNotSaved: "Setting not saved",
-  runningText: "Searching Windows Update{elapsed}. This can take more than a minute; you can keep using the app.",
   elapsed: "· {time} elapsed",
   consentDeniedTitle: "Online checks not allowed",
   busyTitle: "An update search is already in progress",
   busyDescription: "Wait for it to finish, then try again.",
   checkFailedTitle: "Update search failed",
-  lastCheck: "Last check: {date} · took {duration} · source {source} · {offered}",
-  offered_one: "{count} driver update offered",
-  offered_other: "{count} driver updates offered",
+  lastCheck: "Last check: {date} · took {duration}",
   lastCheckIncomplete: "The last check didn't complete",
 } satisfies Translation<typeof it>;

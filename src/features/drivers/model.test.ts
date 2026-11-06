@@ -9,11 +9,10 @@ import {
   groupDevices,
   healthLabel,
   matchesFilter,
-  summaryCards,
   updateLabel,
   updateSourceLabel,
 } from "./model";
-import { device, EMPTY_SUMMARY } from "./testing/fixtures";
+import { device } from "./testing/fixtures";
 
 const update = { kind: "updateAvailable", source: "windowsUpdate", title: "Intel - Display - 31.0", version: "31.0", date: null, hardwareId: "PCI\\VEN_8086" } as const;
 
@@ -71,48 +70,16 @@ describe("device filters", () => {
   });
 });
 
-describe("summaryCards", () => {
-  it("derives the five cards from the backend summary", () => {
-    const cards = summaryCards({
-      ...EMPTY_SUMMARY,
-      total: 120,
-      working: 110,
-      problems: 2,
-      driverMissing: 1,
-      disabled: 3,
-      updatesAvailable: 4,
-      notVerifiable: 5,
-      notChecked: 6,
-    });
-    expect(cards.map((c) => [c.id, c.value])).toEqual([
-      ["total", 120],
-      ["working", 110],
-      ["problems", 3],
-      ["updates", 4],
-      ["unverified", 11],
-    ]);
-    expect(cards.find((c) => c.id === "problems")?.tone).toBe("bad");
-    expect(cards.find((c) => c.id === "updates")?.tone).toBe("warn");
-    expect(cards.find((c) => c.id === "working")?.tone).toBe("neutral");
-  });
-
-  it("uses neutral tones when nothing needs attention", () => {
-    expect(summaryCards(EMPTY_SUMMARY).every((c) => c.tone === "neutral")).toBe(true);
-  });
-});
-
 describe("English labels", () => {
   afterEach(() => setLang("it"));
 
-  it("labels states, categories, filters and cards in English, with the same tones", () => {
+  it("labels states, categories, and filters in English, with the same tones", () => {
     setLang("en");
     expect(healthLabel("working")).toEqual({ label: "Working", tone: "ok" });
     expect(updateLabel(update)).toEqual({ label: "Update available", tone: "warn" });
     expect(categoryLabel("gpu")).toBe("Graphics cards");
     expect(filterLabel("notVerifiable")).toBe("Not verifiable");
     expect(updateSourceLabel("windowsUpdate")).toBe("Windows Update");
-    const cards = summaryCards({ ...EMPTY_SUMMARY, problems: 2, driverMissing: 1 });
-    expect(cards.find((c) => c.id === "problems")?.hint).toBe("2 with a detected problem, 1 without an associated driver");
     const groups = groupDevices([device("Zeta"), device("alpha"), device("GPU", { category: "gpu" })]);
     expect(groups.map((g) => g.label)).toEqual(["Graphics cards", "Other devices"]);
     expect(groups[1]?.devices.map((d) => d.name)).toEqual(["alpha", "Zeta"]);

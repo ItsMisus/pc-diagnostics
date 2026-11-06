@@ -1,9 +1,9 @@
 import { memo, type ReactNode } from "react";
 import { Disclosure } from "@/components/common/Disclosure";
 import { Icon } from "@/components/common/Icon";
+import { SourceCaption } from "@/components/common/SourceCaption";
 import { StatusBadge, type Tone } from "@/components/common/StatusBadge";
 import { RisolviButton } from "@/features/assistant/RisolviButton";
-import { sourceLabel } from "@/lib/format";
 import type { Confidence } from "@/types/generated/Confidence";
 import type { Finding } from "@/types/generated/Finding";
 import type { FindingKind } from "@/types/generated/FindingKind";
@@ -13,7 +13,6 @@ import {
   confidenceLabel,
   findingKindHint,
   findingKindLabel,
-  severityLabel,
   severityTone,
 } from "./model";
 import { simpleFindingText, simpleKindHint, simpleSeverityLabel } from "./simple";
@@ -85,7 +84,7 @@ export function SeverityRail({ tone }: { tone: Tone }) {
   return <span aria-hidden="true" className={`absolute inset-y-3 left-0 w-[3px] rounded-r-full ${RAIL[tone]}`} />;
 }
 
-const ARTICLE = "relative rounded-xl border border-line bg-surface p-4 pl-5 shadow-[inset_0_1px_0_var(--highlight)]";
+const ARTICLE = "relative rounded-md border border-line bg-surface p-4 pl-5";
 
 /** `findingIndex`: position in the report's `findings` (backend order); enables "Risolvi". */
 export const FindingCard = memo(function FindingCard({ finding, findingIndex }: { finding: Finding; findingIndex: number }) {
@@ -106,10 +105,12 @@ function RisolviRow({ finding, findingIndex, label }: { finding: Finding; findin
   );
 }
 
-/** The full technical view of a finding ("Avanzata", and the details of "Semplice"). */
+/**
+ * The full technical view of a finding ("Avanzata", and the details of "Semplice"). No
+ * severity badge: in "Avanzata" the group heading states it, in "Semplice" the card header.
+ */
 function TechnicalFinding({ finding }: { finding: Finding }) {
   const t = useT("diagnostics");
-  const tc = useT("common");
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -120,7 +121,6 @@ function TechnicalFinding({ finding }: { finding: Finding }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <StatusBadge tone={severityTone(finding.severity)} label={severityLabel(finding.severity)} />
           <KindBadge kind={finding.kind} />
           <ConfidenceLabel confidence={finding.confidence} />
         </div>
@@ -129,12 +129,12 @@ function TechnicalFinding({ finding }: { finding: Finding }) {
 
       {finding.evidence.length > 0 && (
         <Section title={t("evidence")}>
-          <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface-2/40 text-[13px]">
+          <ul className="divide-y divide-line border-y border-line text-[13px]">
             {finding.evidence.map((e, i) => (
-              <li key={`${e.label}-${i}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3 py-2">
-                <span className="text-fg-muted">{e.label}:</span>
-                <span className="font-medium text-fg tabular">{e.value}</span>
-                <span className="ml-auto pl-2 text-2xs text-fg-subtle">{tc("source", { source: sourceLabel(e.source) })}</span>
+              <li key={`${e.label}-${i}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5">
+                <span className="text-fg-muted">{e.label}</span>
+                <span className="ml-auto text-right font-medium text-fg tabular">{e.value}</span>
+                <SourceCaption source={e.source} />
               </li>
             ))}
           </ul>
@@ -218,7 +218,7 @@ export const SimpleFindingCard = memo(function SimpleFindingCard({
       <RisolviRow finding={finding} findingIndex={findingIndex} label={text.headline} />
 
       <Disclosure summary={t("showTechnical")} className="mt-4 border-t border-line pt-3">
-        <div className="rounded-lg border border-line bg-surface-2/40 p-3.5">
+        <div className="rounded-md border border-line bg-surface-2/40 p-3.5">
           <TechnicalFinding finding={finding} />
         </div>
       </Disclosure>
