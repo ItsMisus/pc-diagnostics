@@ -61,21 +61,17 @@ export default {
   noiseNote: "Variazioni inferiori a ±{pct}% sono considerate normale variabilità e non vengono evidenziate.",
 
   // Result view.
-  comparableNote:
-    "I punteggi sono confrontabili solo tra esecuzioni con la stessa versione della metodologia (questa esecuzione: v{version}).",
   cancelledDesc: "L'esecuzione è stata interrotta prima del termine.",
   failedTitle: "Benchmark non riuscito",
   failedDesc: "Nessun risultato è stato prodotto.",
+  comparableNote: "I punteggi sono confrontabili solo tra esecuzioni con la stessa versione della metodologia.",
   contextTitle: "Condizioni all'avvio",
   paramsTitle: "Parametri ed esecuzione",
-  buildBadge: "Build {profile}",
-  resultMeta: "{date} · durata {elapsed} · metodologia v{version}",
   safetyStop: "Arresto di sicurezza: {reason}",
   debugWarning: "Build di debug: le prestazioni misurate non sono rappresentative.",
   runNotes: "Note sull'esecuzione",
   interimPending: "Valori intermedi non ancora disponibili.",
   noMetrics: "Nessuna metrica prodotta",
-  interimValue: "valore intermedio",
   higherIsBetter: "più alto è meglio",
   lowerIsBetter: "più basso è meglio",
   seriesAria: "{label} durante l'esecuzione, scala da zero",
@@ -102,7 +98,6 @@ export default {
   appVersion: "Versione app",
 
   // Benchmarks page.
-  pageDescription: "Test selettivi e interrompibili. Nessun test parte automaticamente; uno solo alla volta.",
   unsupportedTitle: "Benchmark non supportati",
   listUnavailable: "Elenco dei test non disponibile",
   unsupportedDesc: "I benchmark richiedono l'applicazione desktop. Nessun dato dimostrativo viene mostrato.",
@@ -111,16 +106,13 @@ export default {
   detecting: "Rilevamento…",
   runningKind: "In corso: {kind}",
   notAvailable: "Non disponibile",
-  testsAvailable_one: "{count} test disponibile",
-  testsAvailable_other: "{count} test disponibili",
   noTestsInVersion: "Nessun test previsto da questa versione.",
   lastRun: "Ultima esecuzione:",
   allComponents: "Tutti i componenti",
   history: "Storico",
-  detectedComponent: "Componente rilevato · {component}",
   noTestsForComponent: "Nessun test disponibile per questo componente",
   testType: "Tipo di test",
-  result: "Risultato",
+  result: "Ultimo risultato",
 
   // Detected component.
   cpuUnidentified: "CPU non identificata",
@@ -148,9 +140,9 @@ export default {
   // Live progress and running bar.
   runAria: "Esecuzione {kind}",
   progressAria: "Avanzamento {kind}",
+  interimTitle: "Valori intermedi",
   stopping: "Interruzione…",
   stop: "Interrompi",
-  elapsed: "trascorsi {elapsed}",
   interimNote: "I valori intermedi servono solo a seguire l'esecuzione: un test interrotto non produce risultati.",
   runningRegion: "Benchmark in esecuzione",
   openScreen: "Apri la schermata del benchmark",

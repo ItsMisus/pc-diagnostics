@@ -22,29 +22,36 @@ import type { ResultMetric } from "@/types/generated/ResultMetric";
 import {
   isDebugBuild,
   isStorageKind,
-  kindLabel,
   powerSourceLabel,
   stateLabel,
   stateTone,
 } from "./model";
 import { INSET } from "./ui";
 
-/** Full view of one stored or just-finished result. Shared by Benchmarks and History. */
-export function ResultView({ result, comparison }: { result: BenchmarkResult; comparison?: ReactNode }) {
+/**
+ * Full view of one stored or just-finished result. Shared by Benchmarks and History. The test
+ * name is the surrounding card's (Benchmarks: the test panel above; History: the detail
+ * title), so it is not repeated here. `meta` (state and date) is off when the container
+ * already shows them.
+ */
+export function ResultView({
+  result,
+  comparison,
+  meta = true,
+}: {
+  result: BenchmarkResult;
+  comparison?: ReactNode;
+  meta?: boolean;
+}) {
   const t = useT("benchmarks");
   return (
     <div className="flex flex-col gap-4">
-      <ResultHeader result={result} />
+      {meta && <ResultMeta result={result} />}
       <SafetyNotes result={result} />
       <RunNotes notes={result.notes} />
 
       {result.state === "completed" && (
-        <div className="flex flex-col gap-2">
-          <MetricsGrid metrics={result.metrics} />
-          <p className="text-xs text-fg-subtle tabular">
-            {t("comparableNote", { version: result.methodologyVersion })}
-          </p>
-        </div>
+        <MetricsGrid metrics={result.metrics} />
       )}
       {result.state === "cancelled" && (
         <StateView kind="empty" title={t("cancelledTitle")} description={t("cancelledDesc")} />
@@ -72,11 +79,11 @@ export function ResultView({ result, comparison }: { result: BenchmarkResult; co
 
       <div className="grid grid-cols-1 gap-x-8 gap-y-5 border-t border-line pt-4 lg:grid-cols-2">
         <section>
-          <h3 className="mb-2 eyebrow">{t("contextTitle")}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-fg">{t("contextTitle")}</h3>
           <ContextList context={result.context} />
         </section>
         <section>
-          <h3 className="mb-2 eyebrow">{t("paramsTitle")}</h3>
+          <h3 className="mb-2 text-sm font-semibold text-fg">{t("paramsTitle")}</h3>
           <RunParams result={result} />
         </section>
       </div>
@@ -84,23 +91,14 @@ export function ResultView({ result, comparison }: { result: BenchmarkResult; co
   );
 }
 
-function ResultHeader({ result }: { result: BenchmarkResult }) {
+/** State and start time. Duration, methodology and build are in the parameters list. */
+function ResultMeta({ result }: { result: BenchmarkResult }) {
   const t = useT("benchmarks");
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-[15px] leading-6 font-semibold text-fg">{kindLabel(result.kind, t)}</h3>
-        <StatusBadge tone={stateTone(result.state)} label={stateLabel(result.state, t)} />
-        {isDebugBuild(result) && <StatusBadge tone="warn" label={t("buildBadge", { profile: result.buildProfile })} />}
-      </div>
-      <p className="text-xs text-fg-muted tabular">
-        {t("resultMeta", {
-          date: formatDateTime(result.startedAt),
-          elapsed: formatElapsed(result.durationMs),
-          version: result.methodologyVersion,
-        })}
-      </p>
-    </div>
+    <p className="flex flex-wrap items-center gap-2 text-xs text-fg-muted tabular">
+      <StatusBadge tone={stateTone(result.state)} label={stateLabel(result.state, t)} />
+      {formatDateTime(result.startedAt)}
+    </p>
   );
 }
 
@@ -110,7 +108,7 @@ function SafetyNotes({ result }: { result: BenchmarkResult }) {
   const debug = isDebugBuild(result);
   if (!result.safetyStop && result.warnings.length === 0 && !debug) return null;
   return (
-    <div role="note" className="rounded-lg border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
+    <div role="note" className="rounded-md border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
       {result.safetyStop && (
         <p className="flex items-start gap-2 font-medium">
           <Icon name="alert" className="mt-0.5 shrink-0 text-warn" />
@@ -168,17 +166,16 @@ export function MetricsGrid({ metrics, interim = false }: { metrics: readonly Re
       {metrics.map((m, i) => {
         const headline = i === 0 && !interim;
         return (
-          <li key={m.id} className={`${INSET} flex flex-col bg-surface-2/40 px-3 py-2.5`}>
+          <li key={m.id} className={`${INSET} flex flex-col px-3 py-2.5`}>
             <span className="text-xs text-fg-muted">{m.label}</span>
             <span
-              className={`mt-1 tabular text-fg ${
-                headline ? "text-2xl leading-8 font-semibold tracking-[-0.01em]" : "text-base leading-6 font-medium"
+              className={`mt-1 font-display tabular text-fg ${
+                headline ? "text-[28px] leading-9 font-light tracking-[-0.02em]" : "text-lg leading-7 font-light"
               }`}
             >
               {formatUnitValue(m.value, m.unit)}
             </span>
             <span className="mt-auto pt-1 text-2xs text-fg-subtle">
-              {interim ? `${t("interimValue")} · ` : ""}
               {m.higherIsBetter ? t("higherIsBetter") : t("lowerIsBetter")}
             </span>
           </li>
@@ -205,7 +202,7 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
 
   return (
     <figure className={`${INSET} min-w-0 p-3`}>
-      <figcaption className="mb-2 text-xs font-medium text-fg-muted">{series.label}</figcaption>
+      <figcaption className="mb-2 text-xs font-semibold text-fg-muted">{series.label}</figcaption>
       <LineChart
         series={chartSeries}
         xDomain={xDomain}
@@ -259,10 +256,14 @@ function RunParams({ result }: { result: BenchmarkResult }) {
   }
   items.push(
     { label: t("actualDuration"), value: formatElapsed(result.durationMs) },
-    { label: t("methodology"), value: `v${result.methodologyVersion}` },
+    {
+      label: t("methodology"),
+      value: <span title={t("comparableNote")}>v{result.methodologyVersion}</span>,
+    },
     {
       label: t("build"),
-      value: isDebugBuild(result) ? <StatusBadge tone="warn" label={result.buildProfile} /> : result.buildProfile,
+      // A debug build is flagged once, in the warnings at the top of the result.
+      value: result.buildProfile,
     },
     { label: t("appVersion"), value: result.appVersion },
   );

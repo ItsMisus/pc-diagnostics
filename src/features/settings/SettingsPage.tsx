@@ -50,7 +50,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description={t("pageDescription")} />
+      <PageHeader title="Settings" />
       {settings.status === "loading" && (
         <Card>
           <StateView kind="loading" />
@@ -86,20 +86,10 @@ export function SettingsPage() {
             </Row>
             <Row
               label={t("viewMode")}
-              hint={
-                <>
-                  <span className="block">
-                    {t.rich("viewModeSimpleHint", {
-                      name: <span className="font-medium text-fg">{tc("viewModeSimple")}</span>,
-                    })}
-                  </span>
-                  <span className="mt-1 block">
-                    {t.rich("viewModeAdvancedHint", {
-                      name: <span className="font-medium text-fg">{tc("viewModeAdvanced")}</span>,
-                    })}
-                  </span>
-                </>
-              }
+              hint={t.rich("viewModeHint", {
+                simple: <span className="font-medium text-fg">{tc("viewModeSimple")}</span>,
+                advanced: <span className="font-medium text-fg">{tc("viewModeAdvanced")}</span>,
+              })}
             >
               <Segmented
                 label={t("viewMode")}

@@ -4,11 +4,10 @@ import type { Translation } from "../types";
 /** English texts for the "settings" namespace. */
 export default {
   language: "Language",
-  languageHint: "“System” follows the Windows display language. Reports and diagnoses already created stay in the language they were made in.",
+  languageHint: "“System” follows the Windows display language.",
   languageSystem: "System",
 
   // Page
-  pageDescription: "Preferences saved locally in SQLite",
   seconds: "{n} s",
   saveFailed: "Setting not saved",
   saving: "Saving…",
@@ -21,21 +20,19 @@ export default {
   theme_light: "Light",
   theme_dark: "Dark",
   viewMode: "How problems and errors are shown",
-  viewModeSimpleHint: "{name}: explanations in plain words and what you can do; technical details stay available on request.",
-  viewModeAdvancedHint: "{name}: every technical detail (evidence, sources, codes, rules, full error messages).",
+  viewModeHint: "{simple}: plain explanations and what to do. {advanced}: every technical detail (sources, codes, full errors).",
 
   // Monitoring
   monitoring: "Monitoring",
   samplingInterval: "Sampling interval",
-  samplingIntervalHint: "Lightweight metrics (CPU, RAM, GPU, disk). Slow sources use their own pace.",
+  samplingIntervalHint: "CPU, RAM, GPU and disk; slow sources keep their own pace.",
   topN: "Processes in the ranking",
   topNHint: "Top N by Impact Score. Used by the Processes page.",
 
   // Privacy
   privacy: "Privacy and network",
   onlineChecks: "Allow online checks",
-  onlineChecksHint:
-    "Off by default. Needed to look for driver updates through Windows Update (Drivers page). No driver is ever installed. No telemetry is ever sent.",
+  onlineChecksHint: "Needed to look for driver updates through Windows Update. No driver is installed.",
 
   // App overhead card
   overhead: "App resource usage",
@@ -46,7 +43,7 @@ export default {
   colProcesses: "Processes",
   rowCore: "Core (Rust)",
   rowWebview: "WebView2 (interface)",
-  overheadNote: "CPU as a share of the whole machine, averaged over the last {window}. Updated every {interval} s.",
+  overheadCpuNote: "Share of the whole machine, averaged over the last {window}",
   historyCapacity: "History capacity",
   historyCapacityValue: "{count} samples (about {duration})",
   samplesCollected: "Samples collected",

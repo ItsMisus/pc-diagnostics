@@ -32,7 +32,7 @@ import {
   storageConsentCopy,
   threadLimit,
 } from "./model";
-import { INSET, PANEL } from "./ui";
+import { INSET, PANEL, PANEL_TITLE } from "./ui";
 
 const EMPTY_VOLUMES: readonly VolumeInfo[] = [];
 /** Native selects are styled globally: sizing only. Left padding only, the chevron owns the right. */
@@ -82,7 +82,7 @@ export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
   return (
     <section aria-labelledby={titleId} className={`${PANEL} p-4`}>
       <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-        <h3 id={titleId} className="text-[15px] leading-6 font-semibold text-fg">
+        <h3 id={titleId} className={PANEL_TITLE}>
           {kindLabel(cap.kind, t)}
         </h3>
         <span className="text-2xs text-fg-subtle tabular">{t("methodologyVersion", { version: cap.methodologyVersion })}</span>

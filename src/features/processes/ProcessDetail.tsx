@@ -59,7 +59,7 @@ function ProcessDetail({ lastSeen }: { lastSeen: ProcessRow }) {
 
   return (
     <Card
-      title={t("detailTitle")}
+      title={row.name}
       aside={
         <Button variant="ghost" size="sm" onClick={() => select(null)} className="-my-1 -mr-2">
           <Icon name="close" size={14} />
@@ -68,16 +68,13 @@ function ProcessDetail({ lastSeen }: { lastSeen: ProcessRow }) {
       }
     >
       <div className="flex flex-col gap-5" aria-live="off">
-        <header>
-          <h3 className="flex flex-wrap items-center gap-2 text-sm font-medium break-all text-fg">
-            {row.name}
-            {row.isSelf && <SelfTag />}
-          </h3>
-          <p className="mt-0.5 text-xs text-fg-subtle tabular">
+        <p className="-mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs break-all text-fg-subtle tabular">
+          <span>
             PID {row.pid} · {categoryLabel(row.category, t)}
             {!row.accessible && ` · ${t("protectedDetail")}`}
-          </p>
-        </header>
+          </span>
+          {row.isSelf && <SelfTag />}
+        </p>
 
         {history.status === "loading" && <StateView compact kind="loading" title={t("historyLoading")} />}
         {history.status === "error" &&
@@ -209,9 +206,11 @@ const HistoryView = memo(function HistoryView({ history }: { history: ProcessHis
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <StatusBadge tone="neutral" label={history.running ? t("historyRunning") : t("historyEnded")} />
-      </div>
+      {!history.running && (
+        <div>
+          <StatusBadge tone="neutral" label={t("historyEnded")} />
+        </div>
+      )}
       {points.length === 0 ? (
         <p className="text-sm text-fg-subtle">{t("noSamples")}</p>
       ) : (
@@ -236,7 +235,7 @@ const HistoryView = memo(function HistoryView({ history }: { history: ProcessHis
               ariaLabel={t("ramChartAria")}
             />
           </MiniChart>
-          <MiniChart title={t("ioChartTitle")} note={t("ioNote")} legend={charts.io}>
+          <MiniChart title={t("ioChartTitle")} legend={charts.io}>
             <LineChart
               series={charts.io}
               xDomain={charts.xDomain}
@@ -254,25 +253,21 @@ const HistoryView = memo(function HistoryView({ history }: { history: ProcessHis
 
 /**
  * Chart with a caption. Multi-series charts get a key drawn like the lines themselves
- * (solid accent, dashed muted); it is decorative, since the caption already names them.
+ * (solid, dashed); it is decorative, since the caption already names them.
  */
 function MiniChart({
   title,
-  note,
   legend,
   children,
 }: {
   title: string;
-  note?: string;
   legend?: readonly Series[];
   children: ReactNode;
 }) {
   return (
     <figure>
       <figcaption className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <span className="text-xs text-fg-muted" title={note}>
-          {title}
-        </span>
+        <span className="text-xs text-fg-muted">{title}</span>
         {legend && (
           <span aria-hidden="true" className="flex items-center gap-3 text-2xs text-fg-subtle">
             {legend.map((s) => (
@@ -289,7 +284,7 @@ function MiniChart({
   );
 }
 
-/** Same stroke as the chart's series: solid accent for primary, dashed muted for secondary. */
+/** Same stroke as the chart's series: solid for primary, dashed for secondary. */
 function LineSwatch({ secondary }: { secondary: boolean }) {
   return (
     <svg width="14" height="4" viewBox="0 0 14 4" className="shrink-0">
@@ -298,7 +293,7 @@ function LineSwatch({ secondary }: { secondary: boolean }) {
         x2={13}
         y1={2}
         y2={2}
-        stroke={secondary ? "var(--fg-subtle)" : "var(--accent)"}
+        stroke={secondary ? "var(--meter)" : "var(--fg-muted)"}
         strokeWidth={secondary ? 1.25 : 1.5}
         strokeDasharray={secondary ? "3 2" : undefined}
         strokeLinecap="round"

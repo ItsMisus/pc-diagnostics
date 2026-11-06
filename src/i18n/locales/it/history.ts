@@ -1,6 +1,5 @@
 /** Italian (reference) texts for the "history" namespace. Test kinds and states come from "benchmarks". */
 export default {
-  pageDescription: "Risultati dei benchmark salvati localmente, dal più recente.",
   refresh: "Aggiorna",
   refreshFailed: "Aggiornamento non riuscito: sono mostrati i dati precedenti",
   unavailable: "Storico non disponibile",
@@ -10,10 +9,9 @@ export default {
   filterAll: "Tutti",
   noRunsOfKind: "Nessuna esecuzione di questo tipo",
   limitNote: "Sono mostrate le ultime {count} esecuzioni.",
-  detail: "Dettaglio",
   loading: "Lettura dello storico…",
   emptyTitle: "Nessun benchmark salvato",
-  emptyDesc: "I risultati compaiono qui al termine di ogni esecuzione. Nessun test parte automaticamente.",
+  emptyDesc: "I risultati compaiono qui al termine di ogni esecuzione.",
   goToBenchmarks: "Vai a Benchmarks",
   tableCaption: "Esecuzioni salvate",
   colDate: "Data",
@@ -21,7 +19,6 @@ export default {
   colState: "Stato",
   colHeadline: "Risultato principale",
   colDuration: "Durata",
-  colMethodology: "Metodologia",
   openDetail: ", apri il dettaglio",
   noResult: "nessun risultato",
   compareWith: "Confronta con",

@@ -56,7 +56,7 @@ export function ComparisonPanel({
   return (
     <section aria-labelledby={titleId} className={`${INSET} p-4`}>
       <header className="mb-3 flex min-h-5 flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h3 id={titleId} className="eyebrow">
+        <h3 id={titleId} className="text-sm font-semibold text-fg">
           {t("compareTitle")}
         </h3>
         {aside}
@@ -104,7 +104,7 @@ function ComparisonTable({ data }: { data: BenchmarkComparison }) {
         <p className="text-[13px] text-fg">{t("notComparable")}</p>
       )}
       {summary.caveats.length > 0 && (
-        <div role="note" className="rounded-lg border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
+        <div role="note" className="rounded-md border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
           <p className="font-medium">
             {summary.kind === "comparable" ? t("caveatsComparable") : t("caveatsReasons")}
           </p>
@@ -124,7 +124,10 @@ function ComparisonTable({ data }: { data: BenchmarkComparison }) {
                 <Th>{t("colMetric")}</Th>
                 <Th align="right">{t("colCurrent")}</Th>
                 <Th align="right">{t("colPrevious")}</Th>
-                <Th align="right">{t("colChange")}</Th>
+                <Th align="right">
+                  <span title={t("noiseNote", { pct: MEANINGFUL_CHANGE_PCT })}>{t("colChange")}</span>
+                  <span className="sr-only">. {t("noiseNote", { pct: MEANINGFUL_CHANGE_PCT })}</span>
+                </Th>
               </>
             }
           >
@@ -149,7 +152,6 @@ function ComparisonTable({ data }: { data: BenchmarkComparison }) {
               );
             })}
           </Table>
-          <p className="text-2xs text-fg-subtle">{t("noiseNote", { pct: MEANINGFUL_CHANGE_PCT })}</p>
         </>
       )}
     </div>

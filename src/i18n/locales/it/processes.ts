@@ -1,7 +1,6 @@
 /** Italian (reference) texts for the "processes" namespace. */
 export default {
   // ProcessesPage
-  pageDescription: "Processi che esercitano pressione su CPU, memoria e I/O (sola lettura)",
   connectingTitle: "Connessione all'analisi dei processi…",
   waitingTitle: "In attesa della prima misurazione…",
   waitingDescription:
@@ -10,25 +9,23 @@ export default {
   unsupportedDescription: "L'analisi dei processi richiede l'applicazione desktop. Nessun dato dimostrativo viene mostrato.",
   notAllowedTitle: "Analisi dei processi non consentita",
   unavailableTitle: "Analisi dei processi non disponibile",
-  badgeLive: "In tempo reale",
-  badgeConnecting: "Connessione…",
-  badgeWaiting: "In attesa del primo campione",
-  badgeUnsupported: "Non supportato",
-  badgeNotAllowed: "Non consentito",
-  badgeError: "Analisi interrotta",
   modeInstant: "Istantanea",
   modeWindow: "Intervallo (ultimi {seconds} s)",
   rankingLabel: "Classifica",
   searchLabel: "Cerca processo per nome",
   searchPlaceholder: "Cerca per nome…",
-  summary:
-    "{total} processi attivi · {inaccessible} protetti (percorso non leggibile; metriche comunque reali) · mostrati i primi {shown} per Impact Score (numero configurabile in {settings}) · aggiornato alle {time}",
+  summaryTotal_one: "{count} processo",
+  summaryTotal_other: "{count} processi",
+  summaryProtected_one: "{count} protetto",
+  summaryProtected_other: "{count} protetti",
+  summaryShown: "primi {shown} per Impact Score",
 
   // ProcessTable
   protectedNote:
     "Processo protetto: il percorso dell'eseguibile non è leggibile senza privilegi elevati. Le metriche provengono dallo snapshot del kernel e sono reali.",
   ioNote: "I/O logico (file, rete, dispositivi): non corrisponde ai byte fisici scritti sul disco",
   colName: "Nome processo",
+  colPeak: "Picco",
   selfTag: "questa app",
   emptyRanking: "Nessun processo in classifica in questo campione.",
   noMatch: "Nessun processo corrisponde a «{query}».",
@@ -38,7 +35,6 @@ export default {
   protectedShort: "protetto",
   impactOf: "Impact Score di {name}",
   outOf100: "{value} su 100",
-  peak: "picco {value}",
 
   // rows.ts: process categories
   category_system: "Sistema",
@@ -65,7 +61,6 @@ export default {
   pressureAria: "Pressione sulle risorse",
   pressureOf: "Pressione {label}",
   staleNote: "Il processo non è più in classifica: sono mostrati gli ultimi valori noti.",
-  historyRunning: "In esecuzione",
   historyEnded: "Terminato",
   noSamples: "Nessun campione ancora registrato per questo processo.",
   cpuChartTitle: "CPU (% dell'intero sistema)",
@@ -85,7 +80,7 @@ export default {
     "quota della capacità dell'intero sistema ({processors} processori logici); 100 significa tutti i processori occupati.",
   scoreRam: "memoria del processo rapportata alla memoria fisica totale ({total}; disponibile ora {available}).",
   scoreIo:
-    "I/O logico (file, rete, dispositivi) rapportato a un riferimento di {reference}, che corrisponde a 100. Non corrisponde ai byte fisici scritti sul disco.",
+    "I/O logico (file, rete, dispositivi) rapportato a un riferimento di {reference}, che corrisponde a 100.",
   scoreModes:
     "«Istantanea» usa l'ultimo campione (ogni {interval} s). «Intervallo» usa la media degli ultimi {window} s; il picco è il valore massimo osservato nello stesso intervallo.",
   scoreMethodology:

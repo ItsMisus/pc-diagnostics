@@ -1,11 +1,10 @@
 /** Italian (reference) texts for the "settings" namespace. */
 export default {
   language: "Lingua",
-  languageHint: "«Sistema» segue la lingua di Windows. Report e diagnosi già creati restano nella lingua in cui sono stati generati.",
+  languageHint: "«Sistema» segue la lingua di Windows.",
   languageSystem: "Sistema",
 
   // Page
-  pageDescription: "Preferenze salvate localmente in SQLite",
   seconds: "{n} s",
   saveFailed: "Impostazione non salvata",
   saving: "Salvataggio…",
@@ -18,22 +17,19 @@ export default {
   theme_light: "Chiaro",
   theme_dark: "Scuro",
   viewMode: "Visualizzazione di problemi ed errori",
-  viewModeSimpleHint:
-    "{name}: spiegazioni in parole semplici e cosa puoi fare; i dettagli tecnici restano consultabili su richiesta.",
-  viewModeAdvancedHint: "{name}: tutti i dettagli tecnici (evidenze, fonti, codici, regole, messaggi di errore completi).",
+  viewModeHint: "{simple}: spiegazioni semplici e cosa fare. {advanced}: tutti i dettagli tecnici (fonti, codici, errori completi).",
 
   // Monitoring
   monitoring: "Monitoraggio",
   samplingInterval: "Intervallo di campionamento",
-  samplingIntervalHint: "Metriche leggere (CPU, RAM, GPU, disco). Le sorgenti lente usano una cadenza propria.",
+  samplingIntervalHint: "CPU, RAM, GPU e disco; le sorgenti lente hanno una cadenza propria.",
   topN: "Processi in classifica",
   topNHint: "Primi N per Impact Score. Usato dalla pagina Processes.",
 
   // Privacy
   privacy: "Privacy e rete",
   onlineChecks: "Consenti verifiche online",
-  onlineChecksHint:
-    "Disattivato di default. Necessario per cercare aggiornamenti driver tramite Windows Update (pagina Drivers). Nessun driver viene installato. Nessuna telemetria viene mai inviata.",
+  onlineChecksHint: "Serve a cercare aggiornamenti dei driver con Windows Update. Nessun driver viene installato.",
 
   // App overhead card
   overhead: "Consumo dell'applicazione",
@@ -44,7 +40,7 @@ export default {
   colProcesses: "Processi",
   rowCore: "Core (Rust)",
   rowWebview: "WebView2 (interfaccia)",
-  overheadNote: "CPU come quota dell'intera macchina, media sugli ultimi {window}. Aggiornato ogni {interval} s.",
+  overheadCpuNote: "Quota dell'intera macchina, media sugli ultimi {window}",
   historyCapacity: "Capacità dello storico",
   historyCapacityValue: "{count} campioni (circa {duration})",
   samplesCollected: "Campioni raccolti",

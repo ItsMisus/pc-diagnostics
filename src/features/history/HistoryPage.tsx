@@ -109,7 +109,6 @@ export function HistoryPage() {
     <>
       <PageHeader
         title="History"
-        description={t("pageDescription")}
         actions={
           <Button onClick={() => setNonce((n) => n + 1)} disabled={loading} aria-busy={loading}>
             {loading ? <Spinner /> : <Icon name="refresh" />}
@@ -186,7 +185,7 @@ export function HistoryPage() {
           {selected && (
             <m.div key={selected.runId} ref={detailRef} className="scroll-mt-16" {...detailIn}>
               <Card
-                title={t("detail")}
+                title={`${kindLabel(selected.kind, tb)} · ${formatDateTime(selected.startedAt)}`}
                 aside={
                   <Button variant="ghost" size="sm" className="-mr-1.5" onClick={() => setSelectedId(null)}>
                     <Icon name="close" size={14} />
@@ -197,6 +196,7 @@ export function HistoryPage() {
                 <ResultView
                   key={selected.runId}
                   result={selected}
+                  meta={false}
                   comparison={<HistoryComparison all={all} current={selected} />}
                 />
               </Card>
@@ -285,7 +285,6 @@ function HistoryTable({
             direction={direction("duration")}
             onSort={() => onSort("duration")}
           />
-          <Th>{t("colMethodology")}</Th>
         </>
       }
     >
@@ -324,7 +323,6 @@ function HistoryTable({
               )}
             </Td>
             <Td className="text-right whitespace-nowrap">{formatElapsed(r.durationMs)}</Td>
-            <Td className="text-fg-muted">v{r.methodologyVersion}</Td>
           </tr>
         );
       })}

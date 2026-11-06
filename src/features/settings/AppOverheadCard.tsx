@@ -7,7 +7,7 @@ import { Table, Td } from "@/components/common/Table";
 import { usePolling } from "@/hooks/usePolling";
 import { stateKindForError } from "@/lib/errors";
 import { formatBytes, formatDuration, formatPercent } from "@/lib/format";
-import { localeTag, useT } from "@/i18n";
+import { useT } from "@/i18n";
 import { commands } from "@/services/commands";
 import type { ResourceUsage } from "@/types/generated/ResourceUsage";
 
@@ -16,6 +16,8 @@ const POLL_MS = 5_000;
 
 const fetchOverview = () => Promise.all([commands.getAppOverhead(), commands.getMonitorStatus()]);
 const pct = (v: number) => formatPercent(v, 1);
+/** Same look as `<Table>`'s own headers. */
+const TH = "pr-4 pb-2 text-2xs font-medium whitespace-nowrap text-fg-subtle";
 const bytes = (v: number) => formatBytes(v);
 
 export function AppOverheadCard() {
@@ -37,20 +39,35 @@ function OverheadDetails({ data }: { data: Awaited<ReturnType<typeof fetchOvervi
   const [overhead, monitor] = data;
   const historySpanS = (monitor.historyCapacity * monitor.intervalMs) / 1000;
   const t = useT("settings");
-  const num = new Intl.NumberFormat(localeTag(), { maximumFractionDigits: 1 });
+  const cpuNote = t("overheadCpuNote", { window: formatDuration(overhead.windowMs / 1000) });
   return (
     <div className="flex flex-col">
-      <Table caption={t("overheadCaption")} headers={[t("colComponent"), t("colCpu"), t("colMemory"), t("colProcesses")]}>
+      <Table
+        caption={t("overheadCaption")}
+        head={
+          <>
+            <th scope="col" className={`${TH} text-left`}>
+              {t("colComponent")}
+            </th>
+            <th scope="col" className={`${TH} text-right`}>
+              <span title={cpuNote}>{t("colCpu")}</span>
+              <span className="sr-only">. {cpuNote}</span>
+            </th>
+            <th scope="col" className={`${TH} text-right`}>
+              {t("colMemory")}
+            </th>
+            <th scope="col" className={`${TH} text-right`}>
+              {t("colProcesses")}
+            </th>
+          </>
+        }
+      >
         <UsageRow label={t("rowCore")} usage={overhead.core} />
         <UsageRow label={t("rowWebview")} usage={overhead.webview} />
       </Table>
-      <p className="mt-2 text-xs text-fg-muted">
-        {t("overheadNote", { window: formatDuration(overhead.windowMs / 1000), interval: num.format(POLL_MS / 1000) })}
-      </p>
       <DefinitionList
         className="mt-4 border-t border-line pt-3.5"
         items={[
-          { label: t("samplingInterval"), value: t("seconds", { n: num.format(monitor.intervalMs / 1000) }) },
           {
             label: t("historyCapacity"),
             value: t("historyCapacityValue", { count: monitor.historyCapacity, duration: formatDuration(historySpanS) }),
@@ -66,13 +83,13 @@ function UsageRow({ label, usage }: { label: string; usage: ResourceUsage }) {
   return (
     <tr>
       <Td>{label}</Td>
-      <Td>
+      <Td className="text-right whitespace-nowrap">
         <MetricValue metric={usage.cpuPercent} format={pct} /> <SourceCaption metric={usage.cpuPercent} />
       </Td>
-      <Td>
+      <Td className="text-right whitespace-nowrap">
         <MetricValue metric={usage.workingSetBytes} format={bytes} />
       </Td>
-      <Td>{usage.processCount}</Td>
+      <Td className="text-right">{usage.processCount}</Td>
     </tr>
   );
 }

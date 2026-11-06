@@ -34,6 +34,7 @@ import {
 } from "./model";
 import { ResultView } from "./ResultView";
 import { TestPanel } from "./TestPanel";
+import { PANEL, PANEL_TITLE } from "./ui";
 import { useBenchView } from "./viewStore";
 
 const NO_CAPS: readonly BenchmarkCapability[] = [];
@@ -46,7 +47,6 @@ const panelIn = {
 
 /** Benchmarks: nothing starts on entering a page or a screen; every run is explicit. */
 export function BenchmarksPage() {
-  const t = useT("benchmarks");
   const component = useBenchView((s) => s.component);
   const ensureCapabilities = useBench((s) => s.ensureCapabilities);
   useEffect(() => ensureCapabilities(), [ensureCapabilities]);
@@ -54,7 +54,7 @@ export function BenchmarksPage() {
 
   return (
     <>
-      <PageHeader title="Benchmarks" description={t("pageDescription")} />
+      <PageHeader title="Benchmarks" />
       <CapabilitiesGate>
         {/* Grid <-> component screen: a short cross-fade on user navigation only. */}
         <AnimatePresence mode="wait" initial={false}>
@@ -125,11 +125,11 @@ function ComponentCard({ component }: { component: BenchComponent }) {
     <button
       type="button"
       onClick={() => open(component)}
-      className="group pressable flex flex-col items-stretch gap-3 rounded-xl border border-line bg-surface p-4 text-left shadow-[inset_0_1px_0_var(--highlight)] hover:border-line-strong hover:bg-surface-2/60"
+      className={`group pressable flex flex-col items-stretch gap-3 p-4 text-left hover:border-line-strong hover:bg-surface-2/60 ${PANEL}`}
     >
       <span className="flex items-start justify-between gap-3">
         <span className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-[15px] leading-6 font-semibold text-fg">{componentLabel(component)}</span>
+          <span className={PANEL_TITLE}>{componentLabel(component)}</span>
           {summary !== null ? (
             <span className="text-[13px] break-words text-fg-muted">{summary}</span>
           ) : inventoryFailed ? (
@@ -144,10 +144,8 @@ function ComponentCard({ component }: { component: BenchComponent }) {
         <span className="flex shrink-0 items-center gap-2 pt-0.5">
           {running ? (
             <StatusBadge tone="neutral" label={t("runningKind", { kind: kindLabel(running, t) })} />
-          ) : available.length === 0 ? (
-            <StatusBadge tone="neutral" label={t("notAvailable")} />
           ) : (
-            <span className="text-xs text-fg-muted tabular">{t.plural("testsAvailable", available.length)}</span>
+            available.length === 0 && <StatusBadge tone="neutral" label={t("notAvailable")} />
           )}
           <Icon
             name="chevronRight"
@@ -231,7 +229,7 @@ function ComponentScreen({ component }: { component: BenchComponent }) {
         </Button>
       </div>
 
-      <Card title={t("detectedComponent", { component: componentLabel(component) })}>
+      <Card title={componentLabel(component)}>
         <DetectedComponent component={component} />
       </Card>
 
