@@ -8,16 +8,17 @@ import { stateKindForError } from "@/lib/errors";
 import { formatTime } from "@/lib/format";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useInventory } from "@/features/monitoring/inventoryStore";
-import { InventoryState, LiveBadge, LiveConnectionState } from "@/features/monitoring/StatusViews";
+import { InventoryState } from "@/features/monitoring/StatusViews";
 import { CpuSection } from "./CpuSection";
 import { GpuSection } from "./GpuSection";
 import { MemorySection } from "./MemorySection";
 import { StorageSection } from "./StorageSection";
+import { SystemSection } from "./SystemSection";
 
 /**
- * Static inventory plus live values. The page subscribes only to the inventory; every
- * live block selects its own slice of the latest sample. The content is a size container:
- * the sections' column splits follow its width, not the window's.
+ * What the PC is: inventory and specs, one panel per component, no live values (those live
+ * on Overview, docs/ui-dashboard-brief.md rule R1). The content is a size container: the
+ * grid follows its width, not the window's.
  */
 export function HardwarePage() {
   const t = useT("hardware");
@@ -27,10 +28,11 @@ export function HardwarePage() {
     <>
       <PageHeader
         title="Hardware"
-        description={t("pageDescription")}
         actions={
           <>
-            <LiveBadge />
+            {data && (
+              <span className="text-xs text-fg-subtle tabular">{t("inventoryAt", { time: formatTime(data.collectedAt) })}</span>
+            )}
             <RefreshButton disabled={status !== "ready"} />
           </>
         }
@@ -42,15 +44,18 @@ export function HardwarePage() {
           <InventoryState />
         </Card>
       ) : (
-        <div className="@container flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-xs text-fg-subtle tabular">{t("inventoryAt", { time: formatTime(data.collectedAt) })}</p>
-            <LiveConnectionState compact />
-          </div>
+        <div className="@container grid grid-cols-1 gap-4 @3xl:grid-cols-2">
+          <SystemSection />
           <CpuSection cpu={data.cpu} />
-          <GpuSection gpus={data.gpus} />
-          <MemorySection memory={data.memory} />
-          <StorageSection disks={data.physicalDisks} volumes={data.volumes} />
+          <div className="min-w-0 @3xl:col-span-2">
+            <GpuSection gpus={data.gpus} />
+          </div>
+          <div className="min-w-0 @3xl:col-span-2">
+            <MemorySection memory={data.memory} />
+          </div>
+          <div className="min-w-0 @3xl:col-span-2">
+            <StorageSection disks={data.physicalDisks} volumes={data.volumes} />
+          </div>
         </div>
       )}
     </>
@@ -76,13 +81,7 @@ function RefreshError() {
   if (!error) return null;
   return (
     <div className="mb-4">
-      <StateView
-        compact
-        kind={stateKindForError(error)}
-        title={t("refreshFailed")}
-        error={error}
-        onRetry={refresh}
-      />
+      <StateView compact kind={stateKindForError(error)} title={t("refreshFailed")} error={error} onRetry={refresh} />
     </div>
   );
 }

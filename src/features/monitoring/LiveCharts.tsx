@@ -1,11 +1,10 @@
 import { memo, useMemo } from "react";
 import { LineChart, type Series } from "@/components/charts/LineChart";
-import type { Point } from "@/components/charts/scale";
 import { Card } from "@/components/common/Card";
 import { Skeleton } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
-import { formatBytesPerSec, formatPercent } from "@/lib/format";
+import { formatBytesPerSec } from "@/lib/format";
 import { useInventoryData, useSeries, useTimeDomain } from "./hooks";
 import { useLive } from "./liveStore";
 import { primaryGpu } from "./selection";
@@ -16,21 +15,6 @@ import { InventoryState, WaitingForSample } from "./StatusViews";
 const CHART_HEIGHT = 120;
 const axisPercent = (v: number) => `${v.toFixed(0)}%`;
 const axisThroughput = (v: number) => formatBytesPerSec(v, 0);
-const tooltipThroughput = (v: number) => formatBytesPerSec(v);
-
-function lastValue(points: readonly Point[]): number | null {
-  return points[points.length - 1]?.v ?? null;
-}
-
-/** Latest value in the card header, on the title's line box so both align. */
-function CurrentValue({ value, format }: { value: number | null; format: (v: number) => string }) {
-  const t = useT("common");
-  return (
-    <span className="text-[13px] leading-5 font-medium text-fg tabular">
-      {value === null ? <span className="font-normal text-fg-subtle">{t("notAvailable")}</span> : format(value)}
-    </span>
-  );
-}
 
 /** Plot-sized placeholder for a chart whose first sample (or inventory) is pending. */
 function ChartSkeleton() {
@@ -44,7 +28,10 @@ interface PercentChartProps {
   pick: Pick;
 }
 
-/** One percent metric over time, fixed 0–100 domain. Re-renders once per accepted sample. */
+/**
+ * One percent metric over time, fixed 0–100 domain. Re-renders once per accepted sample.
+ * No current value in the header: it lives in the dashboard panels above (rule R1).
+ */
 const PercentChartCard = memo(function PercentChartCard({ title, label, pick }: PercentChartProps) {
   const t = useT("monitoring");
   const hasSamples = useLive((s) => s.samples.length > 0);
@@ -53,7 +40,7 @@ const PercentChartCard = memo(function PercentChartCard({ title, label, pick }: 
   const series = useMemo<Series[]>(() => [{ id: "value", label, points }], [label, points]);
 
   return (
-    <Card title={title} aside={hasSamples && <CurrentValue value={lastValue(points)} format={(v) => formatPercent(v)} />}>
+    <Card title={title}>
       {hasSamples ? (
         <LineChart
           series={series}
@@ -133,8 +120,8 @@ export const ThroughputChart = memo(function ThroughputChart() {
             ariaLabel={t("throughputAria")}
           />
           <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-fg-muted" aria-label={t("legend")}>
-            <LegendItem tone="primary" label={t("read")} value={lastValue(read)} />
-            <LegendItem tone="secondary" label={t("write")} value={lastValue(write)} />
+            <LegendItem tone="primary" label={t("read")} />
+            <LegendItem tone="secondary" label={t("write")} />
           </ul>
         </>
       ) : (
@@ -150,22 +137,18 @@ export const ThroughputChart = memo(function ThroughputChart() {
   );
 });
 
-function LegendItem({ tone, label, value }: { tone: "primary" | "secondary"; label: string; value: number | null }) {
-  const t = useT("common");
+function LegendItem({ tone, label }: { tone: "primary" | "secondary"; label: string }) {
   return (
     <li className="flex items-center gap-1.5">
       <LegendSwatch tone={tone} />
       <span>{label}</span>
-      <span className="font-medium text-fg tabular">
-        {value === null ? <span className="font-normal text-fg-subtle">{t("notAvailable")}</span> : tooltipThroughput(value)}
-      </span>
     </li>
   );
 }
 
 /**
- * The series' stroke as drawn by `LineChart`: primary is a solid accent line, secondary a
- * `fg-subtle` dashed one (`3 2`), same widths and caps, so the key reads as the chart does.
+ * The series' stroke as drawn by `LineChart`: primary is a solid `fg-muted` line, secondary a
+ * `meter` dashed one (`3 2`), same widths and caps, so the key reads as the chart does.
  */
 function LegendSwatch({ tone }: { tone: "primary" | "secondary" }) {
   const primary = tone === "primary";
@@ -176,7 +159,7 @@ function LegendSwatch({ tone }: { tone: "primary" | "secondary" }) {
         x2={15}
         y1={4}
         y2={4}
-        className={primary ? "stroke-accent" : "stroke-fg-subtle"}
+        className={primary ? "stroke-fg-muted" : "stroke-meter"}
         strokeWidth={primary ? 1.5 : 1.25}
         strokeDasharray={primary ? undefined : "3 2"}
         strokeLinecap="round"

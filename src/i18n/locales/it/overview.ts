@@ -1,27 +1,39 @@
-/** Italian (reference) texts for the "overview" namespace. */
+/** Italian (reference) texts for the "overview" namespace (the dashboard). */
 export default {
-  pageDescription: "Stato sintetico del sistema",
   monitoringCard: "Monitoraggio",
   recentTrend: "Andamento recente",
-  systemCard: "Sistema",
 
-  // Live cards.
-  cpuCaption: "Utilizzo totale",
-  gpuCaption: "Utilizzo (motore più attivo)",
+  // Panels.
+  load: "Carico",
+  inUse: "In uso",
+  meterAria: "{label} {component}",
+  ofTotal: "{used} di {total}",
+  clock: "Frequenza",
+  frequencyLimited: "Limitata a {limit}",
+  frequencyLimitBody:
+    "Windows riporta un limite di {limit} rispetto a un massimo nominale di {max}. Il sistema non ne indica la causa (ad esempio piano energetico, temperatura o alimentazione).",
   onlySoftwareAdapters: "Sono presenti solo adattatori software.",
-  ramCaption: "in uso",
-  ramCaptionOf: "in uso di {total}",
+  committedMemory: "Memoria impegnata",
+  pagesFromDisk: "Pagine lette da disco",
+  diskTitle: "Disco",
+  activeTime: "Tempo attivo",
+  storageTitle: "Archiviazione",
   detectedAt: "rilevato alle {time}",
-  ssdCaption: "liberi su {mount} di {total}",
+  healthNote: "Riepilogo di Windows Storage, non una valutazione completa dei dati SMART.",
   noPhysicalDisks: "Nessun disco fisico riportato",
 
-  // System summary.
-  notReported: "Non riportato dal sistema",
-  os: "Sistema operativo",
-  version: "Versione",
-  kernel: "Kernel",
-  hostname: "Nome computer",
-  cpuArch: "Architettura CPU",
-  appBuild: "Build applicazione",
-  uptime: "Tempo di attività",
+  // Top processes.
+  processesTitle: "Processi",
+  openProcesses: "Apri Processi",
+  topProcessesCaption: "Processi con l'impatto maggiore",
+  colName: "Nome",
+  ioNote: "I/O logico (file, rete, dispositivi), non byte fisici su disco",
+  processesWaiting: "In attesa dei dati dei processi…",
+  processesUnavailable: "Dati dei processi non disponibili",
+  noProcesses: "Nessun processo nella classifica",
+
+  // Per logical processor.
+  perCoreTitle: "Processori logici",
+  perCoreUsage: "Utilizzo per processore logico",
+  logicalProcessor: "Processore logico {n}",
 } satisfies Record<string, string>;

@@ -1,7 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { Skeleton, SkeletonLines } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
-import { StatusBadge } from "@/components/common/StatusBadge";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
 import { useInventory } from "./inventoryStore";
@@ -41,11 +40,6 @@ export function LiveConnectionState({ compact = false }: { compact?: boolean }) 
       onRetry={retry}
     />
   );
-}
-
-/** True when cards should render live content (or a "waiting" state), not a failure. */
-export function useLiveUsable(): boolean {
-  return useLive((s) => s.status === "live");
 }
 
 /**
@@ -90,26 +84,6 @@ export function DefinitionSkeleton({ rows }: { rows: number }) {
       ))}
     </span>
   );
-}
-
-/** Small header badge; text always states the status (color is secondary). */
-export function LiveBadge() {
-  const status = useLive((s) => s.status);
-  const t = useT("monitoring");
-  const tc = useT("common");
-  switch (status) {
-    case "live":
-      return <StatusBadge tone="ok" label={t("badgeLive")} />;
-    case "idle":
-    case "connecting":
-      return <StatusBadge tone="neutral" label={t("badgeConnecting")} />;
-    case "unsupported":
-      return <StatusBadge tone="neutral" label={t("liveUnsupported")} />;
-    case "permission":
-      return <StatusBadge tone="warn" label={tc("statePermission")} />;
-    case "error":
-      return <StatusBadge tone="bad" label={t("badgeStopped")} />;
-  }
 }
 
 /**
