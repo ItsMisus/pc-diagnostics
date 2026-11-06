@@ -11,8 +11,6 @@ export function PageHeader({
   actions,
 }: {
   title: string;
-  /** @deprecated Ignored (no subtitles); remove it from call sites. Dropped after the dashboard redesign. */
-  description?: string;
   actions?: ReactNode;
 }) {
   return (
