@@ -8,7 +8,7 @@ import { type Translator, useT } from "@/i18n";
 import { formatBytes, formatBytesPerSec, formatPercent } from "@/lib/format";
 import type { ProcessRow } from "@/types/generated/ProcessRow";
 import { useProcesses } from "./processStore";
-import { categoryLabel, filterRows, ioTotal, sameRowDisplay, type SortColumn, sortRows } from "./rows";
+import { filterRows, ioTotal, sameRowDisplay, type SortColumn, sortRows } from "./rows";
 import { rankingKey, type RankingMode, useProcessView } from "./viewStore";
 
 const EMPTY: readonly ProcessRow[] = [];
@@ -85,7 +85,15 @@ export function ProcessTable() {
           {...(c.title ? { title: c.title } : {})}
           {...(c.id === "name" ? { className: "pl-2" } : {})}
         />
-      ))}
+      )).concat(
+        mode === "window"
+          ? [
+              <th key="peak" scope="col" className="pr-4 pb-2 text-right text-2xs font-medium whitespace-nowrap text-fg-subtle">
+                {t("colPeak")}
+              </th>,
+            ]
+          : [],
+      )}
     >
       {visible.map((row) => (
         <ProcessTableRow
@@ -128,21 +136,16 @@ const ProcessTableRow = memo(
             type="button"
             aria-pressed={selected}
             aria-label={t(selected ? "rowHideDetails" : "rowShowDetails", { name: row.name, pid: row.pid })}
-            className="flex w-full min-w-0 flex-col items-start rounded-sm text-left"
+            className="flex w-full min-w-0 items-center gap-1.5 rounded-sm text-left"
           >
-            <span className="flex w-full min-w-0 items-center gap-1.5">
-              {!row.accessible && (
-                <span title={t("protectedNote")} className="shrink-0">
-                  <Icon name="lock" size={12} className="text-fg-subtle" />
-                </span>
-              )}
-              <span className={`truncate ${selected ? "font-medium text-fg" : ""}`}>{row.name}</span>
-              {row.isSelf && <SelfTag />}
-            </span>
-            <span className="text-2xs text-fg-subtle">
-              {categoryLabel(row.category, t)}
-              {!row.accessible && ` · ${t("protectedShort")}`}
-            </span>
+            {!row.accessible && (
+              <span title={t("protectedNote")} className="shrink-0">
+                <Icon name="lock" size={12} className="text-fg-subtle" />
+                <span className="sr-only">{t("protectedShort")}</span>
+              </span>
+            )}
+            <span className={`truncate ${selected ? "font-medium text-fg" : ""}`}>{row.name}</span>
+            {row.isSelf && <SelfTag />}
           </button>
         </Td>
         <Td className="text-right whitespace-nowrap">
@@ -152,11 +155,9 @@ const ProcessTableRow = memo(
           <MetricValue metric={row.workingSetBytes} format={bytes} />
         </Td>
         <Td className="text-right whitespace-nowrap">
-          <span title={t("ioNote")}>
-            <MetricValue metric={io} format={rate} />
-          </span>
+          <MetricValue metric={io} format={rate} />
         </Td>
-        <Td className="w-36 text-right">
+        <Td className="w-32 text-right">
           <div className="flex items-center justify-end gap-2">
             <UsageBar
               percent={impact}
@@ -168,8 +169,10 @@ const ProcessTableRow = memo(
               {impact.toFixed(1)}
             </span>
           </div>
-          {mode === "window" && <div className="text-2xs text-fg-subtle">{t("peak", { value: row.impactPeak.toFixed(1) })}</div>}
         </Td>
+        {mode === "window" && (
+          <Td className="text-right whitespace-nowrap text-fg-muted">{row.impactPeak.toFixed(1)}</Td>
+        )}
       </tr>
     );
   },

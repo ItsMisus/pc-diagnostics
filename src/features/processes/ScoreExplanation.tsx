@@ -38,7 +38,7 @@ export function ScoreExplanation() {
   return (
     <Card flush>
       <details className="group">
-        <summary className="flex items-center gap-2 rounded-xl px-4 py-3 text-[13px] font-medium text-fg-muted transition-colors duration-150 select-none hover:text-fg focus-visible:outline-offset-[-2px]">
+        <summary className="flex items-center gap-2 rounded-md px-4 py-3 text-[13px] font-semibold text-fg-muted transition-colors duration-150 select-none hover:text-fg focus-visible:outline-offset-[-2px]">
           <Icon
             name="chevronRight"
             size={14}

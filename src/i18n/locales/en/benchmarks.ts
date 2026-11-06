@@ -63,20 +63,17 @@ export default {
   noiseNote: "Changes below ±{pct}% are treated as normal variation and are not highlighted.",
 
   // Result view.
-  comparableNote: "Scores are only comparable between runs with the same methodology version (this run: v{version}).",
   cancelledDesc: "The run was stopped before it finished.",
   failedTitle: "Benchmark failed",
   failedDesc: "No result was produced.",
+  comparableNote: "Scores are only comparable between runs with the same methodology version.",
   contextTitle: "Conditions at start",
   paramsTitle: "Parameters and run",
-  buildBadge: "Build {profile}",
-  resultMeta: "{date} · duration {elapsed} · methodology v{version}",
   safetyStop: "Safety stop: {reason}",
   debugWarning: "Debug build: measured performance is not representative.",
   runNotes: "Run notes",
   interimPending: "Interim values not available yet.",
   noMetrics: "No metrics produced",
-  interimValue: "interim value",
   higherIsBetter: "higher is better",
   lowerIsBetter: "lower is better",
   seriesAria: "{label} during the run, zero-based scale",
@@ -103,7 +100,6 @@ export default {
   appVersion: "App version",
 
   // Benchmarks page.
-  pageDescription: "Selective tests you can stop at any time. Nothing starts automatically; one test at a time.",
   unsupportedTitle: "Benchmarks not supported",
   listUnavailable: "Test list unavailable",
   unsupportedDesc: "Benchmarks require the desktop app. No demo data is shown.",
@@ -112,16 +108,13 @@ export default {
   detecting: "Detecting…",
   runningKind: "Running: {kind}",
   notAvailable: "Not available",
-  testsAvailable_one: "{count} test available",
-  testsAvailable_other: "{count} tests available",
   noTestsInVersion: "No tests in this version.",
   lastRun: "Last run:",
   allComponents: "All components",
   history: "History",
-  detectedComponent: "Detected component · {component}",
   noTestsForComponent: "No tests available for this component",
   testType: "Test type",
-  result: "Result",
+  result: "Last result",
 
   // Detected component.
   cpuUnidentified: "Unidentified CPU",
@@ -149,9 +142,9 @@ export default {
   // Live progress and running bar.
   runAria: "{kind} run",
   progressAria: "{kind} progress",
+  interimTitle: "Interim values",
   stopping: "Stopping…",
   stop: "Stop",
-  elapsed: "{elapsed} elapsed",
   interimNote: "Interim values are only for following the run: a stopped test produces no results.",
   runningRegion: "Benchmark running",
   openScreen: "Open the benchmark screen",

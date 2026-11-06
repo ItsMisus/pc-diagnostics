@@ -4,7 +4,6 @@ import type { Translation } from "../types";
 /** English texts for the "processes" namespace. */
 export default {
   // ProcessesPage
-  pageDescription: "Processes putting pressure on CPU, memory and I/O (read-only)",
   connectingTitle: "Connecting to process analysis…",
   waitingTitle: "Waiting for the first measurement…",
   waitingDescription:
@@ -13,25 +12,23 @@ export default {
   unsupportedDescription: "Process analysis requires the desktop app. No demo data is shown.",
   notAllowedTitle: "Process analysis not allowed",
   unavailableTitle: "Process analysis unavailable",
-  badgeLive: "Live",
-  badgeConnecting: "Connecting…",
-  badgeWaiting: "Waiting for the first sample",
-  badgeUnsupported: "Not supported",
-  badgeNotAllowed: "Not allowed",
-  badgeError: "Analysis stopped",
   modeInstant: "Instant",
   modeWindow: "Interval (last {seconds} s)",
   rankingLabel: "Ranking",
   searchLabel: "Search processes by name",
   searchPlaceholder: "Search by name…",
-  summary:
-    "{total} active processes · {inaccessible} protected (path not readable; metrics still real) · showing the top {shown} by Impact Score (number configurable in {settings}) · updated at {time}",
+  summaryTotal_one: "{count} process",
+  summaryTotal_other: "{count} processes",
+  summaryProtected_one: "{count} protected",
+  summaryProtected_other: "{count} protected",
+  summaryShown: "top {shown} by Impact Score",
 
   // ProcessTable
   protectedNote:
     "Protected process: the executable path can't be read without elevated privileges. The metrics come from the kernel snapshot and are real.",
   ioNote: "Logical I/O (files, network, devices): it does not match the physical bytes written to disk",
   colName: "Process name",
+  colPeak: "Peak",
   selfTag: "this app",
   emptyRanking: "No processes ranked in this sample.",
   noMatch: "No process matches “{query}”.",
@@ -41,7 +38,6 @@ export default {
   protectedShort: "protected",
   impactOf: "Impact Score of {name}",
   outOf100: "{value} out of 100",
-  peak: "peak {value}",
 
   // rows.ts: process categories
   category_system: "System",
@@ -67,7 +63,6 @@ export default {
   pressureAria: "Resource pressure",
   pressureOf: "{label} pressure",
   staleNote: "The process is no longer ranked: showing the last known values.",
-  historyRunning: "Running",
   historyEnded: "Ended",
   noSamples: "No samples recorded for this process yet.",
   cpuChartTitle: "CPU (% of the whole system)",
@@ -86,7 +81,7 @@ export default {
   scoreCpu: "share of the whole system's capacity ({processors} logical processors); 100 means all processors are busy.",
   scoreRam: "process memory relative to total physical memory ({total}; available now {available}).",
   scoreIo:
-    "logical I/O (files, network, devices) relative to a reference of {reference}, which corresponds to 100. It does not match the physical bytes written to disk.",
+    "logical I/O (files, network, devices) relative to a reference of {reference}, which corresponds to 100.",
   scoreModes:
     "“Instant” uses the latest sample (every {interval} s). “Interval” uses the average of the last {window} s; the peak is the highest value seen in the same interval.",
   scoreMethodology:

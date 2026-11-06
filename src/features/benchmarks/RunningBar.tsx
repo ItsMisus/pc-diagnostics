@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
-import { ProgressBar } from "@/components/common/ProgressBar";
 import { StateView } from "@/components/common/StateView";
 import { toast } from "@/components/common/Toast";
 import { Tooltip } from "@/components/common/Tooltip";
@@ -13,6 +12,7 @@ import { duration, ease } from "@/lib/motion";
 import type { BenchmarkProgress } from "@/types/generated/BenchmarkProgress";
 import { useBench } from "./benchStore";
 import { componentOfKind, headlineMetric, kindLabel, stateLabel } from "./model";
+import { RunProgress } from "./ui";
 import { useBenchView } from "./viewStore";
 
 /**
@@ -27,9 +27,11 @@ const stripMotion = {
 } as const;
 
 /**
- * Global "benchmark running" strip at the top of the main area, on every page. It is the
- * only shell component subscribed to the progress slice, so progress events re-render it
- * (and the benchmark progress panel) but not the rest of the app.
+ * Global "benchmark running" strip at the top of the main area, on every page: the one place
+ * for a run's progress and its Stop action (the benchmark screen shows only the interim
+ * readings). Monochrome; the only control is Stop. It is the only shell component subscribed
+ * to the progress slice, so progress events re-render it (and the interim readings) but not
+ * the rest of the app.
  */
 export function RunningBar() {
   const t = useT("benchmarks");
@@ -44,7 +46,7 @@ export function RunningBar() {
           role="region"
           aria-label={t("runningRegion")}
           {...stripMotion}
-          className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur-md"
+          className="sticky top-0 z-20 border-b border-line bg-surface"
         >
           {/* While exiting, AnimatePresence keeps rendering the last `run` it was given. */}
           <Strip run={run} />
@@ -78,9 +80,8 @@ function Strip({ run }: { run: BenchmarkProgress }) {
             }}
             className="-ml-1.5 flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left text-[13px] transition-colors duration-150 hover:bg-surface-2"
           >
-            <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-accent" />
             <span className="truncate">
-              <span className="font-medium text-fg">{label}</span>
+              <span className="font-semibold text-fg">{label}</span>
               <span className="text-fg-muted">
                 {" "}
                 · {isCancelling ? stateLabel("cancelling", t) : run.phase || stateLabel(run.state, t)}
@@ -88,12 +89,12 @@ function Strip({ run }: { run: BenchmarkProgress }) {
             </span>
           </button>
         </Tooltip>
-        <ProgressBar fraction={run.fraction} label={t("progressAria", { kind: label })} className="min-w-20 flex-1" />
+        <RunProgress fraction={run.fraction} label={t("progressAria", { kind: label })} className="min-w-20 flex-1" />
         <span className="min-w-30 shrink-0 text-right text-xs text-fg-muted tabular" aria-live="off">
           <span className="font-medium text-fg">{pct}%</span> · {formatElapsed(run.elapsedMs)}
         </span>
         <Button
-          variant="danger"
+          variant="secondary"
           size="sm"
           onClick={() => void cancel()}
           disabled={isCancelling}
