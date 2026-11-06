@@ -274,7 +274,7 @@ export const RamPanel = memo(function RamPanel() {
           />
         }
       >
-        <BarRow label={t("inUse")} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
+        <BarRow label={t("used")} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
         <BarRow label={tm("available")} value={<MetricValue metric={mem.availableBytes} format={bytes} />} />
         {!simple && (
           <>

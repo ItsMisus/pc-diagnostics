@@ -6,6 +6,7 @@ export default {
   // Panels.
   load: "Carico",
   inUse: "In uso",
+  used: "Usata",
   meterAria: "{label} {component}",
   ofTotal: "{used} di {total}",
   clock: "Frequenza",

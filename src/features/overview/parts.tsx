@@ -32,7 +32,7 @@ export function BarRow({ label, value, bar, title }: { label: string; value: Rea
     <div className="min-w-0" title={title}>
       {bar && <UsageBar percent={bar.percent} label={bar.label} valueText={bar.valueText} />}
       <div className={`flex items-baseline justify-between gap-3 text-[13px] leading-5 ${bar ? "mt-1" : ""}`}>
-        <span className="min-w-0 truncate text-fg-muted">{label}</span>
+        <span className="min-w-[3.5rem] truncate text-fg-muted">{label}</span>
         <span className="shrink-0 text-right text-fg tabular">{value}</span>
       </div>
     </div>

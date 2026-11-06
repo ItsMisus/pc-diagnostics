@@ -32,7 +32,6 @@ import {
   deviceProblemExplanation,
   type ProblemExplanation,
   simpleHealthLabel,
-  simpleNoInstallNote,
   simpleUpdateLabel,
   simpleDeviceName,
 } from "./simple";
@@ -384,7 +383,6 @@ export function ProblemExplanationView({
             <li key={a}>{a}</li>
           ))}
         </ol>
-        <p className="mt-1.5 text-xs text-fg-subtle">{simpleNoInstallNote(t)}</p>
       </div>
       {technical && (
         <Disclosure summary={t("showTechnical")}>

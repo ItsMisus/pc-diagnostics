@@ -13,7 +13,7 @@ import type { DriverSummary } from "@/types/generated/DriverSummary";
 import { DeviceList, ProblemExplanationView } from "./DeviceList";
 import { useDrivers } from "./driverStore";
 import { categoryLabel, isProblem } from "./model";
-import { deviceProblemExplanation, simpleDeviceName, simpleDriverSummary } from "./simple";
+import { deviceProblemExplanation, simpleDeviceName, simpleDriverSummary, simpleNoInstallNote } from "./simple";
 import { UpdateCheckPanel } from "./UpdateCheckPanel";
 
 /**
@@ -83,7 +83,7 @@ function ProblemDevices({ devices }: { devices: readonly DeviceRecord[] }) {
   const problems = useMemo(() => devices.filter(isProblem), [devices]);
   if (problems.length === 0) return null;
   return (
-    <Card title={t("problemDevicesTitle")}>
+    <Card title={t("problemDevicesTitle")} description={simpleNoInstallNote(t)}>
       <ul className="flex flex-col gap-3">
         {problems.map((d) => {
           const explanation = deviceProblemExplanation(d, t);

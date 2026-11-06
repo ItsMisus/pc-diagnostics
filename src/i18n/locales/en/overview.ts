@@ -9,6 +9,7 @@ export default {
   // Panels.
   load: "Load",
   inUse: "In use",
+  used: "Used",
   meterAria: "{component} {label}",
   ofTotal: "{used} of {total}",
   clock: "Clock",

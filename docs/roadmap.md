@@ -134,6 +134,13 @@ Methodology, thresholds and ids: docs/benchmark-methodology.md.
 | Stored data keeps its language | by design | Benchmark results and the latest diagnosis are not re-translated; re-running a diagnosis produces it in the current language. Comparing an Italian and an English run may list the same warning as a context difference |
 | Verified in the real app (release build) | done | Every page in English and Italian, a new diagnosis in each language, language switch back to "Sistema". Checks: Rust 461 passed / 6 ignored, web 282 passed, build OK |
 
+## Dashboard redesign (2026-11-06)
+
+| Item | Status | Notes |
+|---|---|---|
+| Monitoring-dashboard style (neutral greys, monochrome gauges/bars/charts, flat panels, big light numbers) | done | Brief and rules in `docs/ui-dashboard-brief.md`; `RingGauge`, `Readout` primitives |
+| No redundancy: one home per value, counts and explanations once, no page subtitles or live badges, sources only in Advanced, one global Simple/Advanced control | done | Overview is the one-screen dashboard; Hardware is specs only; Diagnostics/Drivers/Processes/Benchmarks/History/Settings trimmed; repeated coverage note and duplicate "problem code" evidence removed in Rust |
+
 ## Out of scope for v1 (by design)
 
 Driver installation/update/removal, process kill/suspend, registry changes, BIOS,
