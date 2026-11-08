@@ -1,3 +1,4 @@
+import { SectionHeading } from "@/components/layout/SectionHeading";
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { Button } from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
@@ -143,10 +144,9 @@ function MetaLine({ children }: { children: ReactNode }) {
 /** Heading of a group of finding cards; `count` only where no summary already states it. */
 function GroupHeading({ id, label, count }: { id: string; label: string; count?: number }) {
   return (
-    <h2 id={id} className="flex items-baseline gap-2 text-[15px] leading-6 font-semibold text-fg">
+    <SectionHeading id={id} {...(count !== undefined ? { count } : {})}>
       {label}
-      {count !== undefined && <span className="text-[13px] font-normal text-fg-subtle tabular">{count}</span>}
-    </h2>
+    </SectionHeading>
   );
 }
 

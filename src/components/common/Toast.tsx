@@ -99,7 +99,7 @@ function ToastView({ item }: { item: ToastItem }) {
       onPointerLeave={start}
       onFocus={stop}
       onBlur={start}
-      className="pointer-events-auto flex w-full items-start gap-3 rounded-lg border border-line-strong bg-surface-2 px-3.5 py-3 shadow-lg"
+      className="pointer-events-auto flex w-full items-start gap-3 rounded-md border border-line-strong bg-surface-2 px-3.5 py-3 shadow-lg"
     >
       <Icon name={tone.icon} className={`mt-0.5 shrink-0 ${tone.className}`} />
       <div className="min-w-0 flex-1">

@@ -44,8 +44,9 @@ Rules:
 
 - Body: Segoe UI Variable Text, 14 px base. Display (page titles): Segoe UI Variable Display.
 - Scale: `text-2xs` 11 (captions, table headers, sources), `text-xs` 12 (hints), `text-[13px]`
-  (controls, nav, card titles, dense body), `text-sm` 14 (body), 15 (dialog titles),
-  22 (page titles), `text-2xl` 24 (headline metrics).
+  (controls, nav, dense body), `text-sm` 14 (body), 15 (dialog titles), `text-lg` 18 (card
+  titles), `text-xl` 20 (section headings), 26 (page titles); headline metrics are light
+  numbers (`Readout`, `RingGauge`).
 - Numbers: always `tabular` so live values do not jitter.
 - Decimals and percentages follow the language, like the backend's `fmt::num` / `fmt::pct`:
   "19,4 GB", "6,2 %" in Italian; "19.4 GB", "6.2%" in English; no thousands separator
@@ -57,13 +58,15 @@ Rules:
   `formatBytesPerSec` / `formatMib` (`src/lib/format.ts`), never a hand-written unit. The
   backend's texts follow the same rule (`fmt::bytes_plain` / `fmt::bytes`).
 - Section labels inside cards: `eyebrow` utility (11 px, uppercase, tracked, `fg-subtle`).
-- Card titles: sentence case, 13 px medium, `fg-muted` (handled by `<Card title>`).
+- Hierarchy of headings: page title 26 px (`PageHeader`) > section heading 20 px
+  (`SectionHeading`, a group of cards such as "Andamento recente" or "Avvisi") > card title
+  18 px semibold `fg`, display font (handled by `<Card title>`, the component's name: "CPU").
 
 ## Space, radius, elevation
 
 - 4 px grid. Card padding 16 (`p-4`); grid gaps 16 (`gap-4`); section spacing 24–32.
-- Radius: `rounded-md` (7) controls, `rounded-lg` (10) panels/tooltips/toasts, `rounded-xl` (12) cards, dialogs.
-- Elevation: cards are flat (hairline + faint top highlight). Shadows only on floating
+- Radius: one small radius, `rounded-md` (7), for cards, panels, dialogs, tooltips, toasts, controls and navigation rows; `rounded-sm` for tiny chips, `rounded-full` for pills and gauges.
+- Elevation: cards are flat (hairline, no shadow). Shadows only on floating
   surfaces: `shadow-md` tooltips/chart tooltips, `shadow-lg` dialogs and toasts.
 
 ## Components
@@ -71,10 +74,12 @@ Rules:
 | Component | Notes |
 | --- | --- |
 | `Button` | `primary` / `secondary` / `ghost` / `danger`, sizes `sm` / `md`. Press = 3 % scale. |
-| `Card` | Flat panel (radius 6, hairline). `title` (component name, bold), `description`, `aside`, `flush`. |
+| `Card` | Flat panel (`rounded-md`, hairline). `title` (component name, 18 px semibold), `description`, `aside`, `flush`. |
+| `SectionHeading` | 20 px heading of a group of cards, optional muted `count`. |
 | `Segmented` | Radio group, sliding thumb, arrow keys. `size="sm"` for dense headers. |
 | `Switch` | Spring thumb. Settings' `Toggle` delegates to it. |
-| `Tooltip` | Label tooltips (delay 350 ms, instant on keyboard focus, Esc). Supplementary only. |
+| `Tooltip` | Tooltips (delay 350 ms, instant on keyboard focus, Esc). Supplementary only. `multiline` wraps a sentence at 16 rem; `side="top-end"` for triggers near a right edge. Never a native `title` for information the user needs: it does not open from the keyboard. |
+| `MetricValue` | A value, or a focusable "n/d" whose `Tooltip` gives the reason (plain + technical in "Semplice"). |
 | `toast` / `<Toaster>` | `toast.success(title, description?)` for confirmations of a user action. Errors stay inline. |
 | `Skeleton` / `SkeletonLines` | First-load placeholders. Never for refreshes of data already shown. |
 | `Spinner` (in `StateView`) | Indeterminate activity. |

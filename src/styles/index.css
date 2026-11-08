@@ -6,9 +6,10 @@
  * Monitoring-dashboard palette: neutral dark greys, flat panels with a visible hairline,
  * monochrome meters, gauges and charts (`--meter`). A muted violet accent is kept for focus,
  * the selected option and the one primary action per view; status colours (ok / warn /
- * bad) only where they carry meaning, never as the only signal. Status colors (ok / warn / bad) appear only where they carry
- * meaning, and never as the only signal. `data-theme` on <html> overrides the OS
- * preference; the dark values are declared twice (OS preference and explicit choice).
+ * bad) only where they carry meaning, never as the only signal. `data-theme` on <html>
+ * overrides the OS preference; the dark values are declared twice (OS preference and
+ * explicit choice) because the WebView target (chrome120) predates `light-dark()`.
+ * `src/styles/tokens.test.ts` fails if the two dark blocks ever differ.
  *
  * Motion tokens mirror `src/lib/motion.ts` (the JS side used by Motion for React).
  */
@@ -42,7 +43,6 @@
   --backdrop: rgb(16 17 19 / 0.35);
   --chart-fill: rgb(84 86 92 / 0.12);
   --gauge-track: #e0e1e4;
-  --highlight: rgb(255 255 255 / 0);
   --shadow-color: 220 6% 20%;
   --meter: #7c7e85;
   color-scheme: light;
@@ -79,7 +79,6 @@
     --backdrop: rgb(0 0 0 / 0.6);
     --chart-fill: rgb(174 175 180 / 0.12);
     --gauge-track: #323337;
-    --highlight: rgb(255 255 255 / 0);
     --shadow-color: 0 0% 0%;
     --meter: #8c8d93;
     color-scheme: dark;
@@ -116,7 +115,6 @@
   --backdrop: rgb(0 0 0 / 0.6);
   --chart-fill: rgb(174 175 180 / 0.12);
   --gauge-track: #323337;
-  --highlight: rgb(255 255 255 / 0);
   --shadow-color: 0 0% 0%;
   --meter: #8c8d93;
   color-scheme: dark;
