@@ -18,6 +18,7 @@ export default {
   source: "fonte: {source}",
   viewModeLabel: "Visualizzazione",
   viewModeSimple: "Semplice",
+  viewModeSwitchTo: "passa a {mode}",
   viewModeAdvanced: "Avanzata",
   viewModeHint: "Semplice: spiegazioni in parole semplici. Avanzata: tutti i dettagli tecnici. Si cambia anche in Settings.",
 } satisfies Record<string, string>;

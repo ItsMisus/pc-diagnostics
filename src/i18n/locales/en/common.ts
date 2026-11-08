@@ -21,6 +21,7 @@ export default {
   source: "source: {source}",
   viewModeLabel: "View",
   viewModeSimple: "Simple",
+  viewModeSwitchTo: "switch to {mode}",
   viewModeAdvanced: "Advanced",
   viewModeHint: "Simple: explanations in plain words. Advanced: every technical detail. Also available in Settings.",
 } satisfies Translation<typeof it>;

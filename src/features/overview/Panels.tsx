@@ -69,16 +69,18 @@ function PercentGauge({
   if (metric.status === "unavailable" || p === null) {
     const reason = metric.status === "unavailable" ? reasonText(metric.reason) : undefined;
     return (
-      <span title={reason} className="inline-flex shrink-0">
-        <RingGauge
-          percent={null}
-          value={tc("notAvailable")}
-          caption={caption}
-          label={label}
-          valueText={reason ? `${tc("notAvailable")} — ${reason}` : tc("notAvailable")}
-          size={size}
-        />
-      </span>
+      <Tooltip content={reason} side="bottom" multiline enabled={reason !== undefined}>
+        <span tabIndex={reason !== undefined ? 0 : undefined} className="inline-flex shrink-0 rounded-full">
+          <RingGauge
+            percent={null}
+            value={tc("notAvailable")}
+            caption={caption}
+            label={label}
+            valueText={reason ? `${tc("notAvailable")} — ${reason}` : tc("notAvailable")}
+            size={size}
+          />
+        </span>
+      </Tooltip>
     );
   }
   return (
@@ -155,11 +157,13 @@ function FrequencyLimit({ cpu }: { cpu: CpuSample }) {
   const limit = formatMhz(cpu.limitMhz.value);
   const body = t("frequencyLimitBody", { limit, max: formatMhz(cpu.maxMhz.value) });
   return (
-    <p role="note" className="flex items-center gap-1.5 text-xs text-fg-muted" title={body}>
-      <Icon name="alert" size={14} className="shrink-0 text-warn" />
-      <span className="truncate">{t("frequencyLimited", { limit })}</span>
-      <span className="sr-only">{body}</span>
-    </p>
+    <Tooltip content={body} side="top" multiline className="min-w-0">
+      <p role="note" tabIndex={0} className="flex min-w-0 cursor-help items-center gap-1.5 rounded-sm text-xs text-fg-muted">
+        <Icon name="alert" size={14} className="shrink-0 text-warn" />
+        <span className="truncate">{t("frequencyLimited", { limit })}</span>
+        <span className="sr-only">{body}</span>
+      </p>
+    </Tooltip>
   );
 }
 

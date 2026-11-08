@@ -91,7 +91,7 @@ export function Sidebar() {
             onClick={toggle}
             aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
             aria-expanded={!collapsed}
-            className="flex w-full items-center gap-3.5 rounded-lg px-[13px] text-[13px] text-fg-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
+            className="flex w-full items-center gap-3.5 rounded-md px-[13px] text-[13px] text-fg-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
             style={{ height: 36 }}
           >
             <Icon name={collapsed ? "expand" : "collapse"} className="shrink-0" />
@@ -115,27 +115,31 @@ function ViewModeControl({ collapsed }: { collapsed: boolean }) {
   const current = options.find((o) => o.value === mode)?.label ?? "";
 
   if (collapsed) {
+    // The icon shows the current mode; the tooltip names it and what a click switches to.
+    const next = options.find((o) => o.value !== mode)?.label ?? "";
     return (
-      <Tooltip content={`${t("viewModeLabel")}: ${current}`} side="right" className="w-full">
+      <Tooltip content={`${t("viewModeLabel")}: ${current} · ${t("viewModeSwitchTo", { mode: next })}`} side="right" className="w-full">
         <button
           type="button"
           onClick={() => setMode(mode === "simple" ? "advanced" : "simple")}
           aria-label={`${t("viewModeLabel")}: ${current}`}
-          className="flex w-full items-center rounded-lg px-[13px] text-fg-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
+          className="flex w-full items-center rounded-md px-[13px] text-fg-subtle transition-colors duration-150 hover:bg-surface-2 hover:text-fg"
           style={{ height: 36 }}
         >
-          <Icon name="info" className="shrink-0" />
+          <Icon name={mode === "advanced" ? "viewAdvanced" : "viewSimple"} className="shrink-0" />
         </button>
       </Tooltip>
     );
   }
   return (
-    <div className="px-1 pb-1" title={t("viewModeHint")}>
-      <p className="eyebrow mb-1.5 px-0.5">{t("viewModeLabel")}</p>
-      <div className="[&>div]:flex [&>div]:w-full [&_button]:flex-1">
-        <Segmented size="sm" label={t("viewModeLabel")} options={options} value={mode} onChange={setMode} />
+    <Tooltip content={t("viewModeHint")} side="top" multiline className="w-full">
+      <div className="w-full px-1 pb-1">
+        <p className="eyebrow mb-1.5 px-0.5">{t("viewModeLabel")}</p>
+        <div className="[&>div]:flex [&>div]:w-full [&_button]:flex-1">
+          <Segmented size="sm" label={t("viewModeLabel")} options={options} value={mode} onChange={setMode} />
+        </div>
       </div>
-    </div>
+    </Tooltip>
   );
 }
 
