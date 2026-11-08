@@ -32,6 +32,12 @@ Rules:
 - The accent appears in small doses: the active nav icon, the selected thumb, primary buttons,
   chart lines, meters, focus rings. One primary button per view at most.
 - Status color is never the only signal (`StatusBadge` always has a label).
+- Meters are grey (`--meter`) until a value crosses a threshold where "high" means a
+  problem; then the fill takes `--warn` / `--bad` and a short status word ("Avviso",
+  "Critico") sits next to the value. The thresholds live in `src/features/overview/levels.ts`
+  and mirror the diagnostics rules (available memory, commit, VRAM, free space). Load, power
+  and temperature stay grey: high load is normal, and there is no diagnostics threshold for
+  temperature.
 - Do not use raw hex or Tailwind palette colors (`zinc-500`, `black/40`...) in components.
 
 ## Typography
@@ -64,9 +70,9 @@ Rules:
 | `Skeleton` / `SkeletonLines` | First-load placeholders. Never for refreshes of data already shown. |
 | `Spinner` (in `StateView`) | Indeterminate activity. |
 | `StatusBadge` | Tinted chip + dot + text. |
-| `RingGauge` | Open 270° monochrome gauge for headline live values; number + small unit in the centre, caption in the opening. Not animated. |
+| `RingGauge` | Open 270° gauge for headline live values, grey unless `tone` (`warn` / `bad`) is set; number + small unit in the centre, caption in the opening. Not animated. |
 | `Readout` | Big light number + small unit. |
-| `UsageBar` / `ProgressBar` | Transform-scaled fill. `UsageBar` (live) is not animated; `ProgressBar` (benchmark) eases. |
+| `UsageBar` / `ProgressBar` | Transform-scaled fill; `UsageBar` takes the same `tone` as `RingGauge`. `UsageBar` (live) is not animated; `ProgressBar` (benchmark) eases. |
 | `Disclosure` | Native `<details>`; height animates via global CSS, chevron rotates. |
 | Native `select`, text inputs, checkboxes | Styled globally in `index.css`; just use the element. Add only sizing utilities (`h-8`, `w-56`, `px-2.5`). |
 

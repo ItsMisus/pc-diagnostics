@@ -23,7 +23,8 @@ import type { GpuSample } from "@/types/generated/GpuSample";
 import type { Metric } from "@/types/generated/Metric";
 import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
-import { type Bar, BarRow, GaugeLayout, GaugeSkeleton, metricText, splitUnit } from "./parts";
+import { commitLevel, type Level, memoryLevel, volumeLevel, vramLevel } from "./levels";
+import { type Bar, BarRow, GaugeLayout, GaugeSkeleton, metricText, splitUnit, toneOf, useLevelText } from "./parts";
 
 /** Panels are flex columns so a trailing line can sit at the bottom when a row stretches them. */
 const PANEL = "flex flex-col";
@@ -48,6 +49,7 @@ function PercentGauge({
   percent,
   label,
   caption,
+  level,
   size = 140,
 }: {
   /** Drives availability and the reason. */
@@ -56,11 +58,14 @@ function PercentGauge({
   percent?: number | null;
   label: string;
   caption: string;
+  /** Status of the value (`levels.ts`): colours the arc. State it as text nearby too. */
+  level?: Level | undefined;
   size?: 140 | 112;
 }) {
   const tc = useT("common");
   const reasonText = useUnavailabilityText();
   const p = percent !== undefined ? percent : valueOf(metric);
+  const valueText = useLevelText(p === null ? "" : formatPercent(p), level);
   if (metric.status === "unavailable" || p === null) {
     const reason = metric.status === "unavailable" ? reasonText(metric.reason) : undefined;
     return (
@@ -83,7 +88,8 @@ function PercentGauge({
       unit="%"
       caption={caption}
       label={label}
-      valueText={formatPercent(p)}
+      valueText={valueText}
+      tone={toneOf(level)}
       size={size}
     />
   );
@@ -226,6 +232,7 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
           percent: ratio(valueOf(gpu.dedicatedUsedBytes), dedicatedVramBytes),
           label: t("meterAria", { label: "VRAM", component: "GPU" }),
           valueText: metricText(gpu.dedicatedUsedBytes, vramText, tm),
+          level: vramLevel(valueOf(gpu.dedicatedUsedBytes), dedicatedVramBytes),
         }
       : undefined;
 
@@ -259,6 +266,7 @@ export const RamPanel = memo(function RamPanel() {
   const total = valueOf(mem.totalBytes);
   const usedText = (v: number) => (total !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(total) }) : formatBytes(v));
   const commitLimit = valueOf(mem.commitLimitBytes);
+  const memLevel = memoryLevel(valueOf(mem.availableBytes), total);
   const commitText = (v: number) =>
     commitLimit !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(commitLimit) }) : formatBytes(v);
   return (
@@ -270,11 +278,12 @@ export const RamPanel = memo(function RamPanel() {
             percent={ratio(valueOf(mem.usedBytes), total)}
             label={tm("memoryInUse")}
             caption={t("inUse")}
+            level={memLevel}
             size={112}
           />
         }
       >
-        <BarRow label={t("used")} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
+        <BarRow label={t("used")} level={memLevel} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
         <BarRow label={tm("available")} value={<MetricValue metric={mem.availableBytes} format={bytes} />} />
         {!simple && (
           <>
@@ -284,6 +293,7 @@ export const RamPanel = memo(function RamPanel() {
                 percent: ratio(valueOf(mem.commitUsedBytes), commitLimit),
                 label: t("committedMemory"),
                 valueText: metricText(mem.commitUsedBytes, commitText, tm),
+                level: commitLevel(valueOf(mem.commitUsedBytes), commitLimit),
               }}
               value={<MetricValue metric={mem.commitUsedBytes} format={commitText} />}
             />
@@ -402,6 +412,7 @@ function VolumeRow({ volume: v }: { volume: VolumeInfo }) {
         percent,
         label: tm("usedSpaceOn", { mount: v.mountPoint }),
         valueText: percent !== null ? tm("percentUsed", { percent: formatPercent(percent) }) : tm("notAvailableText"),
+        level: volumeLevel(v.availableBytes, v.totalBytes),
       }}
       value={t("ofTotal", { used: formatBytes(used), total: formatBytes(v.totalBytes) })}
     />

@@ -23,6 +23,11 @@ export default {
   healthNote: "Riepilogo di Windows Storage, non una valutazione completa dei dati SMART.",
   noPhysicalDisks: "Nessun disco fisico riportato",
 
+  // Status of a meter above its threshold (features/overview/levels.ts).
+  levelWarn: "Avviso",
+  levelBad: "Critico",
+  levelAria: "{value}, {level}",
+
   // Top processes.
   processesTitle: "Processi",
   openProcesses: "Apri Processi",

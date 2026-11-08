@@ -26,6 +26,11 @@ export default {
   healthNote: "Windows Storage summary, not a full evaluation of SMART data.",
   noPhysicalDisks: "No physical disks reported",
 
+  // Status of a meter above its threshold (features/overview/levels.ts).
+  levelWarn: "Warning",
+  levelBad: "Critical",
+  levelAria: "{value}, {level}",
+
   // Top processes.
   processesTitle: "Processes",
   openProcesses: "Open Processes",

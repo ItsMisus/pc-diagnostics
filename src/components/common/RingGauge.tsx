@@ -1,4 +1,5 @@
 import { clamp } from "@/components/charts/scale";
+import { METER_FILL, type MeterTone } from "./UsageBar";
 
 interface RingGaugeProps {
   /** Fill, 0–100. `null` draws only the track (value unavailable). */
@@ -13,6 +14,8 @@ interface RingGaugeProps {
   label: string;
   /** Accessible value; defaults to `value` + `unit`. */
   valueText?: string;
+  /** Status of the value: colours the arc. The caller also states it as text. */
+  tone?: MeterTone | undefined;
   /** Outer diameter in px. */
   size?: number;
   /** Ring thickness in px. */
@@ -25,8 +28,8 @@ const SWEEP = 0.75;
 
 /**
  * Open circular meter for the headline live values of the dashboard (load, temperature,
- * memory). Monochrome (`--meter` on `--gauge-track`), with the number in a light weight and
- * a smaller unit. Like `UsageBar`, deliberately not animated: samples arrive every second
+ * memory). Monochrome (`--meter` on `--gauge-track`); `tone` colours the arc when the value
+ * is at a warning level. The number is in a light weight with a smaller unit. Like `UsageBar`, deliberately not animated: samples arrive every second
  * and a transition would keep the compositor busy (docs/design-system.md, "Live data never
  * animates"). The value is always written out, so the arc is never the only signal.
  */
@@ -37,6 +40,7 @@ export function RingGauge({
   caption,
   label,
   valueText,
+  tone,
   size = 140,
   stroke = 9,
   className = "",
@@ -70,7 +74,7 @@ export function RingGauge({
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" style={{ transform: `rotate(${rotate}deg)` }}>
         <circle {...common} stroke="var(--gauge-track)" strokeDasharray={`${arc} ${c}`} />
-        {available && p > 0 && <circle {...common} stroke="var(--meter)" strokeDasharray={`${(arc * p) / 100} ${c}`} />}
+        {available && p > 0 && <circle {...common} stroke={METER_FILL[tone ?? "normal"]} strokeDasharray={`${(arc * p) / 100} ${c}`} />}
       </svg>
       <div aria-hidden="true" className="absolute inset-0 grid place-content-center text-center">
         <span className={`tabular font-display font-light tracking-[-0.02em] ${big ? "text-[34px] leading-10" : "text-[22px] leading-7"} ${available ? "text-fg" : "text-fg-subtle"}`}>

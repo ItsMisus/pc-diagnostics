@@ -6,8 +6,22 @@ interface UsageBarProps {
   label: string;
   /** Human-readable value announced to assistive technology. */
   valueText: string;
+  /**
+   * Status of the value. `warn` / `bad` colour the fill; the caller must also write the
+   * status as text (colour is never the only signal). Omitted: the grey meter fill.
+   */
+  tone?: MeterTone | undefined;
   className?: string;
 }
+
+export type MeterTone = "warn" | "bad";
+
+/** Fill colour per tone; shared with `RingGauge`. */
+export const METER_FILL: Record<MeterTone | "normal", string> = {
+  normal: "var(--meter)",
+  warn: "var(--warn)",
+  bad: "var(--bad)",
+};
 
 /**
  * Thin meter for live values. Deliberately not animated: samples arrive every second, so
@@ -16,7 +30,7 @@ interface UsageBarProps {
  * before the redesign). The fill is a scaled bar (transform only, no layout).
  * The value is always also written out as text by the caller.
  */
-export function UsageBar({ percent, label, valueText, className = "" }: UsageBarProps) {
+export function UsageBar({ percent, label, valueText, tone, className = "" }: UsageBarProps) {
   const p = percent === null ? 0 : clamp(percent, 0, 100);
   return (
     <div
@@ -29,8 +43,8 @@ export function UsageBar({ percent, label, valueText, className = "" }: UsageBar
       className={`h-1.5 w-full overflow-hidden rounded-[2px] bg-gauge-track ${className}`}
     >
       <div
-        className="h-full origin-left bg-meter"
-        style={{ transform: `scaleX(${p / 100})` }}
+        className="h-full origin-left"
+        style={{ transform: `scaleX(${p / 100})`, background: METER_FILL[tone ?? "normal"] }}
       />
     </div>
   );
