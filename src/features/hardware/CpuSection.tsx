@@ -12,6 +12,7 @@ export function CpuSection({ cpu }: { cpu: CpuInfo }) {
   return (
     <Card title="CPU">
       <DefinitionList
+        aligned
         items={[
           { label: t("model"), value: cpu.brand ?? <NotReported /> },
           { label: t("manufacturer"), value: cpu.vendor ?? <NotReported /> },

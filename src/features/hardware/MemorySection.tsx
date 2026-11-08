@@ -15,7 +15,7 @@ export function MemorySection({ memory }: { memory: MemoryInfo }) {
   const t = useT("hardware");
   return (
     <Card title={t("memoryTitle")}>
-      <DefinitionList items={[{ label: t("totalInstalled"), value: formatBytes(memory.totalBytes) }]} />
+      <DefinitionList aligned items={[{ label: t("totalInstalled"), value: formatBytes(memory.totalBytes) }]} />
       <h3 className="eyebrow mt-5 mb-2.5">{t("modules")}</h3>
       <ModulesTable modules={memory.modules} />
     </Card>

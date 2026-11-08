@@ -7,10 +7,23 @@ export interface DefinitionItem {
   caption?: ReactNode;
 }
 
-/** Two-column label/value list with tabular numbers. */
-export function DefinitionList({ items, className = "" }: { items: readonly DefinitionItem[]; className?: string }) {
+/**
+ * Two-column label/value list with tabular numbers. `aligned` gives the label column a fixed
+ * width (long labels wrap), so lists in panels side by side start their values at the same
+ * x; by default the column is as wide as the longest label.
+ */
+export function DefinitionList({
+  items,
+  className = "",
+  aligned = false,
+}: {
+  items: readonly DefinitionItem[];
+  className?: string;
+  aligned?: boolean;
+}) {
+  const columns = aligned ? "grid-cols-[minmax(0,12rem)_minmax(0,1fr)]" : "grid-cols-[max-content_1fr]";
   return (
-    <dl className={`grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5 text-sm ${className}`}>
+    <dl className={`grid ${columns} gap-x-6 gap-y-1.5 text-sm ${className}`}>
       {items.map((item) => (
         <div key={item.label} className="contents">
           <dt className="text-fg-muted">{item.label}</dt>

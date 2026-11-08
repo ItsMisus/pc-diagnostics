@@ -22,10 +22,14 @@ export function GpuSection({ gpus }: { gpus: readonly GpuInfo[] }) {
       {ordered.length === 0 ? (
         <StateView compact kind="empty" title={t("noGpuAdapters")} />
       ) : (
-        <div className="grid grid-cols-1 gap-x-8 gap-y-5 @3xl:grid-cols-2">
-          {ordered.map((gpu) => (
-            <GpuBlock key={gpu.id} gpu={gpu} />
-          ))}
+        // Its own size container: the card can be half the page wide (next to Memory), so
+        // adapters go side by side only when the card itself has the room.
+        <div className="@container">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-5 @2xl:grid-cols-2">
+            {ordered.map((gpu) => (
+              <GpuBlock key={gpu.id} gpu={gpu} />
+            ))}
+          </div>
         </div>
       )}
     </Card>
@@ -63,7 +67,7 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
         {gpu.isSoftware && <StatusBadge tone="neutral" label={t("softwareAdapter")} />}
         {gpu.isVirtual && <StatusBadge tone="neutral" label={t("virtualDisplay")} />}
       </header>
-      <DefinitionList items={items} />
+      <DefinitionList aligned items={items} />
     </article>
   );
 }

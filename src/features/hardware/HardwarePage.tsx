@@ -23,6 +23,13 @@ import { SystemSection } from "./SystemSection";
 export function HardwarePage() {
   const t = useT("hardware");
   const { status, data } = useInventoryData();
+  // GPU and Memory share a row when both are short: one adapter, and no modules table (it
+  // has six columns and needs the full width). Otherwise each takes the full width.
+  const pairGpuMemory =
+    data !== null &&
+    data !== undefined &&
+    data.gpus.length <= 1 &&
+    (data.memory.modules.status === "unavailable" || data.memory.modules.value.length === 0);
 
   return (
     <>
@@ -44,17 +51,22 @@ export function HardwarePage() {
           <InventoryState />
         </Card>
       ) : (
-        <div className="@container grid grid-cols-1 gap-4 @3xl:grid-cols-2">
-          <SystemSection />
-          <CpuSection cpu={data.cpu} />
-          <div className="min-w-0 @3xl:col-span-2">
-            <GpuSection gpus={data.gpus} />
-          </div>
-          <div className="min-w-0 @3xl:col-span-2">
-            <MemorySection memory={data.memory} />
-          </div>
-          <div className="min-w-0 @3xl:col-span-2">
-            <StorageSection disks={data.physicalDisks} volumes={data.volumes} />
+        // The container wraps the grid: an element cannot query its own size, so with both on
+        // one element the two-column rule never applied and the spanning panels made an
+        // implicit, content-sized second column (unequal widths).
+        <div className="@container">
+          <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-2">
+            <SystemSection />
+            <CpuSection cpu={data.cpu} />
+            <div className={`min-w-0 ${pairGpuMemory ? "" : "@3xl:col-span-2"}`}>
+              <GpuSection gpus={data.gpus} />
+            </div>
+            <div className={`min-w-0 ${pairGpuMemory ? "" : "@3xl:col-span-2"}`}>
+              <MemorySection memory={data.memory} />
+            </div>
+            <div className="min-w-0 @3xl:col-span-2">
+              <StorageSection disks={data.physicalDisks} volumes={data.volumes} />
+            </div>
           </div>
         </div>
       )}
