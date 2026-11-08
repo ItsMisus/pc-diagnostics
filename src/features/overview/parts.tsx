@@ -50,6 +50,11 @@ export function useLevelText(valueText: string, level: Level | undefined): strin
  * Secondary value, dashboard style: a thin bar above (only when the value has a real scale),
  * label on the left, value on the right. Not animated (live data). At a warning level the bar
  * takes the status colour and a short status word sits before the value.
+ *
+ * Every row has the same height: a row without a bar keeps the bar's slot empty, so rows
+ * line up across panels (CPU and GPU side by side) and the rhythm never jumps. The bar sits
+ * closer to its own label (4 px) than to the row above (the list's 12 px gap), so it reads
+ * as part of its row.
  */
 export function BarRow({
   label,
@@ -69,8 +74,12 @@ export function BarRow({
   const valueText = useLevelText(bar?.valueText ?? "", bar?.level);
   return (
     <div className="min-w-0" title={title}>
-      {bar && <UsageBar percent={bar.percent} label={bar.label} valueText={valueText} tone={toneOf(bar.level)} />}
-      <div className={`flex items-baseline justify-between gap-3 text-[13px] leading-5 ${bar ? "mt-1" : ""}`}>
+      {bar ? (
+        <UsageBar percent={bar.percent} label={bar.label} valueText={valueText} tone={toneOf(bar.level)} />
+      ) : (
+        <div aria-hidden="true" className="h-1.5" />
+      )}
+      <div className="mt-1 flex items-baseline justify-between gap-3 text-[13px] leading-5">
         <span className="min-w-[3.5rem] truncate text-fg-muted">{label}</span>
         <span className="flex shrink-0 items-baseline gap-2 text-right text-fg tabular">
           <LevelLabel level={level} />
@@ -85,12 +94,14 @@ export function BarRow({
  * Gauge on the left, compact rows on the right, wrapping under the gauge when narrow. The
  * rows' minimum width fits the longest value ("19.4 GiB di 32.0 GiB") next to a short
  * label, so a value never runs past the panel's edge: below it the rows wrap instead.
+ * Gauge and rows are top-aligned, so panels side by side start their gauges and their
+ * first rows at the same height, whatever their number of rows.
  */
 export function GaugeLayout({ gauge, children }: { gauge: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+    <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
       {gauge}
-      <div className="flex min-w-56 flex-1 flex-col gap-2.5">{children}</div>
+      <div className="flex min-w-56 flex-1 flex-col gap-3">{children}</div>
     </div>
   );
 }
@@ -100,9 +111,9 @@ const SIZE: Record<number, string> = { 140: "size-[140px]", 112: "size-[112px]" 
 /** First-load placeholder with the panel's geometry (gauge + rows). Decorative. */
 export function GaugeSkeleton({ rows, size = 140 }: { rows: number; size?: 140 | 112 }) {
   return (
-    <span aria-hidden="true" className="flex flex-wrap items-center gap-x-6 gap-y-4">
+    <span aria-hidden="true" className="flex flex-wrap items-start gap-x-6 gap-y-4">
       <Skeleton className={`shrink-0 rounded-full ${SIZE[size]}`} />
-      <span className="flex min-w-32 flex-1 flex-col gap-3.5">
+      <span className="flex min-w-56 flex-1 flex-col gap-3">
         {Array.from({ length: rows }, (_, i) => (
           <span key={i} className="block">
             <Skeleton className="h-1.5 w-full rounded-[2px]" />

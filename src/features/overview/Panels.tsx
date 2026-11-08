@@ -388,7 +388,7 @@ export const StoragePanel = memo(function StoragePanel() {
       {data.volumes.length === 0 ? (
         <StateView compact kind="empty" title={tm("noVolumes")} />
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {data.volumes.map((v) => (
             <VolumeRow key={v.mountPoint} volume={v} />
           ))}
