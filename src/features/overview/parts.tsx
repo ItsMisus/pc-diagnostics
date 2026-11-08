@@ -81,12 +81,16 @@ export function BarRow({
   );
 }
 
-/** Gauge on the left, compact rows on the right (wrapping under the gauge when narrow). */
+/**
+ * Gauge on the left, compact rows on the right, wrapping under the gauge when narrow. The
+ * rows' minimum width fits the longest value ("19.4 GiB di 32.0 GiB") next to a short
+ * label, so a value never runs past the panel's edge: below it the rows wrap instead.
+ */
 export function GaugeLayout({ gauge, children }: { gauge: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
       {gauge}
-      <div className="flex min-w-32 flex-1 flex-col gap-2.5">{children}</div>
+      <div className="flex min-w-56 flex-1 flex-col gap-2.5">{children}</div>
     </div>
   );
 }

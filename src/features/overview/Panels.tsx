@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { SourceCaption } from "@/components/common/SourceCaption";
 import { StateView } from "@/components/common/StateView";
 import { Tooltip } from "@/components/common/Tooltip";
-import { useIsSimple } from "@/hooks/useViewMode";
+import { useIsSimple, useViewMode } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
 import { formatBytes, formatBytesPerSec, formatCelsius, formatMhz, formatPercent, formatPerSec, formatRpm, formatTime, formatWatts } from "@/lib/format";
 import { DiskHealth } from "@/features/monitoring/DiskHealth";
@@ -166,6 +166,8 @@ function FrequencyLimit({ cpu }: { cpu: CpuSample }) {
 // ---------------------------------------------------------------- GPU
 
 export const GpuPanel = memo(function GpuPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const { status, data } = useInventoryData();
@@ -250,6 +252,8 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
 // ---------------------------------------------------------------- RAM
 
 export const RamPanel = memo(function RamPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const simple = useIsSimple();
@@ -308,6 +312,8 @@ export const RamPanel = memo(function RamPanel() {
 // ---------------------------------------------------------------- Disk activity
 
 export const DiskPanel = memo(function DiskPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const storage = useLive((s) => s.latest?.storage);
@@ -361,6 +367,8 @@ function RateReadout({ label, metric }: { label: string; metric: Metric<number> 
 // ---------------------------------------------------------------- Storage (inventory)
 
 export const StoragePanel = memo(function StoragePanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const { status, data } = useInventoryData();

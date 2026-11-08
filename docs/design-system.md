@@ -47,6 +47,11 @@ Rules:
   (controls, nav, card titles, dense body), `text-sm` 14 (body), 15 (dialog titles),
   22 (page titles), `text-2xl` 24 (headline metrics).
 - Numbers: always `tabular` so live values do not jitter.
+- Byte sizes scale by 1024 and follow the view mode: "Semplice" uses the labels File
+  Explorer and Task Manager use (KB, MB, GB, TB), so the numbers match Windows; "Avanzata"
+  uses the exact IEC names (KiB, MiB, GiB, TiB). Always format them with `formatBytes` /
+  `formatBytesPerSec` / `formatMib` (`src/lib/format.ts`), never a hand-written unit. The
+  backend's texts follow the same rule (`fmt::bytes_plain` / `fmt::bytes`).
 - Section labels inside cards: `eyebrow` utility (11 px, uppercase, tracked, `fg-subtle`).
 - Card titles: sentence case, 13 px medium, `fg-muted` (handled by `<Card title>`).
 

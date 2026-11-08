@@ -50,7 +50,7 @@ describe("result formatters", () => {
     expect(formatOpsPerSec(4_560_000)).toBe("4.56 Mop/s");
     expect(formatOpsPerSec(950)).toBe("950 op/s");
     expect(formatOpsPerSec(21_770_330_229_964.8)).toBe("21.8 Top/s");
-    expect(formatUnitValue(3 * 1024 ** 3, "bytesPerSecond")).toBe("3.0 GiB/s");
+    expect(formatUnitValue(3 * 1024 ** 3, "bytesPerSecond")).toBe("3.0 GB/s");
     expect(formatUnitValue(12_345, "none")).toBe("12.3 k");
     expect(formatUnitValue(42, "count")).toBe("42");
   });

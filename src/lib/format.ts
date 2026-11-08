@@ -5,23 +5,56 @@ import type { Unavailability } from "@/types/generated/Unavailability";
 import type { Unit } from "@/types/generated/Unit";
 import { localeTag, translatorFor } from "@/i18n";
 
-const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"] as const;
+/**
+ * How byte sizes are labelled. Both scale by 1024 (Windows reports sizes in powers of 1024);
+ * only the label differs:
+ * - `windows`: KB, MB, GB, TB, the labels File Explorer and Task Manager use, so the number
+ *   matches what the user sees in Windows. Used in the "Semplice" view.
+ * - `iec`: KiB, MiB, GiB, TiB, the exact technical names. Used in the "Avanzata" view.
+ * The backend follows the same rule (`fmt::bytes_plain` / `fmt::bytes` in crates/diagnostics).
+ */
+export type ByteUnits = "windows" | "iec";
 
-/** Binary (IEC) units: Windows reports memory in powers of 1024. */
-export function formatBytes(bytes: number, fractionDigits = 1): string {
+const BYTE_LABELS: Record<ByteUnits, readonly string[]> = {
+  windows: ["B", "KB", "MB", "GB", "TB", "PB"],
+  iec: ["B", "KiB", "MiB", "GiB", "TiB", "PiB"],
+};
+
+let byteUnits: ByteUnits = "windows";
+
+/**
+ * Sets the labels `formatBytes` uses. Called by the app store whenever the view mode changes,
+ * before React re-renders, so the next render already shows the new labels.
+ */
+export function setByteUnits(units: ByteUnits): void {
+  byteUnits = units;
+}
+
+export function getByteUnits(): ByteUnits {
+  return byteUnits;
+}
+
+/** Powers of 1024, labelled per `units` (default: the current view mode's). */
+export function formatBytes(bytes: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  const labels = BYTE_LABELS[units];
   let value = bytes;
   let unit = 0;
-  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+  while (value >= 1024 && unit < labels.length - 1) {
     value /= 1024;
     unit += 1;
   }
   const digits = unit === 0 ? 0 : fractionDigits;
-  return `${value.toFixed(digits)} ${BYTE_UNITS[unit]}`;
+  return `${value.toFixed(digits)} ${labels[unit]}`;
 }
 
-export function formatBytesPerSec(bytesPerSec: number, fractionDigits = 1): string {
-  const bytes = formatBytes(bytesPerSec, fractionDigits);
+/** A size given in MiB (benchmark file sizes), labelled per the current view mode: "256 MB". */
+export function formatMib(mib: number): string {
+  return formatBytes(mib * 1024 * 1024, 0);
+}
+
+export function formatBytesPerSec(bytesPerSec: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
+  const bytes = formatBytes(bytesPerSec, fractionDigits, units);
   return bytes === "—" ? bytes : `${bytes}/s`;
 }
 

@@ -1,3 +1,4 @@
+import { useViewMode } from "@/hooks/useViewMode";
 import { memo, type ReactNode, useMemo } from "react";
 import { LineChart } from "@/components/charts/LineChart";
 import { DefinitionList, type DefinitionItem } from "@/components/common/DefinitionList";
@@ -8,6 +9,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useT } from "@/i18n";
 import {
   formatBytes,
+  formatMib,
   formatDateTime,
   formatElapsed,
   formatMhz,
@@ -186,6 +188,8 @@ export function MetricsGrid({ metrics, interim = false }: { metrics: readonly Re
 }
 
 const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSeries }) {
+  // Byte labels follow the view mode (lib/format.ts).
+  const viewMode = useViewMode();
   const t = useT("benchmarks");
   const { points, xDomain, yDomain } = useMemo(() => {
     const pts = series.points.map((p) => ({ t: p.elapsedMs, v: Number.isFinite(p.value) ? p.value : null }));
@@ -198,7 +202,7 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
     () => [{ id: series.id, label: series.label, points, tone: "primary" as const }],
     [series.id, series.label, points],
   );
-  const formatY = useMemo(() => (v: number) => formatUnitValue(v, series.unit), [series.unit]);
+  const formatY = useMemo(() => (v: number) => formatUnitValue(v, series.unit), [series.unit, viewMode]);
 
   return (
     <figure className={`${INSET} min-w-0 p-3`}>
@@ -252,7 +256,7 @@ function RunParams({ result }: { result: BenchmarkResult }) {
   if (r.threads !== null) items.push({ label: t("threads"), value: r.threads });
   if (isStorageKind(result.kind)) {
     items.push({ label: t("volume"), value: r.storageVolume ?? "—" });
-    if (r.storageFileMib !== null) items.push({ label: t("tempFile"), value: `${r.storageFileMib} MiB` });
+    if (r.storageFileMib !== null) items.push({ label: t("tempFile"), value: formatMib(r.storageFileMib) });
   }
   items.push(
     { label: t("actualDuration"), value: formatElapsed(result.durationMs) },

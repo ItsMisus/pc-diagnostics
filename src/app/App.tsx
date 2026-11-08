@@ -64,6 +64,10 @@ function Page({ id }: { id: SectionId }): ReactNode {
 
 export function App() {
   const sectionId = useAppStore((s) => s.section);
+  // Re-renders the page tree when the view mode changes, so every size picks up the new
+  // byte labels (KB/MB/GB or KiB/MiB/GiB, lib/format.ts). Memoised components that format
+  // bytes subscribe on their own.
+  useAppStore((s) => s.viewMode);
   const loadSettings = useAppStore((s) => s.loadSettings);
   useThemeSync();
   useLangSync();

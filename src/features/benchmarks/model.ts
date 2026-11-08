@@ -8,7 +8,7 @@ import type { PowerSource } from "@/types/generated/PowerSource";
 import type { ResultMetric } from "@/types/generated/ResultMetric";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 import { type Translator, translatorFor } from "@/i18n";
-import { unavailabilityText } from "@/lib/format";
+import { formatMib, unavailabilityText } from "@/lib/format";
 
 /** The four benchmarkable components shown as cards. */
 export type BenchComponent = "cpu" | "gpu" | "memory" | "storage";
@@ -286,6 +286,6 @@ export function buildRequest(
 }
 
 export function storageConsentCopy(fileMib: number | null, t: T = current()): string {
-  const size = fileMib === null ? t("consentDefaultSize") : `${fileMib} MiB`;
+  const size = fileMib === null ? t("consentDefaultSize") : formatMib(fileMib);
   return t("consentCopy", { size });
 }

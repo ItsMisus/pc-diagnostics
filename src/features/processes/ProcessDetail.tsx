@@ -1,3 +1,4 @@
+import { useViewMode } from "@/hooks/useViewMode";
 import { memo, type ReactNode, useCallback, useId, useMemo } from "react";
 import { LineChart, type Series } from "@/components/charts/LineChart";
 import type { Domain, Point } from "@/components/charts/scale";
@@ -172,6 +173,8 @@ function PressureBreakdown({ row, stale }: { row: ProcessRow; stale: boolean }) 
 }
 
 const HistoryView = memo(function HistoryView({ history }: { history: ProcessHistory }) {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("processes");
   const { points } = history;
   const charts = useMemo(() => {

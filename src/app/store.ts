@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { commands } from "@/services/commands";
 import { toAppError } from "@/services/ipc";
 import { setLang } from "@/i18n";
+import { setByteUnits } from "@/lib/format";
 import type { AppError } from "@/types/generated/AppError";
 import type { AppSettings } from "@/types/generated/AppSettings";
 import type { ViewMode } from "@/types/generated/ViewMode";
@@ -103,3 +104,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 export function normalizeViewMode(value: unknown): ViewMode {
   return value === "advanced" ? "advanced" : "simple";
 }
+
+/**
+ * Byte labels follow the view mode (KB/MB/GB in "Semplice", KiB/MiB/GiB in "Avanzata").
+ * A store listener runs synchronously inside `set`, before React re-renders, so every
+ * component that renders after a mode change already formats with the new labels.
+ */
+useAppStore.subscribe((state, previous) => {
+  if (state.viewMode !== previous.viewMode) setByteUnits(state.viewMode === "advanced" ? "iec" : "windows");
+});

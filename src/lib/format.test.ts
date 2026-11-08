@@ -14,13 +14,16 @@ import {
   formatIsoDate,
   formatMetric,
   formatMhz,
+  formatMib,
   formatMts,
   formatPercent,
   formatPerSec,
   formatRpm,
   formatUnitValue,
   formatWatts,
+  getByteUnits,
   niceCeil,
+  setByteUnits,
   sourceLabel,
   unavailabilityText,
 } from "./format";
@@ -54,7 +57,8 @@ describe("niceCeil", () => {
 describe("unit formatters", () => {
   it("formats throughput with binary units", () => {
     expect(formatBytesPerSec(0)).toBe("0 B/s");
-    expect(formatBytesPerSec(1024 * 1024 * 3.5)).toBe("3.5 MiB/s");
+    expect(formatBytesPerSec(1024 * 1024 * 3.5)).toBe("3.5 MB/s");
+    expect(formatBytesPerSec(1024 * 1024 * 3.5, 1, "iec")).toBe("3.5 MiB/s");
     expect(formatBytesPerSec(-1)).toBe("—");
   });
 
@@ -96,11 +100,27 @@ describe("stateKindForError", () => {
 });
 
 describe("formatBytes", () => {
-  it("uses binary units", () => {
+  it("scales by 1024 with the labels Windows uses (simple view, the default)", () => {
     expect(formatBytes(0)).toBe("0 B");
     expect(formatBytes(1023)).toBe("1023 B");
-    expect(formatBytes(1024)).toBe("1.0 KiB");
-    expect(formatBytes(16 * 1024 ** 3)).toBe("16.0 GiB");
+    expect(formatBytes(1024)).toBe("1.0 KB");
+    expect(formatBytes(16 * 1024 ** 3)).toBe("16.0 GB");
+    expect(formatBytes(1.8 * 1024 ** 4)).toBe("1.8 TB");
+  });
+
+  it("uses the IEC labels when asked or when the view mode is advanced", () => {
+    expect(formatBytes(16 * 1024 ** 3, 1, "iec")).toBe("16.0 GiB");
+    setByteUnits("iec");
+    try {
+      expect(getByteUnits()).toBe("iec");
+      expect(formatBytes(1024)).toBe("1.0 KiB");
+      expect(formatBytesPerSec(3 * 1024 ** 2)).toBe("3.0 MiB/s");
+      expect(formatMib(256)).toBe("256 MiB");
+    } finally {
+      setByteUnits("windows");
+    }
+    expect(formatMib(256)).toBe("256 MB");
+    expect(formatMib(4096)).toBe("4 GB");
   });
 
   it("rejects invalid input", () => {

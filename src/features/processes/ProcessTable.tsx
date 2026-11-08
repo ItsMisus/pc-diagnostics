@@ -1,3 +1,4 @@
+import { useViewMode } from "@/hooks/useViewMode";
 import { memo, useMemo } from "react";
 import { Icon } from "@/components/common/Icon";
 import { MetricValue } from "@/components/common/MetricValue";
@@ -117,6 +118,8 @@ interface RowProps {
 
 const ProcessTableRow = memo(
   function ProcessTableRow({ row, mode, selected, onSelect }: RowProps) {
+    // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+    useViewMode();
     const t = useT("processes");
     const io = ioTotal(row);
     const impact = row.pressure.impact;

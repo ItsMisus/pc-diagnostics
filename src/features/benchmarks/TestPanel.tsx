@@ -5,7 +5,7 @@ import { UnavailableReason, useUnavailabilityText } from "@/components/common/Me
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes } from "@/lib/format";
+import { formatBytes, formatMib } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
 import type { AppError } from "@/types/generated/AppError";
@@ -248,7 +248,7 @@ function Controls({
             >
               {presets(fBounds, FILE_PRESETS).map((v) => (
                 <option key={v} value={v}>
-                  {v === fBounds.def ? t("optionDefault", { value: `${v} MiB` }) : `${v} MiB`}
+                  {v === fBounds.def ? t("optionDefault", { value: formatMib(v) }) : formatMib(v)}
                 </option>
               ))}
             </select>
