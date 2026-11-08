@@ -47,6 +47,10 @@ Rules:
   (controls, nav, card titles, dense body), `text-sm` 14 (body), 15 (dialog titles),
   22 (page titles), `text-2xl` 24 (headline metrics).
 - Numbers: always `tabular` so live values do not jitter.
+- Decimals and percentages follow the language, like the backend's `fmt::num` / `fmt::pct`:
+  "19,4 GB", "6,2 %" in Italian; "19.4 GB", "6.2%" in English; no thousands separator
+  ("4700 MHz"). Use `formatNumber` / `formatPercent` (`src/lib/format.ts`), never `toFixed`
+  in a component.
 - Byte sizes scale by 1024 and follow the view mode: "Semplice" uses the labels File
   Explorer and Task Manager use (KB, MB, GB, TB), so the numbers match Windows; "Avanzata"
   uses the exact IEC names (KiB, MiB, GiB, TiB). Always format them with `formatBytes` /

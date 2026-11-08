@@ -34,7 +34,7 @@ export default {
   health_unknown: "Non determinato",
 
   // Live charts.
-  percentChartAria: "{label} nel tempo, scala fissa 0–100%",
+  percentChartAria: "{label} nel tempo, scala fissa 0–100 %",
   diskThroughputTitle: "Disco: lettura e scrittura",
   throughputAria: "Velocità di lettura e scrittura su disco nel tempo, scala da zero",
   legend: "Legenda",

@@ -16,9 +16,11 @@ import {
   formatMhz,
   formatMib,
   formatMts,
+  formatNumber,
   formatPercent,
   formatPerSec,
   formatRpm,
+  formatSignedPercent,
   formatUnitValue,
   formatWatts,
   getByteUnits,
@@ -57,8 +59,8 @@ describe("niceCeil", () => {
 describe("unit formatters", () => {
   it("formats throughput with binary units", () => {
     expect(formatBytesPerSec(0)).toBe("0 B/s");
-    expect(formatBytesPerSec(1024 * 1024 * 3.5)).toBe("3.5 MB/s");
-    expect(formatBytesPerSec(1024 * 1024 * 3.5, 1, "iec")).toBe("3.5 MiB/s");
+    expect(formatBytesPerSec(1024 * 1024 * 3.5)).toBe("3,5 MB/s");
+    expect(formatBytesPerSec(1024 * 1024 * 3.5, 1, "iec")).toBe("3,5 MiB/s");
     expect(formatBytesPerSec(-1)).toBe("—");
   });
 
@@ -66,10 +68,10 @@ describe("unit formatters", () => {
     expect(formatMhz(3599.6)).toBe("3600 MHz");
     expect(formatMhz(Number.NaN)).toBe("—");
     expect(formatCelsius(64.4)).toBe("64 °C");
-    expect(formatWatts(12.34)).toBe("12.3 W");
+    expect(formatWatts(12.34)).toBe("12,3 W");
     expect(formatMts(3200)).toBe("3200 MT/s");
     expect(formatMts(0)).toBe("—");
-    expect(formatPerSec(3.25)).toBe("3.3/s");
+    expect(formatPerSec(3.25)).toBe("3,3/s");
     expect(formatPerSec(120.4)).toBe("120/s");
   });
 
@@ -103,18 +105,18 @@ describe("formatBytes", () => {
   it("scales by 1024 with the labels Windows uses (simple view, the default)", () => {
     expect(formatBytes(0)).toBe("0 B");
     expect(formatBytes(1023)).toBe("1023 B");
-    expect(formatBytes(1024)).toBe("1.0 KB");
-    expect(formatBytes(16 * 1024 ** 3)).toBe("16.0 GB");
-    expect(formatBytes(1.8 * 1024 ** 4)).toBe("1.8 TB");
+    expect(formatBytes(1024)).toBe("1,0 KB");
+    expect(formatBytes(16 * 1024 ** 3)).toBe("16,0 GB");
+    expect(formatBytes(1.8 * 1024 ** 4)).toBe("1,8 TB");
   });
 
   it("uses the IEC labels when asked or when the view mode is advanced", () => {
-    expect(formatBytes(16 * 1024 ** 3, 1, "iec")).toBe("16.0 GiB");
+    expect(formatBytes(16 * 1024 ** 3, 1, "iec")).toBe("16,0 GiB");
     setByteUnits("iec");
     try {
       expect(getByteUnits()).toBe("iec");
-      expect(formatBytes(1024)).toBe("1.0 KiB");
-      expect(formatBytesPerSec(3 * 1024 ** 2)).toBe("3.0 MiB/s");
+      expect(formatBytes(1024)).toBe("1,0 KiB");
+      expect(formatBytesPerSec(3 * 1024 ** 2)).toBe("3,0 MiB/s");
       expect(formatMib(256)).toBe("256 MiB");
     } finally {
       setByteUnits("windows");
@@ -131,7 +133,7 @@ describe("formatBytes", () => {
 
 describe("formatPercent", () => {
   it("formats with fixed digits", () => {
-    expect(formatPercent(42.456, 1)).toBe("42.5%");
+    expect(formatPercent(42.456, 1)).toBe("42,5 %");
     expect(formatPercent(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
@@ -149,7 +151,7 @@ describe("metric helpers", () => {
   it("formats available metrics only", () => {
     const ok: Metric<number> = { status: "available", value: 50, unit: "percent", source: "pdh", at: 0 };
     const missing: Metric<number> = { status: "unavailable", reason: { kind: "permissionDenied" } };
-    expect(formatMetric(ok, (v: number) => formatPercent(v))).toBe("50%");
+    expect(formatMetric(ok, (v: number) => formatPercent(v))).toBe("50 %");
     expect(formatMetric(missing, (v: number) => formatPercent(v))).toBeNull();
   });
 
@@ -193,18 +195,18 @@ describe("formatDateTime", () => {
 
 describe("GPU compute and fan formatters", () => {
   it("formats FLOP/s with SI prefixes", () => {
-    expect(formatFlopsPerSec(21_770_330_229_964.8)).toBe("21.8 TFLOP/s");
-    expect(formatFlopsPerSec(1_234_000_000)).toBe("1.23 GFLOP/s");
-    expect(formatFlopsPerSec(45_600_000)).toBe("45.6 MFLOP/s");
-    expect(formatFlopsPerSec(1500)).toBe("1.50 kFLOP/s");
+    expect(formatFlopsPerSec(21_770_330_229_964.8)).toBe("21,8 TFLOP/s");
+    expect(formatFlopsPerSec(1_234_000_000)).toBe("1,23 GFLOP/s");
+    expect(formatFlopsPerSec(45_600_000)).toBe("45,6 MFLOP/s");
+    expect(formatFlopsPerSec(1500)).toBe("1,50 kFLOP/s");
     expect(formatFlopsPerSec(950)).toBe("950 FLOP/s");
     expect(formatFlopsPerSec(-1)).toBe("—");
     expect(formatFlopsPerSec(Number.NaN)).toBe("—");
   });
 
   it("routes the flopsPerSecond unit through the shared result formatter", () => {
-    expect(formatUnitValue(21_770_330_229_964.8, "flopsPerSecond")).toBe("21.8 TFLOP/s");
-    expect(formatUnitValue(4_560_000, "operationsPerSecond")).toBe("4.56 Mop/s");
+    expect(formatUnitValue(21_770_330_229_964.8, "flopsPerSecond")).toBe("21,8 TFLOP/s");
+    expect(formatUnitValue(4_560_000, "operationsPerSecond")).toBe("4,56 Mop/s");
   });
 
   it("formats fan speed, keeping 0 rpm as a real reading", () => {
@@ -235,5 +237,24 @@ describe("English formatting", () => {
     setLang("it");
     expect(errorTitle("network")).toBe("Errore di rete");
     expect(formatIsoDate("2024-05-01")).toBe("01/05/2024");
+  });
+});
+
+describe("numbers follow the language, like the backend's fmt::num", () => {
+  afterEach(() => setLang("it"));
+
+  it("Italian: decimal comma and a space before %", () => {
+    expect(formatNumber(19.44, 1)).toBe("19,4");
+    expect(formatNumber(4700)).toBe("4700");
+    expect(formatPercent(91.6)).toBe("92 %");
+    expect(formatBytes(19.4 * 1024 ** 3)).toBe("19,4 GB");
+  });
+
+  it("English: decimal point and no space before %", () => {
+    setLang("en");
+    expect(formatNumber(19.44, 1)).toBe("19.4");
+    expect(formatPercent(91.6)).toBe("92%");
+    expect(formatSignedPercent(4.24)).toBe("+4.2%");
+    expect(formatBytes(19.4 * 1024 ** 3)).toBe("19.4 GB");
   });
 });

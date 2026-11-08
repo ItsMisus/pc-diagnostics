@@ -3,7 +3,22 @@ import type { Metric } from "@/types/generated/Metric";
 import type { Source } from "@/types/generated/Source";
 import type { Unavailability } from "@/types/generated/Unavailability";
 import type { Unit } from "@/types/generated/Unit";
-import { localeTag, translatorFor } from "@/i18n";
+import { getLang, localeTag, translatorFor } from "@/i18n";
+
+/**
+ * A number with a fixed number of decimals in the current language: "19,4" in Italian,
+ * "19.4" in English. No thousands separator ("4700 MHz", "1863 GB"), like the backend's
+ * `fmt::num` (crates/diagnostics/src/fmt.rs), so the UI and the findings write numbers alike.
+ */
+export function formatNumber(value: number, fractionDigits = 0): string {
+  const s = value.toFixed(fractionDigits);
+  return getLang() === "it" ? s.replace(".", ",") : s;
+}
+
+/** "92 %" in Italian, "92%" in English (the backend's `with_percent`). */
+function withPercent(number: string): string {
+  return getLang() === "it" ? `${number} %` : `${number}%`;
+}
 
 /**
  * How byte sizes are labelled. Both scale by 1024 (Windows reports sizes in powers of 1024);
@@ -45,7 +60,7 @@ export function formatBytes(bytes: number, fractionDigits = 1, units: ByteUnits 
     unit += 1;
   }
   const digits = unit === 0 ? 0 : fractionDigits;
-  return `${value.toFixed(digits)} ${labels[unit]}`;
+  return `${formatNumber(value, digits)} ${labels[unit]}`;
 }
 
 /** A size given in MiB (benchmark file sizes), labelled per the current view mode: "256 MB". */
@@ -65,12 +80,12 @@ export function formatMhz(mhz: number): string {
 
 export function formatCelsius(celsius: number): string {
   if (!Number.isFinite(celsius)) return "—";
-  return `${celsius.toFixed(0)} °C`;
+  return `${formatNumber(celsius, 0)} °C`;
 }
 
 export function formatWatts(watts: number): string {
   if (!Number.isFinite(watts) || watts < 0) return "—";
-  return `${watts.toFixed(1)} W`;
+  return `${formatNumber(watts, 1)} W`;
 }
 
 /** Memory module transfer rate (`Win32_PhysicalMemory` reports MT/s). */
@@ -82,7 +97,7 @@ export function formatMts(mts: number): string {
 /** Events per second, e.g. hard page faults. */
 export function formatPerSec(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "—";
-  return `${value < 10 ? value.toFixed(1) : Math.round(value)}/s`;
+  return `${value < 10 ? formatNumber(value, 1) : Math.round(value)}/s`;
 }
 
 /** Wall-clock time of an epoch-ms timestamp, in the current language's locale. */
@@ -155,7 +170,7 @@ export function sourceLabel(source: Source): string {
 
 export function formatPercent(value: number, fractionDigits = 0): string {
   if (!Number.isFinite(value)) return "—";
-  return `${value.toFixed(fractionDigits)}%`;
+  return withPercent(formatNumber(value, fractionDigits));
 }
 
 /** Compact duration: "3 g 4 h" ("3 d 4 h" in English), "2 h 5 min", "42 s". */
@@ -196,10 +211,10 @@ export function formatMetric<T>(metric: Metric<T>, format: (value: T) => string)
 /** 2 decimals below 10, 1 below 100, none above: keeps result numbers readable. */
 function sig(value: number): string {
   const abs = Math.abs(value);
-  return value.toFixed(abs < 10 ? 2 : abs < 100 ? 1 : 0);
+  return formatNumber(value, abs < 10 ? 2 : abs < 100 ? 1 : 0);
 }
 
-/** Compact decimal number with SI prefix: "950", "12.3 k", "4.56 M", "1.20 G", "21.8 T". */
+/** Compact decimal number with SI prefix: "950", "12.3 k", "4.56 M", "1.20 G", "21.8 T" ("12,3 k" in Italian). */
 export function formatCompact(value: number): string {
   if (!Number.isFinite(value)) return "—";
   const abs = Math.abs(value);
@@ -251,12 +266,12 @@ export function formatMilliseconds(ms: number): string {
   return `${sig(ms)} ms`;
 }
 
-/** Signed percentage change with one decimal: "+4.2%", "−3.0%", "0.0%". */
+/** Signed percentage change with one decimal: "+4.2%", "−3.0%", "0.0%" ("+4,2 %" in Italian). */
 export function formatSignedPercent(value: number): string {
   if (!Number.isFinite(value)) return "—";
   const rounded = Math.round(value * 10) / 10;
-  if (rounded === 0) return "0.0%";
-  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded).toFixed(1)}%`;
+  if (rounded === 0) return withPercent(formatNumber(0, 1));
+  return withPercent(`${rounded > 0 ? "+" : "−"}${formatNumber(Math.abs(rounded), 1)}`);
 }
 
 /** Formats a benchmark result value according to its declared unit. */

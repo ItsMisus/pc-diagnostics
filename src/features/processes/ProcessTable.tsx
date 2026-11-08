@@ -6,7 +6,7 @@ import { SortHeader, Table, Td } from "@/components/common/Table";
 import { UsageBar } from "@/components/common/UsageBar";
 import { Tag } from "@/components/common/Tag";
 import { type Translator, useT } from "@/i18n";
-import { formatBytes, formatBytesPerSec, formatPercent } from "@/lib/format";
+import { formatBytes, formatBytesPerSec, formatPercent, formatNumber } from "@/lib/format";
 import type { ProcessRow } from "@/types/generated/ProcessRow";
 import { useProcesses } from "./processStore";
 import { filterRows, ioTotal, sameRowDisplay, type SortColumn, sortRows } from "./rows";
@@ -165,16 +165,16 @@ const ProcessTableRow = memo(
             <UsageBar
               percent={impact}
               label={t("impactOf", { name: row.name })}
-              valueText={t("outOf100", { value: impact.toFixed(1) })}
+              valueText={t("outOf100", { value: formatNumber(impact, 1) })}
               className="w-14"
             />
             <span className="w-9 text-right" aria-hidden="true">
-              {impact.toFixed(1)}
+              {formatNumber(impact, 1)}
             </span>
           </div>
         </Td>
         {mode === "window" && (
-          <Td className="text-right whitespace-nowrap text-fg-muted">{row.impactPeak.toFixed(1)}</Td>
+          <Td className="text-right whitespace-nowrap text-fg-muted">{formatNumber(row.impactPeak, 1)}</Td>
         )}
       </tr>
     );

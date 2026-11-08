@@ -7,11 +7,11 @@ describe("view mode and byte labels", () => {
 
   it("switches between Windows and IEC labels with the view mode", () => {
     expect(getByteUnits()).toBe("windows");
-    expect(formatBytes(16 * 1024 ** 3)).toBe("16.0 GB");
+    expect(formatBytes(16 * 1024 ** 3)).toBe("16,0 GB");
 
     useAppStore.getState().setViewMode("advanced");
     expect(getByteUnits()).toBe("iec");
-    expect(formatBytes(16 * 1024 ** 3)).toBe("16.0 GiB");
+    expect(formatBytes(16 * 1024 ** 3)).toBe("16,0 GiB");
 
     useAppStore.getState().setViewMode("simple");
     expect(getByteUnits()).toBe("windows");

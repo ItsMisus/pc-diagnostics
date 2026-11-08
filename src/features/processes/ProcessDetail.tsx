@@ -13,7 +13,7 @@ import { UsageBar } from "@/components/common/UsageBar";
 import { usePolling } from "@/hooks/usePolling";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatBytesPerSec, formatPercent } from "@/lib/format";
+import { formatBytes, formatBytesPerSec, formatPercent, formatNumber } from "@/lib/format";
 import { commands } from "@/services/commands";
 import type { ProcessHistory } from "@/types/generated/ProcessHistory";
 import type { ProcessRow } from "@/types/generated/ProcessRow";
@@ -157,10 +157,10 @@ function PressureBreakdown({ row, stale }: { row: ProcessRow; stale: boolean }) 
             <UsageBar
               percent={i.value}
               label={t("pressureOf", { label: i.label })}
-              valueText={t("outOf100", { value: i.value.toFixed(1) })}
+              valueText={t("outOf100", { value: formatNumber(i.value, 1) })}
             />
             <span className="text-right tabular" aria-hidden="true">
-              {i.value.toFixed(1)}
+              {formatNumber(i.value, 1)}
             </span>
           </li>
         ))}

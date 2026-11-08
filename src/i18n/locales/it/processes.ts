@@ -64,7 +64,7 @@ export default {
   historyEnded: "Terminato",
   noSamples: "Nessun campione ancora registrato per questo processo.",
   cpuChartTitle: "CPU (% dell'intero sistema)",
-  cpuChartAria: "CPU del processo nel tempo, scala fissa 0–100%",
+  cpuChartAria: "CPU del processo nel tempo, scala fissa 0–100 %",
   ramChartTitle: "RAM (working set)",
   ramChartAria: "Memoria del processo nel tempo, scala da zero",
   ioChartTitle: "I/O logico: scrittura (linea piena) e lettura",

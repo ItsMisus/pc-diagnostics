@@ -4,7 +4,7 @@ import { Card } from "@/components/common/Card";
 import { Skeleton } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
-import { formatBytesPerSec } from "@/lib/format";
+import { formatBytesPerSec, formatPercent } from "@/lib/format";
 import { useInventoryData, useSeries, useTimeDomain } from "./hooks";
 import { useLive } from "./liveStore";
 import { primaryGpu } from "./selection";
@@ -13,7 +13,7 @@ import { InventoryState, WaitingForSample } from "./StatusViews";
 
 /** Keep in sync with `ChartSkeleton` (`h-30` = 120 px), so the first sample causes no shift. */
 const CHART_HEIGHT = 120;
-const axisPercent = (v: number) => `${v.toFixed(0)}%`;
+const axisPercent = (v: number) => formatPercent(v);
 const axisThroughput = (v: number) => formatBytesPerSec(v, 0);
 
 /** Plot-sized placeholder for a chart whose first sample (or inventory) is pending. */
