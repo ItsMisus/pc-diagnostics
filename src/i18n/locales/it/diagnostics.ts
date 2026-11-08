@@ -54,7 +54,7 @@ export default {
   showTechnical: "Mostra dettagli tecnici",
 
   // Overview "System Insights" card
-  insightsTitle: "System Insights",
+  insightsTitle: "Segnalazioni",
   openDiagnostics: "Apri Diagnostics",
   insightsUnavailable: "Report diagnostico non disponibile",
   insightsNeverRunDescription:

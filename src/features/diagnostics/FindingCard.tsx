@@ -2,7 +2,7 @@ import { memo, type ReactNode } from "react";
 import { Disclosure } from "@/components/common/Disclosure";
 import { Icon } from "@/components/common/Icon";
 import { SourceCaption } from "@/components/common/SourceCaption";
-import { StatusBadge, type Tone } from "@/components/common/StatusBadge";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { RisolviButton } from "@/features/assistant/RisolviButton";
 import type { Confidence } from "@/types/generated/Confidence";
 import type { Finding } from "@/types/generated/Finding";
@@ -69,28 +69,16 @@ function ConfidenceLabel({ confidence }: { confidence: Confidence }) {
   );
 }
 
-const RAIL: Record<Tone, string> = {
-  bad: "bg-bad",
-  warn: "bg-warn",
-  ok: "bg-ok",
-  neutral: "bg-line-strong",
-};
-
 /**
- * Thin severity accent on the left edge of a card, readable at a glance while scanning a
- * list. Decorative: the severity is always also written in a badge.
+ * Flat panel like every other card. Severity is written, not drawn: the badge in the simple
+ * view, the group heading ("Avvisi", "Critici") in the advanced one.
  */
-export function SeverityRail({ tone }: { tone: Tone }) {
-  return <span aria-hidden="true" className={`absolute inset-y-3 left-0 w-[3px] rounded-r-full ${RAIL[tone]}`} />;
-}
-
-const ARTICLE = "relative rounded-md border border-line bg-surface p-4 pl-5";
+const ARTICLE = "rounded-md border border-line bg-surface p-4";
 
 /** `findingIndex`: position in the report's `findings` (backend order); enables "Risolvi". */
 export const FindingCard = memo(function FindingCard({ finding, findingIndex }: { finding: Finding; findingIndex: number }) {
   return (
     <article className={ARTICLE}>
-      <SeverityRail tone={severityTone(finding.severity)} />
       <TechnicalFinding finding={finding} />
       <RisolviRow finding={finding} findingIndex={findingIndex} label={finding.title} />
     </article>
@@ -198,7 +186,6 @@ export const SimpleFindingCard = memo(function SimpleFindingCard({
   const text = simpleFindingText(finding);
   return (
     <article className={ARTICLE}>
-      <SeverityRail tone={severityTone(finding.severity)} />
       <header className="flex flex-wrap items-center gap-1.5">
         <StatusBadge tone={severityTone(finding.severity)} label={simpleSeverityLabel(finding.severity)} />
         <SimpleKindHint finding={finding} />
