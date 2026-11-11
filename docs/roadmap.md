@@ -141,6 +141,36 @@ Methodology, thresholds and ids: docs/benchmark-methodology.md.
 | Monitoring-dashboard style (neutral greys, monochrome gauges/bars/charts, flat panels, big light numbers) | done | Brief and rules in `docs/ui-dashboard-brief.md`; `RingGauge`, `Readout` primitives |
 | No redundancy: one home per value, counts and explanations once, no page subtitles or live badges, sources only in Advanced, one global Simple/Advanced control | done | Overview is the one-screen dashboard; Hardware is specs only; Diagnostics/Drivers/Processes/Benchmarks/History/Settings trimmed; repeated coverage note and duplicate "problem code" evidence removed in Rust |
 
+## macOS port (2026-11-11)
+
+Target: Apple Silicon (arm64), macOS 13.3 or later. Development and test machine: Apple M5,
+10 cores, 16 GB, macOS 27.2.1. Rules are the same as on Windows: real data only, no admin,
+no privileged helper or kernel extension, native APIs (sysctl, Mach, I/O Kit, libproc), no
+shelling out to `powermetrics`, `system_profiler`, `ioreg` and similar tools. A value macOS
+does not expose stays unavailable with the reason; a Windows-specific field is not reused
+for a macOS value with a different meaning.
+
+| Item | Status | Notes |
+|---|---|---|
+| Workspace builds and the app launches on macOS | done | Windows-only providers return `notSupported`; providers are being ported (rows below) |
+| Bundle: `.app` + `.dmg` (`src-tauri/tauri.macos.conf.json`, Windows config unchanged) | done | `npx tauri build`, release with LTO: 2 min 58 s from a cold release cache with 4 jobs. `PC Diagnostics.app` 12.19 MiB, binary 12 697 968 bytes (arm64 only), `PC Diagnostics_0.1.0_aarch64.dmg` 5 836 064 bytes. DMG mounts with the app and an Applications link |
+| Signing | done (ad-hoc) | `signingIdentity: "-"`, hardened runtime, no entitlements. `codesign --verify --deep --strict` passes, also on the copy inside the DMG. Builds without an Apple account |
+| `LSMinimumSystemVersion` 13.3 | done | Tailwind CSS 4 needs Safari 16.4 features (cascade layers, `@property`, `color-mix()`); macOS 13.3 is the first release that ships that WebKit. The binary's `minos` is 13.3 (Tauri sets `MACOSX_DEPLOYMENT_TARGET`). Only macOS 27.2.1 was actually tested |
+| Info.plist additions | done | `NSDocumentsFolderUsageDescription` (report export writes to `~/Documents/PC Diagnostics`, which TCC protects), English and Italian `InfoPlist.strings`. The TCC prompt itself was not exercised (no export was run) |
+| CSP and IPC on WKWebView (`tauri://localhost`, `ipc://localhost`) | done | No CSP change needed: `connect-src ipc: http://ipc.localhost` covers the macOS custom protocol. Verified on the release `.app` started with `open -n`: the Overview showed real CPU load, RAM 8.9 of 16.0 GB, volumes and the process list, and values changed between two window captures about 25 s apart (commands and live events both work); the log shows `hardware inventory collected`, which only a command from the UI triggers at startup. Process alive 41 s, then stopped by its PID |
+| Data location | done | `~/Library/Application Support/com.pcdiagnostics.desktop/pc-diagnostics.sqlite3` (opened by the release build, `database ready schema=3`) |
+| Gatekeeper instructions for the unsigned build | done | README "macOS: opening an unsigned app" (Open Anyway on macOS 15+, Control-click Open on 13/14). Not tested with a quarantined download |
+| CI: `check-macos` job on `macos-latest` running `npm run check` | written, not run | YAML parsed locally (Ruby Psych); GitHub Actions cannot run here. It passes only once the workspace is clippy-clean on macOS |
+| Release: macOS `.dmg` + SHA-256 added to the draft release | written, not run | Parallel `macos` job, then `macos-release-asset` uploads to the draft the Windows job creates |
+| Process enumeration and categories | in progress | Platform agent |
+| Live monitoring and hardware inventory (CPU, memory, GPU, disks, sensors) | in progress | Monitor agent |
+| Benchmarks (CPU, RAM, storage, GPU via Metal) | in progress | Bench agent |
+| System services (display language, Keychain for the assistant key, app overhead, assistant actions) | in progress | System services agent |
+| UI wording for macOS (texts that name Windows, Drivers page) | in progress | UI agent |
+| Drivers page and Windows Update driver check | not applicable | No comparable user-visible driver inventory on macOS; drivers ship with the OS |
+| Developer ID signing and notarization | not done | Needs a paid Apple Developer account; until then Gatekeeper blocks the first launch of a downloaded copy |
+| Intel Macs (x86_64) / universal binary | not done | Not built or tested; would need `--target universal-apple-darwin` and an Intel test machine |
+
 ## Out of scope for v1 (by design)
 
 Driver installation/update/removal, process kill/suspend, registry changes, BIOS,
