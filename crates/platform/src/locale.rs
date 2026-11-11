@@ -1,7 +1,10 @@
-//! Windows display language, used to resolve `LanguagePreference::System`.
+//! The OS display language, used to resolve `LanguagePreference::System`.
+//!
+//! - Windows: the user's display (UI) language (`GetUserDefaultUILanguage`).
+//! - macOS: the first of the user's preferred languages (`CFLocaleCopyPreferredLanguages`).
 
-/// Whether the user's Windows display (UI) language is Italian, in any region.
-/// `false` on other platforms and when the language cannot be read.
+/// Whether the user's display (UI) language is Italian, in any region. `false` on other
+/// platforms and when the language cannot be read.
 pub fn display_language_is_italian() -> bool {
     #[cfg(windows)]
     {
@@ -9,14 +12,19 @@ pub fn display_language_is_italian() -> bool {
         let lang_id = unsafe { windows::Win32::Globalization::GetUserDefaultUILanguage() };
         is_italian_lang_id(lang_id)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::locale::first_preferred_language()
+            .is_some_and(|tag| crate::macos::locale::is_italian_tag(&tag))
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         false
     }
 }
 
 /// The primary language is the low 10 bits of a LANGID; `LANG_ITALIAN` is 0x10.
-#[cfg_attr(not(windows), allow(dead_code))]
+#[cfg(any(windows, test))]
 fn is_italian_lang_id(lang_id: u16) -> bool {
     lang_id & 0x3ff == 0x10
 }
@@ -31,5 +39,13 @@ mod tests {
         assert!(is_italian_lang_id(0x0810)); // it-CH
         assert!(!is_italian_lang_id(0x0409)); // en-US
         assert!(!is_italian_lang_id(0x040c)); // fr-FR
+    }
+
+    #[test]
+    fn host_display_language_returns() {
+        eprintln!(
+            "display language is Italian: {}",
+            display_language_is_italian()
+        );
     }
 }

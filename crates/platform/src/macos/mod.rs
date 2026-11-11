@@ -2,4 +2,7 @@
 //! providers in `windows/`; anything macOS does not expose stays an explained
 //! `Unavailability`.
 
+pub mod credentials;
+pub mod locale;
 pub mod process;
+pub mod remediation;

@@ -2710,6 +2710,7 @@ dependencies = [
  "libc",
  "models",
  "nvml-wrapper",
+ "objc2-core-foundation",
  "security-framework",
  "serde",
  "sysinfo",
