@@ -912,6 +912,7 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn test_dir_selection() {
         let temp = Path::new("C:\\Users\\u\\AppData\\Local\\Temp");

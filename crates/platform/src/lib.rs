@@ -29,3 +29,6 @@ pub mod system;
 
 #[cfg(windows)]
 mod windows;
+
+#[cfg(target_os = "macos")]
+mod macos;

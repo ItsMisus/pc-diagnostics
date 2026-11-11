@@ -1054,6 +1054,7 @@ mod tests {
         assert!(err(2200, "svc.exe").contains("servizio"));
     }
 
+    #[cfg(windows)]
     #[test]
     fn temp_root_must_be_inside_profile() {
         let profile = PathBuf::from(r"\\?\C:\Users\anna");

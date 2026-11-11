@@ -23,7 +23,10 @@ use crate::score::{
 /// `Source` reported for per-process metrics. The contract has no variant for
 /// `NtQuerySystemInformation`; PDH's `Process` object is served from the same kernel
 /// snapshot (perfproc), so the values are the ones PDH would report.
+#[cfg(windows)]
 pub const PROCESS_METRIC_SOURCE: Source = Source::Kernel;
+#[cfg(not(windows))]
+pub const PROCESS_METRIC_SOURCE: Source = Source::Sysinfo;
 
 /// The System Idle Process: idle time, not load. Never tracked, ranked or counted.
 pub const IDLE_PID: u32 = 0;

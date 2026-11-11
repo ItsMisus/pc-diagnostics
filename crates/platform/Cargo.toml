@@ -10,7 +10,11 @@ license.workspace = true
 [dependencies]
 models.workspace = true
 tracing.workspace = true
-sysinfo = { version = "0.40", default-features = false, features = ["system", "disk"] }
+sysinfo = { version = "0.40", default-features = false, features = ["system", "disk", "gpu", "component"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+security-framework = "3"
 
 [target.'cfg(windows)'.dependencies]
 serde.workspace = true

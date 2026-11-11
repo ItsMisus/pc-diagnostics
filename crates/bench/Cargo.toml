@@ -18,6 +18,10 @@ serde_json.workspace = true
 wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "dx12", "vulkan", "wgsl"] }
 pollster = "0.4"
 
+# macOS: the GPU workload runs on Metal (DX12/Vulkan are not available there).
+[target.'cfg(target_os = "macos")'.dependencies]
+wgpu = { version = "30.0.1", default-features = false, features = ["metal"] }
+
 [lints]
 workspace = true
 
