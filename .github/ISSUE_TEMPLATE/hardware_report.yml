@@ -6,7 +6,8 @@ body:
     attributes:
       value: |
         The app has been tested on few machines. Reports from other hardware (Intel GPUs,
-        laptops, Windows 10, older PCs) are very useful, including "everything works".
+        laptops, Windows 10, older PCs, Macs other than Apple M5) are very useful, including
+        "everything works".
   - type: input
     id: value
     attributes:
@@ -25,19 +26,19 @@ body:
     id: expected
     attributes:
       label: Where you can see the real value
-      description: For example Task Manager, the GPU vendor's app, HWiNFO.
+      description: For example Task Manager, the GPU vendor's app, HWiNFO, or Activity Monitor on macOS.
   - type: input
     id: device
     attributes:
       label: Device model
-      placeholder: Intel Arc A750 / Lenovo ThinkPad T14 Gen 3 (Intel Iris Xe)
+      placeholder: Intel Arc A750 / Lenovo ThinkPad T14 Gen 3 (Intel Iris Xe) / MacBook Pro M4 Pro
     validations:
       required: true
   - type: input
-    id: windows
+    id: os
     attributes:
-      label: Windows version
-      placeholder: Windows 10 22H2
+      label: Operating system and version
+      placeholder: Windows 10 22H2 / macOS 15.6
     validations:
       required: true
   - type: input
