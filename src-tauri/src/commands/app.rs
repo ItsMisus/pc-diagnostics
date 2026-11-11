@@ -1,5 +1,5 @@
 use models::AppError;
-use models::app::AppInfo;
+use models::app::{AppInfo, Platform};
 use tauri::State;
 
 use crate::state::AppState;
@@ -17,5 +17,6 @@ pub async fn get_app_info(state: State<'_, AppState>) -> Result<AppInfo, AppErro
         }
         .to_owned(),
         schema_version,
+        platform: Platform::current(),
     })
 }

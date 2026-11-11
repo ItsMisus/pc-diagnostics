@@ -162,6 +162,8 @@ const SOURCE_LABELS: Record<Exclude<Source, "d3dkmt">, string> = {
   windowsUpdate: "Windows Update",
   benchmark: "Benchmark",
   kernel: "Kernel (NtQuerySystemInformation)",
+  ioKit: "I/O Kit",
+  mach: "Mach (host_statistics64)",
 };
 
 export function sourceLabel(source: Source): string {

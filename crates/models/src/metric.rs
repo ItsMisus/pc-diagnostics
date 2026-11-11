@@ -45,6 +45,10 @@ pub enum Source {
     /// WDDM performance data reported by the graphics driver (`D3DKMTQueryAdapterInfo`,
     /// the same source as Task Manager). Vendor-neutral.
     D3dkmt,
+    /// macOS I/O Kit registry (GPU statistics, block storage counters, HID sensors).
+    IoKit,
+    /// macOS Mach kernel statistics (`host_statistics64`, `sysctl`).
+    Mach,
 }
 
 /// Why a value is missing. There is no "unknown": every gap has an explanation.
