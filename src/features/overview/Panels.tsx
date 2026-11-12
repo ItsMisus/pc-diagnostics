@@ -115,7 +115,7 @@ function useTemperatureBar(metric: Metric<number>, component: string): Bar {
 export const CpuPanel = memo(function CpuPanel() {
   const cpu = useLive((s) => s.latest?.cpu);
   return (
-    <Card title="CPU" className={PANEL} aside={cpu && <SourceCaption metric={cpu.usagePercent} />}>
+    <Card level={3} title="CPU" className={PANEL} aside={cpu && <SourceCaption metric={cpu.usagePercent} />}>
       {cpu ? (
         <CpuBody cpu={cpu} />
       ) : (
@@ -178,7 +178,7 @@ export const GpuPanel = memo(function GpuPanel() {
   const { status, data } = useInventoryData();
   const gpu = useMemo(() => (data ? primaryGpu(data.gpus) : null), [data]);
   return (
-    <Card title="GPU" className={PANEL}>
+    <Card level={3} title="GPU" className={PANEL}>
       {status !== "ready" || !data ? (
         <InventoryState compact placeholder={<GaugeSkeleton rows={5} />} />
       ) : !gpu ? (
@@ -291,7 +291,7 @@ export const RamPanel = memo(function RamPanel() {
   const mem = useLive((s) => s.latest?.memory);
   if (!mem) {
     return (
-      <Card title="RAM" className={PANEL}>
+      <Card level={3} title="RAM" className={PANEL}>
         <WaitingForSample>
           <GaugeSkeleton rows={2} size={112} />
         </WaitingForSample>
@@ -309,7 +309,7 @@ export const RamPanel = memo(function RamPanel() {
     swapTotal !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(swapTotal) }) : formatBytes(v);
   const pLevel = pressureLevel(mem.pressure.status === "available" ? mem.pressure.value : null);
   return (
-    <Card title="RAM" className={PANEL} aside={<SourceCaption metric={mem.usedBytes} />}>
+    <Card level={3} title="RAM" className={PANEL} aside={<SourceCaption metric={mem.usedBytes} />}>
       <GaugeLayout
         gauge={
           <PercentGauge
@@ -367,7 +367,7 @@ export const DiskPanel = memo(function DiskPanel() {
   const tm = useT("monitoring");
   const storage = useLive((s) => s.latest?.storage);
   return (
-    <Card title={t("diskTitle")} className={PANEL} aside={storage && <SourceCaption metric={storage.readBytesPerSec} />}>
+    <Card level={3} title={t("diskTitle")} className={PANEL} aside={storage && <SourceCaption metric={storage.readBytesPerSec} />}>
       {!storage ? (
         <WaitingForSample>
           <span aria-hidden="true" className="grid grid-cols-2 gap-4">
@@ -424,13 +424,13 @@ export const StoragePanel = memo(function StoragePanel() {
   const { status, data } = useInventoryData();
   if (status !== "ready" || !data) {
     return (
-      <Card title={t("storageTitle")} className={PANEL}>
+      <Card level={3} title={t("storageTitle")} className={PANEL}>
         <InventoryState compact placeholder={<GaugeSkeleton rows={2} size={112} />} />
       </Card>
     );
   }
   return (
-    <Card
+    <Card level={3}
       title={t("storageTitle")}
       className={PANEL}
       aside={<span className="text-2xs text-fg-subtle tabular">{t("detectedAt", { time: formatTime(data.collectedAt) })}</span>}
@@ -447,7 +447,7 @@ export const StoragePanel = memo(function StoragePanel() {
       {showsDiskStatus(data.physicalDisks, platform) && (
         <>
           <div className="mt-4 mb-2 flex items-center gap-1.5">
-            <h3 className="eyebrow">{tm("windowsHealth")}</h3>
+            <h4 className="eyebrow">{tm("windowsHealth")}</h4>
             <Tooltip content={t("healthNote")} side="top">
               <span tabIndex={0} aria-label={t("healthNote")} className="inline-flex rounded text-fg-subtle">
                 <Icon name="info" size={12} />
@@ -487,18 +487,18 @@ function DiskHealthList({ disks }: { disks: Metric<PhysicalDiskInfo[]> }) {
   const tc = useT("common");
   if (disks.status === "unavailable") {
     return (
-      <p className="text-[13px] text-fg-subtle">
+      <p className="text-sm text-fg-subtle">
         {tc("notAvailable")} — <UnavailableReason reason={disks.reason} />
       </p>
     );
   }
-  if (disks.value.length === 0) return <p className="text-[13px] text-fg-subtle">{t("noPhysicalDisks")}</p>;
+  if (disks.value.length === 0) return <p className="text-sm text-fg-subtle">{t("noPhysicalDisks")}</p>;
   return (
     <ul className="flex flex-col gap-1.5">
       {disks.value.map((d) => {
         const name = d.model ?? tm("diskFallback", { id: d.id });
         return (
-          <li key={d.id} className="flex items-center justify-between gap-2 text-[13px]">
+          <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
             <span className="min-w-0 truncate" title={name}>
               {name}
             </span>

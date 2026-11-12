@@ -79,7 +79,7 @@ export function BarRow({
       ) : (
         <div aria-hidden="true" className="h-1.5" />
       )}
-      <div className="mt-1 flex items-baseline justify-between gap-3 text-[13px] leading-5">
+      <div className="mt-1 flex items-baseline justify-between gap-3 text-sm">
         <span className="min-w-[3.5rem] truncate text-fg-muted">{label}</span>
         <span className="flex shrink-0 items-baseline gap-2 text-right text-fg tabular">
           <LevelLabel level={level} />

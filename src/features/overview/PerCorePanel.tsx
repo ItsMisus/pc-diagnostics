@@ -20,15 +20,15 @@ export function PerCorePanel() {
   const t = useT("overview");
   const [open, setOpen] = useState(false);
   return (
-    <details className="group rounded-md border border-line bg-surface" onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="flex cursor-pointer items-center gap-2 rounded-md px-4 py-3 select-none">
+    <details className="group surface-secondary" onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="flex cursor-pointer items-center gap-2 rounded-lg px-4 py-3 select-none">
         <Icon
           name="chevronRight"
           size={14}
           strokeWidth={1.75}
           className="shrink-0 text-fg-subtle transition-transform duration-200 ease-out group-open:rotate-90"
         />
-        <h2 className="font-display text-lg leading-6 font-semibold text-fg">{t("perCoreTitle")}</h2>
+        <h3 className="font-display text-md font-semibold text-fg">{t("perCoreTitle")}</h3>
       </summary>
       <div className="px-4 pb-4">{open && <PerCore />}</div>
     </details>
