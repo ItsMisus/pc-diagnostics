@@ -9,6 +9,7 @@ import type { ResultMetric } from "@/types/generated/ResultMetric";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 import { type Translator, translatorFor } from "@/i18n";
 import { formatMib, unavailabilityText } from "@/lib/format";
+import { isSystemMount } from "@/features/monitoring/selection";
 
 /** The four benchmarkable components shown as cards. */
 export type BenchComponent = "cpu" | "gpu" | "memory" | "storage";
@@ -153,9 +154,9 @@ export function presets(bounds: { min: number; max: number; def: number }, candi
 export const DURATION_PRESETS = [5, 10, 15, 30, 60, 120, 300, 600];
 export const FILE_PRESETS = [64, 128, 256, 512, 1024, 2048, 4096, 8192];
 
-/** Preferred default volume: the system drive, else the first fixed one, else any. */
+/** Preferred default volume: the system drive (`C:\` or `/`), else the first fixed one, else any. */
 export function defaultVolume(volumes: readonly VolumeInfo[]): string | null {
-  const system = volumes.find((v) => v.mountPoint.toUpperCase().startsWith("C:"));
+  const system = volumes.find((v) => isSystemMount(v.mountPoint));
   return (system ?? volumes.find((v) => !v.removable) ?? volumes[0])?.mountPoint ?? null;
 }
 

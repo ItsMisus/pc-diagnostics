@@ -2,6 +2,7 @@
 export default {
   language: "Lingua",
   languageHint: "«Sistema» segue la lingua di Windows.",
+  "languageHint@macos": "«Sistema» segue la lingua di macOS.",
   languageSystem: "Sistema",
 
   // Page
@@ -30,6 +31,8 @@ export default {
   privacy: "Privacy e rete",
   onlineChecks: "Consenti verifiche online",
   onlineChecksHint: "Serve a cercare aggiornamenti dei driver con Windows Update. Nessun driver viene installato.",
+  onlineChecksWindowsOnly:
+    "Su questo sistema l'app non fa verifiche online: l'unica, la ricerca di aggiornamenti dei driver con Windows Update, esiste solo su Windows.",
 
   // App overhead card
   overhead: "Consumo dell'applicazione",
@@ -37,9 +40,11 @@ export default {
   colComponent: "Componente",
   colCpu: "CPU",
   colMemory: "Memoria (working set)",
+  "colMemory@macos": "Memoria (residente)",
   colProcesses: "Processi",
   rowCore: "Core (Rust)",
   rowWebview: "WebView2 (interfaccia)",
+  "rowWebview@macos": "WebKit (interfaccia)",
   overheadCpuNote: "Quota dell'intera macchina, media sugli ultimi {window}",
   historyCapacity: "Capacità dello storico",
   historyCapacityValue: "{count} campioni (circa {duration})",
@@ -64,6 +69,7 @@ export default {
   assistantPointConfirm:
     "Niente viene eseguito senza la tua conferma, un passaggio alla volta, e solo tra poche operazioni sicure previste dall'app.",
   assistantPointKey: "La chiave è conservata in Gestione credenziali di Windows e non viene più mostrata.",
+  "assistantPointKey@macos": "La chiave è conservata nel Portachiavi di macOS e non viene più mostrata.",
   assistantEnable: "Attiva l'assistente Risolvi",
   offByDefault: "Disattivato di default.",
   apiKey: "Chiave API di Anthropic",
@@ -71,6 +77,7 @@ export default {
   keyStatusUnavailable: "Stato non disponibile",
   keySaved: "Chiave salvata",
   keySavedDetail: "Conservata in Gestione credenziali di Windows.",
+  "keySavedDetail@macos": "Conservata nel Portachiavi di macOS.",
   keyRemoved: "Chiave rimossa",
   noKey: "Nessuna chiave",
   keyReplacePlaceholder: "Incolla una nuova chiave per sostituirla",

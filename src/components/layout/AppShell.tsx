@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
-import { SECTIONS } from "@/app/sections";
+import { resolveShortcut } from "@/app/shortcuts";
 import { useAppStore } from "@/app/store";
+import { getPlatform } from "@/lib/platform";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { RunningBar } from "@/features/benchmarks/RunningBar";
 import { Sidebar } from "./Sidebar";
@@ -30,28 +31,22 @@ export function AppShell({ sectionKey, children }: { sectionKey: string; childre
 }
 
 /**
- * Ctrl+B toggles the sidebar; Ctrl+1…8 jumps to a section. Ignored while a modal dialog is
- * open or while typing in a field.
+ * Keyboard shortcuts (`app/shortcuts.ts`): Ctrl+B / ⌘B toggles the sidebar, Ctrl+1…8 on
+ * Windows and ⌘1…7 on macOS (no Drivers there) open the sections in sidebar order. Ignored
+ * while a modal dialog is open or while typing in a field.
  */
 function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      const action = resolveShortcut(e, getPlatform());
+      if (!action) return;
       if (document.querySelector("dialog[open]")) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+      e.preventDefault();
       const { toggleSidebar, setSection } = useAppStore.getState();
-      if (e.key.toLowerCase() === "b") {
-        e.preventDefault();
-        toggleSidebar();
-        return;
-      }
-      const n = Number(e.key);
-      const target = Number.isInteger(n) && n >= 1 ? SECTIONS[n - 1] : undefined;
-      if (target) {
-        e.preventDefault();
-        setSection(target.id);
-      }
+      if (action.kind === "toggleSidebar") toggleSidebar();
+      else setSection(action.id);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

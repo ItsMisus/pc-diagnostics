@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 /**
  * App-wide Motion setup. `LazyMotion strict` forces the lightweight `m.*` components
  * (a stray `motion.*` import throws in development). `reducedMotion="user"` disables
- * transform and layout animations when Windows "Show animations" is off; opacity and
+ * transform and layout animations when the OS asks for less motion (Windows "Show
+ * animations" off, macOS "Reduce motion" on); opacity and
  * color changes remain, as recommended.
  */
 export function MotionProvider({ children }: { children: ReactNode }) {

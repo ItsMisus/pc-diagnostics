@@ -27,6 +27,9 @@ function withPercent(number: string): string {
  *   matches what the user sees in Windows. Used in the "Semplice" view.
  * - `iec`: KiB, MiB, GiB, TiB, the exact technical names. Used in the "Avanzata" view.
  * The backend follows the same rule (`fmt::bytes_plain` / `fmt::bytes` in crates/diagnostics).
+ * On macOS the same powers of 1024 are used on purpose, so UI and backend texts agree:
+ * Activity Monitor labels memory the same way; Finder and About This Mac give disk and file
+ * sizes in powers of 1000, so a disk size here reads about 7 % lower than in Finder.
  */
 export type ByteUnits = "windows" | "iec";
 

@@ -4,6 +4,7 @@ import type { Confidence } from "@/types/generated/Confidence";
 import type { CoverageItem } from "@/types/generated/CoverageItem";
 import type { CoverageStatus } from "@/types/generated/CoverageStatus";
 import type { Finding } from "@/types/generated/Finding";
+import type { Platform } from "@/types/generated/Platform";
 import type { FindingKind } from "@/types/generated/FindingKind";
 import type { Severity } from "@/types/generated/Severity";
 import { translatorFor } from "@/i18n";
@@ -113,6 +114,17 @@ export interface CoverageSummary {
   complete: boolean;
   /** Partial and not-evaluated items, not-evaluated first. */
   gaps: CoverageItem[];
+}
+
+/**
+ * The coverage items that apply on `platform`. The device and driver inventory exists only on
+ * Windows; elsewhere the backend reports drivers as "not evaluated" (no inventory to read),
+ * which is a property of the platform, not a gap of this check, so the item is left out like
+ * the Drivers page itself. Every other item, and drivers in any other status, is kept.
+ */
+export function platformCoverage(coverage: readonly CoverageItem[], platform: Platform): readonly CoverageItem[] {
+  if (platform === "windows") return coverage;
+  return coverage.filter((c) => !(c.component === "drivers" && c.status === "notEvaluated"));
 }
 
 export function coverageSummary(coverage: readonly CoverageItem[]): CoverageSummary {

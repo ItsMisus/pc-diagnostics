@@ -13,6 +13,8 @@ export default {
   frequencyLimited: "Limitata a {limit}",
   frequencyLimitBody:
     "Windows riporta un limite di {limit} rispetto a un massimo nominale di {max}. Il sistema non ne indica la causa (ad esempio piano energetico, temperatura o alimentazione).",
+  "frequencyLimitBody@macos":
+    "macOS riporta un limite di {limit} rispetto a un massimo nominale di {max}. Il sistema non ne indica la causa (ad esempio temperatura, alimentazione o modalità di risparmio energetico).",
   onlySoftwareAdapters: "Sono presenti solo adattatori software.",
   committedMemory: "Memoria impegnata",
   pagesFromDisk: "Pagine lette da disco",
@@ -21,6 +23,7 @@ export default {
   storageTitle: "Archiviazione",
   detectedAt: "rilevato alle {time}",
   healthNote: "Riepilogo di Windows Storage, non una valutazione completa dei dati SMART.",
+  "healthNote@macos": "Stato riportato da macOS, non una valutazione completa dei dati SMART.",
   noPhysicalDisks: "Nessun disco fisico riportato",
 
   // Status of a meter above its threshold (features/overview/levels.ts).
@@ -34,6 +37,7 @@ export default {
   topProcessesCaption: "Processi con l'impatto maggiore",
   colName: "Nome",
   ioNote: "I/O logico (file, rete, dispositivi), non byte fisici su disco",
+  "ioNote@macos": "I/O su disco del processo (macOS non conta per processo rete e dispositivi)",
   processesWaiting: "In attesa dei dati dei processi…",
   processesUnavailable: "Dati dei processi non disponibili",
   noProcesses: "Nessun processo nella classifica",

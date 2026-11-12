@@ -18,6 +18,10 @@ export function gpuVendorLabel(
     case "microsoft":
       return "Microsoft";
     case "other":
+      // PCI vendor ids: 0x106B is Apple (Apple silicon GPUs have no vendor value of their own
+      // yet); 0 is not a valid id, it means the OS reported none.
+      if (vendorId === 0x106b) return "Apple";
+      if (vendorId === 0) return t("vendorNotReported");
       return t("vendorOther", { id: vendorId.toString(16).toUpperCase().padStart(4, "0") });
   }
 }

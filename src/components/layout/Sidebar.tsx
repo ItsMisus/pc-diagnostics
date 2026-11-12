@@ -1,5 +1,5 @@
 import { m } from "motion/react";
-import { SECTIONS } from "@/app/sections";
+import { visibleSections } from "@/app/sections";
 import { useAppStore } from "@/app/store";
 import { Icon } from "@/components/common/Icon";
 import { Segmented } from "@/components/common/Segmented";
@@ -7,6 +7,8 @@ import { Tooltip } from "@/components/common/Tooltip";
 import { useSetViewMode, useViewMode, useViewModeOptions } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
 import { spring } from "@/lib/motion";
+import { usePlatform } from "@/lib/platform";
+import { shortcutLabel } from "@/lib/shortcuts";
 
 /** Row height + gap; the selection indicator slides by this step. */
 const ROW = 40;
@@ -27,9 +29,12 @@ export function Sidebar() {
   const setSection = useAppStore((s) => s.setSection);
   const toggle = useAppStore((s) => s.toggleSidebar);
   const t = useT("shell");
+  const platform = usePlatform();
+  // Only the sections this platform has (no Drivers on macOS); shortcuts follow this order.
+  const sections = visibleSections(platform);
   const activeIndex = Math.max(
     0,
-    SECTIONS.findIndex((s) => s.id === section),
+    sections.findIndex((s) => s.id === section),
   );
 
   const labelClass = `truncate transition-opacity duration-200 ${collapsed ? "pointer-events-none opacity-0" : "opacity-100 delay-75"}`;
@@ -55,12 +60,12 @@ export function Sidebar() {
           animate={{ y: activeIndex * (ROW + GAP) }}
           transition={spring.indicator}
         />
-        {SECTIONS.map((s, i) => {
+        {sections.map((s, i) => {
           const active = s.id === section;
           const label = t(`section_${s.id}`);
           return (
             <li key={s.id} className="relative">
-              <Tooltip content={<TooltipLabel label={label} index={i} />} enabled={collapsed} className="w-full">
+              <Tooltip content={<TooltipLabel label={label} shortcut={shortcutLabel(String(i + 1), platform)} />} enabled={collapsed} className="w-full">
                 <button
                   type="button"
                   onClick={() => setSection(s.id)}
@@ -85,7 +90,7 @@ export function Sidebar() {
 
       <div className="shrink-0 space-y-1 border-t border-line p-2.5">
         <ViewModeControl collapsed={collapsed} />
-        <Tooltip content={<TooltipLabel label={collapsed ? t("expand") : t("collapse")} shortcut="Ctrl+B" />} side={collapsed ? "right" : "top"} className="w-full">
+        <Tooltip content={<TooltipLabel label={collapsed ? t("expand") : t("collapse")} shortcut={shortcutLabel("B", platform)} />} side={collapsed ? "right" : "top"} className="w-full">
           <button
             type="button"
             onClick={toggle}
@@ -143,12 +148,11 @@ function ViewModeControl({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function TooltipLabel({ label, index, shortcut }: { label: string; index?: number; shortcut?: string }) {
-  const keys = shortcut ?? (index !== undefined ? `Ctrl+${index + 1}` : undefined);
+function TooltipLabel({ label, shortcut }: { label: string; shortcut: string }) {
   return (
     <span className="flex items-center gap-2">
       {label}
-      {keys && <kbd className="font-sans text-2xs text-fg-subtle">{keys}</kbd>}
+      <kbd className="font-sans text-2xs text-fg-subtle">{shortcut}</kbd>
     </span>
   );
 }

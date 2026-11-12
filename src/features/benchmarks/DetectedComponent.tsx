@@ -100,7 +100,8 @@ function items(
       const list: DefinitionItem[] = [{ label: t("total"), value: formatBytes(inv.memory.totalBytes) }];
       if (inv.memory.modules.status === "available") {
         const modules = inv.memory.modules.value;
-        list.push({ label: t("modules"), value: modules.length });
+        // An empty list (e.g. memory built into the chip package) is no count of modules.
+        list.push({ label: t("modules"), value: modules.length > 0 ? modules.length : t("noModulesReported") });
         modules.forEach((m, i) => {
           const speed = m.configuredSpeedMts ?? m.speedMts;
           list.push({

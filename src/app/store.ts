@@ -3,10 +3,11 @@ import { commands } from "@/services/commands";
 import { toAppError } from "@/services/ipc";
 import { setLang } from "@/i18n";
 import { setByteUnits } from "@/lib/format";
+import { getPlatform, setPlatform, usePlatformStore } from "@/lib/platform";
 import type { AppError } from "@/types/generated/AppError";
 import type { AppSettings } from "@/types/generated/AppSettings";
 import type { ViewMode } from "@/types/generated/ViewMode";
-import type { SectionId } from "./sections";
+import { isSectionAvailable, type SectionId } from "./sections";
 
 export type SettingsState =
   | { status: "loading" }
@@ -23,10 +24,16 @@ interface AppStore {
    */
   viewMode: ViewMode;
   settings: SettingsState;
+  /** Ignored for a section the current platform does not have (e.g. Drivers on macOS). */
   setSection: (id: SectionId) => void;
   toggleSidebar: () => void;
   setViewMode: (mode: ViewMode) => void;
   loadSettings: () => Promise<void>;
+  /**
+   * Asks the backend which OS the app was built for (`get_app_info`) and applies it app-wide
+   * (`lib/platform.ts`). Called once at startup; until it answers, the user-agent guess holds.
+   */
+  loadPlatform: () => Promise<void>;
   /** Asks the backend for the effective language ("system" resolved) and applies it. */
   syncLanguage: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
@@ -38,7 +45,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   viewMode: "simple",
   settings: { status: "loading" },
 
-  setSection: (section) => set({ section }),
+  setSection: (section) => {
+    if (isSectionAvailable(section, getPlatform())) set({ section });
+  },
 
   toggleSidebar: () => {
     const next = !get().sidebarCollapsed;
@@ -52,12 +61,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (get().settings.status === "ready") void get().updateSettings({ viewMode: mode });
   },
 
+  loadPlatform: async () => {
+    try {
+      const info = await commands.getAppInfo();
+      setPlatform(info.platform);
+    } catch {
+      // Outside the desktop app (or an older backend): keep the user-agent guess.
+    }
+  },
+
   syncLanguage: async () => {
     try {
       const lang = await commands.getLanguage();
       setLang(lang === "it" ? "it" : "en");
     } catch {
-      // Keep the language seeded from the WebView (it follows Windows).
+      // Keep the language seeded from the WebView (it follows the OS language).
     }
   },
 
@@ -112,4 +130,10 @@ export function normalizeViewMode(value: unknown): ViewMode {
  */
 useAppStore.subscribe((state, previous) => {
   if (state.viewMode !== previous.viewMode) setByteUnits(state.viewMode === "advanced" ? "iec" : "windows");
+});
+
+/** A section the new platform does not have (only possible before the guess is confirmed) closes. */
+usePlatformStore.subscribe((state, previous) => {
+  if (state.platform === previous.platform) return;
+  if (!isSectionAvailable(useAppStore.getState().section, state.platform)) useAppStore.setState({ section: "overview" });
 });

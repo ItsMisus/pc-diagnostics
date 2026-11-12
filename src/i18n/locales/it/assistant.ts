@@ -51,14 +51,24 @@ export default {
   days_other: "{count} giorni",
   action_openSettingsPage:
     "Aprirà la pagina «{page}» delle Impostazioni di Windows. Da sola non cambia nulla: sarai tu a decidere cosa modificare.",
+  "action_openSettingsPage@macos":
+    "Apre la pagina «{page}» delle Impostazioni di Windows: esiste solo su Windows, quindi su questo Mac l'app non la esegue.",
   action_openDeviceManager: "Aprirà Gestione dispositivi di Windows. Da sola non cambia nulla: sarai tu a decidere cosa fare.",
+  "action_openDeviceManager@macos":
+    "Apre Gestione dispositivi di Windows: esiste solo su Windows, quindi su questo Mac l'app non la esegue.",
   action_openDiskCleanup: "Aprirà Pulizia disco di Windows per l'unità {drive}. Sarai tu a scegliere cosa eliminare.",
+  "action_openDiskCleanup@macos":
+    "Apre Pulizia disco di Windows: esiste solo su Windows, quindi su questo Mac l'app non la esegue.",
   action_emptyRecycleBin: "Svuoterà il Cestino. Windows ti chiederà conferma. Non si può annullare.",
+  "action_emptyRecycleBin@macos": "Svuoterà il Cestino. Non si può annullare.",
   action_cleanTempFiles:
     "Eliminerà i file temporanei più vecchi di {days} dalla tua cartella dei file temporanei. I file ancora in uso vengono saltati. Non si può annullare.",
   action_closeProgram: "Chiederà a «{name}» di chiudersi, come cliccare la X. Salva prima il tuo lavoro.",
+  "action_closeProgram@macos": "Chiederà a «{name}» di chiudersi. Salva prima il tuo lavoro.",
   action_runSystemFileCheck:
     "Windows ti chiederà il permesso di amministratore, poi si aprirà una finestra che controlla e ripara i file di sistema di Windows. Può richiedere 10–20 minuti: lascia la finestra aperta fino alla fine.",
+  "action_runSystemFileCheck@macos":
+    "Avvia il controllo dei file di sistema di Windows: esiste solo su Windows, quindi su questo Mac l'app non lo esegue.",
 
   // Numbers (model.ts)
   costZero: "0 $",
@@ -110,10 +120,12 @@ export default {
   stepNumber: "Passaggio {n}:",
   requiresAdmin: "Richiede amministratore",
   notReversible: "Non reversibile",
+  windowsOnly: "Solo su Windows",
   appNote: "Nota dell'app: {note}",
   confirmStepAria: "Conferma del passaggio {n}",
   whatWillHappen: "Cosa succederà:",
   mayAskAdmin: "Windows potrebbe chiederti il permesso di amministratore.",
+  "mayAskAdmin@macos": "Questo passaggio richiede permessi da amministratore, che su macOS l'app non chiede.",
   cannotUndo: "Questo passaggio non si può annullare.",
   confirmAndRun: "Conferma ed esegui",
   runningStep: "In esecuzione…",

@@ -3,6 +3,7 @@ import { localeTag, translatorFor, type Translator } from "@/i18n";
 import type { AssistantStatus } from "@/types/generated/AssistantStatus";
 import type { Confidence } from "@/types/generated/Confidence";
 import type { Finding } from "@/types/generated/Finding";
+import type { Platform } from "@/types/generated/Platform";
 import type { RemediationAction } from "@/types/generated/RemediationAction";
 import type { SettingsPage } from "@/types/generated/SettingsPage";
 import type { StepRisk } from "@/types/generated/StepRisk";
@@ -148,6 +149,27 @@ export function describeAction(action: RemediationAction): string {
       return t("action_closeProgram", { name: action.name });
     case "runSystemFileCheck":
       return t("action_runSystemFileCheck");
+  }
+}
+
+/**
+ * Whether the app can run `action` on `platform`. Opening a Windows Settings page, Device
+ * Manager or Disk Cleanup and the system file check (`sfc`) drive Windows tools with no macOS
+ * counterpart: on other platforms the step is shown, explained (`describeAction` has a
+ * per-platform text) and never offered to run. The remaining actions are platform-neutral;
+ * the backend still validates each one before running it and reports when it cannot.
+ */
+export function actionRunsOn(action: RemediationAction, platform: Platform): boolean {
+  switch (action.kind) {
+    case "openSettingsPage":
+    case "openDeviceManager":
+    case "openDiskCleanup":
+    case "runSystemFileCheck":
+      return platform === "windows";
+    case "emptyRecycleBin":
+    case "cleanTempFiles":
+    case "closeProgram":
+      return true;
   }
 }
 

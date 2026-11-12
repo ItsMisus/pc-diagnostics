@@ -10,12 +10,14 @@ import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
 import { formatBytes } from "@/lib/format";
 import { duration, ease } from "@/lib/motion";
+import { usePlatform } from "@/lib/platform";
 import { type Translator, useT } from "@/i18n";
 import type { FixPlan } from "@/types/generated/FixPlan";
 import type { FixPreview } from "@/types/generated/FixPreview";
 import type { FixStep } from "@/types/generated/FixStep";
 import { canExecuteStep, fixFlowStore, isFlowBusy, useFixFlow, type FixPhase, type StepRun } from "./fixFlow";
 import {
+  actionRunsOn,
   actionStatesIrreversible,
   actionTechnicalLabel,
   describeAction,
@@ -503,6 +505,9 @@ function StepItem({
   const checkId = useId();
   const flow = fixFlowStore.getState;
   const state = stepState(step, run, done);
+  const platform = usePlatform();
+  // A Windows tool on macOS: the step stays visible with its explanation, never runnable.
+  const runsHere = step.action === null || actionRunsOn(step.action, platform);
   return (
     <li
       className={`flex gap-3 rounded-md border p-3.5 transition-colors duration-200 ${
@@ -520,6 +525,7 @@ function StepItem({
             <StatusBadge tone={stepRiskTone(step.risk)} label={stepRiskLabel(step.risk)} />
             {step.requiresAdmin && <Chip icon="lock">{t("requiresAdmin")}</Chip>}
             {!step.reversible && <Chip>{t("notReversible")}</Chip>}
+            {!runsHere && <Chip>{t("windowsOnly")}</Chip>}
           </div>
         </div>
         <p className="mt-1 text-[13px]">{step.explanation}</p>
@@ -530,7 +536,12 @@ function StepItem({
           </p>
         )}
 
-        {step.action ? (
+        {step.action && !runsHere ? (
+          <div className="mt-3">
+            {!simple && <p className="mb-2 font-mono text-2xs break-all text-fg-subtle">{actionTechnicalLabel(step.action)}</p>}
+            <p className="text-[13px] text-fg-muted">{describeAction(step.action)}</p>
+          </div>
+        ) : step.action ? (
           <div className="mt-3">
             {!simple && <p className="mb-2 font-mono text-2xs break-all text-fg-subtle">{actionTechnicalLabel(step.action)}</p>}
             <m.div key={run.status} {...stateFade}>

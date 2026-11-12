@@ -12,6 +12,8 @@ export default {
   neverRun: "Diagnosi non ancora eseguita",
   neverRunDescription:
     "La diagnosi parte solo su richiesta: analizza i dati di monitoraggio, i processi e i driver già raccolti, senza eseguire test di carico.",
+  "neverRunDescription@macos":
+    "La diagnosi parte solo su richiesta: analizza i dati di monitoraggio e i processi già raccolti, senza eseguire test di carico.",
   loadingLatest: "Lettura dell'ultimo report…",
 
   // "Semplice" report
@@ -37,6 +39,8 @@ export default {
   exporting: "Esportazione…",
   redact: "Rimuovi dati personali",
   exportHint: "Salvato in Documenti\\PC Diagnostics. «Rimuovi dati personali» omette nome del computer, percorsi e ID dei dispositivi.",
+  "exportHint@macos":
+    "Salvato in Documenti/PC Diagnostics. «Rimuovi dati personali» omette nome del computer, percorsi e ID dei dispositivi.",
   exportSavedToast: "Report salvato",
   exportSavedRedacted: "Report {format} salvato (dati personali rimossi)",
   exportSavedPersonal: "Report {format} salvato (con dati personali)",

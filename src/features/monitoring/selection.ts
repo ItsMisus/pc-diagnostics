@@ -3,6 +3,8 @@ import { type Translator, translatorFor } from "@/i18n";
 import type { DiskHealthStatus } from "@/types/generated/DiskHealthStatus";
 import type { GpuInfo } from "@/types/generated/GpuInfo";
 import type { Metric } from "@/types/generated/Metric";
+import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
+import type { Platform } from "@/types/generated/Platform";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 
 const isPhysical = (g: GpuInfo) => !g.isSoftware && !g.isVirtual;
@@ -21,8 +23,26 @@ export function orderGpus(gpus: readonly GpuInfo[]): GpuInfo[] {
   ];
 }
 
+/**
+ * The volume the OS boots from: `C:` on Windows (any spelling: `C:\`, `c:`, `C:/`), the
+ * root `/` on macOS (other volumes are mounted under `/Volumes`).
+ */
 export function isSystemMount(mountPoint: string): boolean {
-  return mountPoint.trim().replace(/[\\/]+$/, "").toUpperCase() === "C:";
+  const m = mountPoint.trim();
+  if (m === "/") return true;
+  return m.replace(/[\\/]+$/, "").toUpperCase() === "C:";
+}
+
+/**
+ * How a volume is named in lists. Drive letters keep the Windows layout ("C:\ Windows").
+ * POSIX mount points (macOS) put the name first, "Macintosh HD (/)", and drop a label that the
+ * path already ends with ("/Volumes/Backup", not "/Volumes/Backup Backup").
+ */
+export function volumeDisplayName(v: Pick<VolumeInfo, "mountPoint" | "label">): string {
+  const label = v.label?.trim() ?? "";
+  if (!label) return v.mountPoint;
+  if (!v.mountPoint.startsWith("/")) return `${v.mountPoint} ${label}`;
+  return v.mountPoint.endsWith(`/${label}`) ? v.mountPoint : `${label} (${v.mountPoint})`;
 }
 
 function largest(volumes: readonly VolumeInfo[]): VolumeInfo | null {
@@ -31,13 +51,39 @@ function largest(volumes: readonly VolumeInfo[]): VolumeInfo | null {
   return best;
 }
 
-/** `C:\` when present, otherwise the largest fixed volume, otherwise the largest one. */
+/** `C:\` (or `/`) when present, otherwise the largest fixed volume, otherwise the largest one. */
 export function systemVolume(volumes: readonly VolumeInfo[]): VolumeInfo | null {
   return (
     volumes.find((v) => isSystemMount(v.mountPoint)) ??
     largest(volumes.filter((v) => !v.removable)) ??
     largest(volumes)
   );
+}
+
+/**
+ * Whether the Overview shows the disk status block on `platform`. On Windows always: the
+ * Windows Storage health summary exists there, and when it cannot be read the reason is
+ * worth stating. Elsewhere the block is a Windows concept with no counterpart, so it is shown
+ * only when the OS actually reported a status for at least one disk; a block made only of
+ * "not available" rows (e.g. on macOS) would say nothing.
+ */
+export function showsDiskStatus(disks: Metric<readonly Pick<PhysicalDiskInfo, "health">[]>, platform: Platform): boolean {
+  if (platform === "windows") return true;
+  return disks.status === "available" && disks.value.some((d) => d.health.status === "available");
+}
+
+/** PCI vendor id of Apple. */
+export const APPLE_VENDOR_ID = 0x106b;
+
+/**
+ * True for an Apple silicon GPU reported without dedicated memory. Those GPUs have no VRAM:
+ * they share the unified memory with the CPU, so "0 dedicated" is the architecture, not a
+ * missing reading. Recognised by the Apple vendor id or by the chip name ("Apple M5"), since
+ * the inventory has no vendor value for Apple yet.
+ */
+export function hasUnifiedMemory(gpu: Pick<GpuInfo, "vendorId" | "name" | "dedicatedVramBytes">): boolean {
+  const apple = gpu.vendorId === APPLE_VENDOR_ID || /^Apple M\d/.test(gpu.name.trim());
+  return apple && gpu.dedicatedVramBytes === 0;
 }
 
 export function healthTone(status: DiskHealthStatus): Tone {
