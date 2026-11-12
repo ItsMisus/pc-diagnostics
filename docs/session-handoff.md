@@ -17,8 +17,8 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
   clippy `-D warnings` clean (2026-11-12).
 - What works, measured values and what is still open: `docs/roadmap.md` "macOS port".
   Main open items: Windows tests of the port (CI on the pull request; the core crates
-  already pass clippy for x86_64-pc-windows-msvc from this Mac), NVMe SMART health,
-  Developer ID signing/notarization.
+  already pass clippy for x86_64-pc-windows-msvc from this Mac), Developer ID
+  signing/notarization, ATA SMART for SATA/USB disks on macOS.
 - Windows type-check from the Mac: `cargo clippy -p models -p platform -p diagnostics -p monitor
   -p bench -p processes -p drivers --all-targets --target x86_64-pc-windows-msvc -- -D warnings`.
 - Build the app: `npx tauri build` (`.app` + `.dmg`, ad-hoc signed, `src-tauri/tauri.macos.conf.json`).

@@ -26,7 +26,7 @@ export default {
   storageTitle: "Archiviazione",
   detectedAt: "rilevato alle {time}",
   healthNote: "Riepilogo di Windows Storage, non una valutazione completa dei dati SMART.",
-  "healthNote@macos": "Stato riportato da macOS, non una valutazione completa dei dati SMART.",
+  "healthNote@macos": "Dal registro SMART dei dischi NVMe (avvisi critici, riserva, usura), non una valutazione completa.",
   noPhysicalDisks: "Nessun disco fisico riportato",
 
   // Status of a meter above its threshold (features/overview/levels.ts).

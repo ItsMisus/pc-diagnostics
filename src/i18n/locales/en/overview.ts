@@ -29,7 +29,7 @@ export default {
   storageTitle: "Storage",
   detectedAt: "detected at {time}",
   healthNote: "Windows Storage summary, not a full evaluation of SMART data.",
-  "healthNote@macos": "Status reported by macOS, not a full evaluation of SMART data.",
+  "healthNote@macos": "From the SMART log of NVMe disks (critical warnings, spare, wear), not a full evaluation.",
   noPhysicalDisks: "No physical disks reported",
 
   // Status of a meter above its threshold (features/overview/levels.ts).

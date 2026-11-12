@@ -37,8 +37,8 @@ fn health_limitation(lang: Language, platform: Platform) -> &'static str {
             "Windows summary status, not a full SMART analysis.",
         ),
         lang.pick(
-            "Stato riassuntivo di macOS, non un'analisi SMART completa.",
-            "macOS summary status, not a full SMART analysis.",
+            "Stato ricavato dal registro SMART del disco NVMe (avvisi critici, riserva, usura dichiarata dal produttore), non un'analisi completa.",
+            "Status derived from the NVMe disk's SMART log (critical warnings, spare, manufacturer-rated wear), not a full analysis.",
         ),
     )
 }
@@ -292,9 +292,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                                 format!("{os} reports a warning about a disk's condition: {name}"),
                                             )
                                         },
-                                        lang.pick(
-                                            format!("Di solito significa che il disco ha registrato errori o segni di usura. Un disco in queste condizioni può perdere i dati che contiene, quindi è importante metterli al sicuro. È un riepilogo fornito da {os}, non un controllo completo del disco."),
-                                            format!("This usually means the disk has recorded errors or signs of wear. A disk in this condition can lose the data on it, so it's important to keep that data safe. This is a summary provided by {os}, not a full check of the disk."),
+                                        by_os(
+                                            p,
+                                            lang.pick(
+                                                format!("Di solito significa che il disco ha registrato errori o segni di usura. Un disco in queste condizioni può perdere i dati che contiene, quindi è importante metterli al sicuro. È un riepilogo fornito da {os}, non un controllo completo del disco."),
+                                                format!("This usually means the disk has recorded errors or signs of wear. A disk in this condition can lose the data on it, so it's important to keep that data safe. This is a summary provided by {os}, not a full check of the disk."),
+                                            ),
+                                            lang.pick(
+                                                "Di solito significa che il disco ha registrato errori o segni di usura. Un disco in queste condizioni può perdere i dati che contiene, quindi è importante metterli al sicuro. L'informazione viene dal disco stesso, che tiene un registro del proprio stato.".to_owned(),
+                                                "This usually means the disk has recorded errors or signs of wear. A disk in this condition can lose the data on it, so it's important to keep that data safe. The information comes from the disk itself, which keeps a record of its own condition.".to_owned(),
+                                            ),
                                         ),
                                         lang.pick(
                                             "Fai subito una copia dei tuoi file importanti su un'altra unità o su un servizio di archiviazione online, poi controlla lo stato del disco con il programma del produttore.",
@@ -309,7 +316,10 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                             "Stato di salute (MSFT_PhysicalDisk.HealthStatus)",
                                             "Health status (MSFT_PhysicalDisk.HealthStatus)",
                                         ),
-                                        lang.pick("Stato di salute", "Health status"),
+                                        lang.pick(
+                                            "Stato di salute (registro SMART NVMe)",
+                                            "Health status (NVMe SMART log)",
+                                        ),
                                     ),
                                     if unhealthy { "Unhealthy" } else { "Warning" },
                                     by_os(p, Source::Wmi, src(&d.health).unwrap_or(Source::IoKit)),
@@ -341,8 +351,8 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                             "disk status: Windows summary, not a full SMART analysis",
                         ),
                         lang.pick(
-                            "stato dei dischi: riepilogo di macOS, non un'analisi SMART completa",
-                            "disk status: macOS summary, not a full SMART analysis",
+                            "stato dei dischi NVMe dal registro SMART (avvisi critici, riserva, usura), non un'analisi completa",
+                            "NVMe disk status from the SMART log (critical warnings, spare, wear), not a full analysis",
                         ),
                     ));
                 }

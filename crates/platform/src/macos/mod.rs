@@ -14,6 +14,7 @@ pub mod gpu;
 pub mod iokit;
 pub mod live;
 pub mod mem;
+pub mod nvme_smart;
 pub mod sensors;
 pub mod storage;
 pub mod time;

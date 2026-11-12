@@ -356,13 +356,13 @@ pub fn render(doc: &ExportDocument, platform: Platform) -> String {
                             "Modello",
                             "Tipo",
                             "Capacità",
-                            os("Stato riportato da Windows", "Stato riportato da macOS"),
+                            os("Stato riportato da Windows", "Stato (registro SMART)"),
                         ],
                         [
                             "Model",
                             "Type",
                             "Capacity",
-                            os("Status reported by Windows", "Status reported by macOS"),
+                            os("Status reported by Windows", "Status (SMART log)"),
                         ],
                     )));
                     for d in disks {
@@ -378,11 +378,11 @@ pub fn render(doc: &ExportDocument, platform: Platform) -> String {
                     h.push_str(lang.pick(
                         os(
                             "</table><p class=\"muted\">Lo stato è il riepilogo di Windows, non un'analisi SMART completa.</p>",
-                            "</table><p class=\"muted\">Lo stato è il riepilogo di macOS, non un'analisi SMART completa.</p>",
+                            "</table><p class=\"muted\">Lo stato dei dischi NVMe viene dal loro registro SMART (avvisi critici, riserva, usura), non da un'analisi completa.</p>",
                         ),
                         os(
                             "</table><p class=\"muted\">The status is the Windows summary, not a full SMART analysis.</p>",
-                            "</table><p class=\"muted\">The status is the macOS summary, not a full SMART analysis.</p>",
+                            "</table><p class=\"muted\">The status of NVMe disks comes from their SMART log (critical warnings, spare, wear), not from a full analysis.</p>",
                         ),
                     ));
                 }

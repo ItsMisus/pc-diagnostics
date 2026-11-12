@@ -19,13 +19,14 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use models::hardware::{BusKind, MediaKind, PhysicalDiskInfo};
+use models::hardware::{BusKind, DiskHealthStatus, MediaKind, PhysicalDiskInfo};
 use models::metric::{Metric, Source, Unavailability, Unit};
 use models::monitor::StorageSample;
 use models::{AppError, ErrorCode};
 
 use super::iokit::{self, IoObject};
 use super::mem::counter_rate;
+use super::nvme_smart;
 
 /// Re-enumerate the drivers every this many samples to pick up newly attached disks.
 const RESCAN_EVERY: u32 = 30;
@@ -105,12 +106,23 @@ pub fn physical_disks() -> Result<Vec<PhysicalDiskInfo>, AppError> {
                 .number("Size")
                 .and_then(|v| u64::try_from(v).ok())
                 .unwrap_or(0),
-            // SMART/NVMe health needs the NVMe SMART user-client plugin; not wired up.
-            health: Metric::unavailable(Unavailability::NotImplemented),
+            health: disk_health(&device),
         });
     }
     out.sort_by(|a, b| natural_disk_order(&a.id, &b.id));
     Ok(out)
+}
+
+/// NVMe drives: the SMART / Health Information log (see `nvme_smart`). Other drives
+/// (SATA, USB): ATA SMART is not read, so their health stays not implemented.
+fn disk_health(device: &IoObject) -> Metric<DiskHealthStatus> {
+    if !nvme_smart::is_capable(device) {
+        return Metric::unavailable(Unavailability::NotImplemented);
+    }
+    match nvme_smart::read(device) {
+        Ok(log) => Metric::available(log.health(), Unit::None, Source::IoKit),
+        Err(e) => Metric::unavailable(Unavailability::Failed(e)),
+    }
 }
 
 /// `disk2` before `disk10`.

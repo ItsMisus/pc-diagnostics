@@ -242,7 +242,7 @@ fn macos_texts_use_macos_names() {
         disk.title
             .starts_with("macOS reports a disk health problem")
     );
-    assert_eq!(disk.evidence[0].label, "Health status");
+    assert_eq!(disk.evidence[0].label, "Health status (NVMe SMART log)");
     assert_eq!(disk.evidence[0].source, Source::IoKit);
     let paging = &find(&en, "memory.paging.high")[0];
     assert!(paging.simple.meaning.starts_with("macOS often read data"));
@@ -291,7 +291,7 @@ fn macos_report_export_is_clean_and_redacted() {
         }
         let html_clean = strip_allowed(&html);
         assert!(!html_clean.contains("Windows"), "{html_clean}");
-        assert!(html.contains(lang.pick("Stato riportato da macOS", "Status reported by macOS")));
+        assert!(html.contains(lang.pick("Stato (registro SMART)", "Status (SMART log)")));
         // Unredacted export keeps the real POSIX paths out of the document anyway:
         // process paths are never exported.
         let plain = render_json(&bundle, false).expect("json");

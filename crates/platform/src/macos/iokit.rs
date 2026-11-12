@@ -1,11 +1,14 @@
 //! Small owned wrappers over the public I/O Kit registry calls used by the macOS
 //! providers (GPU, block storage, power manager tables). No privileges are needed: the
-//! registry is readable by any user. Nothing here opens a user client to a driver.
+//! registry is readable by any user. Nothing here opens a user client to a driver (the
+//! only user client the app opens is the read-only NVMe SMART one, in `nvme_smart`).
 
 use std::ffi::{CStr, c_char};
 
 use models::{AppError, ErrorCode};
-use objc2_core_foundation::{CFData, CFDictionary, CFNumber, CFRetained, CFString, CFType};
+use objc2_core_foundation::{
+    CFBoolean, CFData, CFDictionary, CFNumber, CFRetained, CFString, CFType,
+};
 use objc2_io_kit::{
     IOIteratorNext, IOObjectConformsTo, IOObjectGetClass, IOObjectRelease,
     IORegistryEntryCreateCFProperty, IORegistryEntryGetChildEntry, IORegistryEntryGetName,
@@ -111,6 +114,15 @@ impl IoObject {
 
     pub fn data(&self, key: &str) -> Option<Vec<u8>> {
         Some(self.property(key)?.downcast::<CFData>().ok()?.to_vec())
+    }
+
+    pub fn boolean(&self, key: &str) -> Option<bool> {
+        Some(self.property(key)?.downcast::<CFBoolean>().ok()?.as_bool())
+    }
+
+    /// The underlying reference, still owned by `self` (do not release it).
+    pub fn raw(&self) -> io_object_t {
+        self.0
     }
 }
 
