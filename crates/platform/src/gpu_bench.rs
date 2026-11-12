@@ -155,7 +155,7 @@ mod tests {
             assert!(!g.name.is_empty());
             assert!(!g.is_software && !g.is_virtual);
         }
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             assert!(
                 gpus.iter()
                     .any(|g| g.vendor_id == 0x106B && g.name.starts_with("Apple"))

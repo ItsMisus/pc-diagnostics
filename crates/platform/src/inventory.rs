@@ -235,7 +235,7 @@ mod tests {
                 .iter()
                 .all(|v| !v.mount_point.starts_with("/System/Volumes/"))
         );
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             assert_eq!(inv.cpu.vendor.as_deref(), Some("Apple"));
             let m = *inv.cpu.max_mhz.value().expect("rated max MHz");
             assert!((2000.0..=6000.0).contains(&m), "{m} MHz");

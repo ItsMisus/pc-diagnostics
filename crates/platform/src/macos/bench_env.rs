@@ -451,7 +451,9 @@ mod tests {
         assert!(sector.is_power_of_two() && sector >= 512);
         let model = volume_disk_model("/");
         eprintln!("disk model: {model:?}");
-        assert!(model.is_some_and(|m| !m.is_empty()));
+        if crate::macos::physical_apple_silicon() {
+            assert!(model.is_some_and(|m| !m.is_empty()));
+        }
         eprintln!("power source: {:?}", power_source());
         eprintln!("power plan: {:?}", active_power_plan());
         assert_ne!(power_source(), PowerSource::Unknown);

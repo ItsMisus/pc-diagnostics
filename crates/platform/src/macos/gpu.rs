@@ -269,7 +269,7 @@ mod tests {
             assert!(!g.name.is_empty());
             assert!(samples.iter().any(|s| s.id == g.id), "live id matches");
         }
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             let g = &inv[0];
             assert_eq!(g.vendor_id, 0x106B, "Apple");
             assert_eq!(

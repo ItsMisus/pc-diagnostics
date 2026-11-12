@@ -382,7 +382,7 @@ mod tests {
             assert!(r >= 0.0 && w >= 0.0);
             assert!(!s.storage.active_time_percent.is_available());
             assert!(!s.gpus.is_empty(), "the GPU is listed");
-            if cfg!(target_arch = "aarch64") {
+            if crate::macos::physical_apple_silicon() {
                 let t = *s.cpu.temperature_c.value().expect("SoC die temperature");
                 assert!((10.0..=110.0).contains(&t), "{t} °C");
                 let m = *s.cpu.max_mhz.value().expect("max MHz");

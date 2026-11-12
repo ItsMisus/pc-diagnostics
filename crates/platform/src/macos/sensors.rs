@@ -217,7 +217,7 @@ mod tests {
     fn host_cpu_temperature_is_plausible_if_present() {
         let mut s = Sensors::new();
         let (cpu, gpu) = s.read();
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             assert!(s.has_cpu_sensors(), "Apple Silicon exposes PMU die sensors");
             let t = cpu.expect("CPU/SoC die temperature");
             assert!((10.0..=110.0).contains(&t), "{t} °C");

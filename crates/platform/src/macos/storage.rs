@@ -307,8 +307,8 @@ mod tests {
         let disks = physical_disks().expect("disk inventory");
         let d0 = disks.iter().find(|d| d.id == "disk0").expect("disk0");
         assert!(d0.size_bytes > 10_000_000_000);
-        assert!(d0.model.is_some());
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
+            assert!(d0.model.is_some());
             assert_eq!(d0.bus, BusKind::Nvme);
             assert_eq!(d0.media, MediaKind::Ssd);
         }

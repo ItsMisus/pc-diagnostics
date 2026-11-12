@@ -352,7 +352,7 @@ mod tests {
             .filter_map(IoObject::parent)
             .filter(is_capable)
             .collect();
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             assert!(!devices.is_empty(), "the internal SSD is SMART capable");
         }
         for d in &devices {

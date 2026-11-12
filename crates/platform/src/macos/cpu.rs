@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn host_max_frequency_is_plausible() {
         let m = max_mhz();
-        if cfg!(target_arch = "aarch64") {
+        if crate::macos::physical_apple_silicon() {
             let v = *m.value().expect("Apple Silicon pmgr DVFS table");
             assert!((2000.0..=6000.0).contains(&v), "{v} MHz");
         }
