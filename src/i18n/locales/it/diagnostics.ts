@@ -75,7 +75,6 @@ export default {
   overallWarning_one: "{count} avviso da controllare",
   overallWarning_other: "{count} avvisi da controllare",
   countsAria: "Segnalazioni per gravità",
-  runAt: "Diagnosi del {date}",
 
   // Overview "System Insights" card
   insightsTitle: "Segnalazioni",

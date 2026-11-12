@@ -78,7 +78,6 @@ export default {
   overallWarning_one: "{count} warning to check",
   overallWarning_other: "{count} warnings to check",
   countsAria: "Findings by severity",
-  runAt: "Diagnostics from {date}",
 
   // Overview "System Insights" card
   insightsTitle: "System Insights",
