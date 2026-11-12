@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitLevel, memoryLevel, volumeLevel, vramLevel } from "./levels";
+import { commitLevel, memoryLevel, pressureLevel, volumeLevel, vramLevel } from "./levels";
 
 const GIB = 1024 ** 3;
 
@@ -26,6 +26,15 @@ describe("commitLevel and vramLevel", () => {
     expect(vramLevel(89.9, 100)).toBe("normal");
     expect(vramLevel(99, 100)).toBe("warn");
     expect(vramLevel(null, 100)).toBe("normal");
+  });
+});
+
+describe("pressureLevel", () => {
+  it("maps the macOS kernel levels, normal when not reported", () => {
+    expect(pressureLevel("normal")).toBe("normal");
+    expect(pressureLevel("warning")).toBe("warn");
+    expect(pressureLevel("critical")).toBe("bad");
+    expect(pressureLevel(null)).toBe("normal");
   });
 });
 

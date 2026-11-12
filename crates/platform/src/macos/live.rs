@@ -2,7 +2,7 @@
 //! once (service lists, sensor list, Mach host port) and only re-read per tick.
 
 use models::metric::{Metric, Source, Unavailability, Unit};
-use models::monitor::{GpuSample, StorageSample};
+use models::monitor::{GpuSample, MemoryPressure, StorageSample};
 use models::{AppError, ErrorCode};
 
 use super::gpu::GpuLive;
@@ -81,6 +81,26 @@ impl MacLive {
             Metric::unavailable(Unavailability::NotSupported),
             pages,
         )
+    }
+
+    /// `(swap used, swap total, pressure)`: see `macos::mem`.
+    pub fn memory_swap_pressure(&self) -> (Metric<f64>, Metric<f64>, Metric<MemoryPressure>) {
+        #[allow(clippy::cast_precision_loss)] // exact below 2^53 bytes
+        let (used, total) = match super::mem::swap_usage() {
+            Ok((u, t)) => (
+                Metric::available(u as f64, Unit::Bytes, Source::Mach),
+                Metric::available(t as f64, Unit::Bytes, Source::Mach),
+            ),
+            Err(e) => (
+                Metric::unavailable(Unavailability::Failed(e.clone())),
+                Metric::unavailable(Unavailability::Failed(e)),
+            ),
+        };
+        let pressure = match super::mem::pressure_level() {
+            Ok(p) => Metric::available(p, Unit::None, Source::Mach),
+            Err(e) => Metric::unavailable(Unavailability::Failed(e)),
+        };
+        (used, total, pressure)
     }
 
     pub fn gpus(&mut self) -> Vec<GpuSample> {

@@ -1,3 +1,5 @@
+import type { MemoryPressure } from "@/types/generated/MemoryPressure";
+
 /**
  * Status level of a dashboard meter: whether its fill stays grey (`normal`) or takes the
  * status colour, always together with a text label (docs/design-system.md, "Color").
@@ -46,6 +48,16 @@ export function memoryLevel(availableBytes: number | null, totalBytes: number | 
 export function commitLevel(usedBytes: number | null, limitBytes: number | null): Level {
   const used = share(usedBytes, limitBytes);
   return used !== null && used >= MEM_COMMIT_WARN_PERCENT ? "warn" : "normal";
+}
+
+/**
+ * macOS memory pressure: the kernel's own level, as memory.rs reads it
+ * (MEM_PRESSURE_HIGH_RANK / MEM_PRESSURE_CRITICAL_RANK).
+ */
+export function pressureLevel(pressure: MemoryPressure | null): Level {
+  if (pressure === "critical") return "bad";
+  if (pressure === "warning") return "warn";
+  return "normal";
 }
 
 export function vramLevel(usedBytes: number | null, totalBytes: number | null): Level {

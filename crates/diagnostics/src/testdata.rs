@@ -37,6 +37,15 @@ pub fn avail(v: f64, unit: Unit, source: Source) -> Metric<f64> {
     }
 }
 
+pub fn pressure(p: models::monitor::MemoryPressure) -> Metric<models::monitor::MemoryPressure> {
+    Metric::Available {
+        value: p,
+        unit: Unit::None,
+        source: Source::Mach,
+        at: T0,
+    }
+}
+
 pub fn missing<T>() -> Metric<T> {
     Metric::unavailable(Unavailability::ProviderMissing("test".into()))
 }
@@ -61,6 +70,10 @@ pub fn base_sample(i: usize) -> LiveSample {
             commit_used_bytes: avail(12.0 * GIB, Unit::Bytes, Source::Pdh),
             commit_limit_bytes: avail(32.0 * GIB, Unit::Bytes, Source::Pdh),
             pages_per_sec: avail(5.0, Unit::Count, Source::Pdh),
+            // Windows-shaped: no swap or pressure readings.
+            swap_used_bytes: Metric::unavailable(Unavailability::NotSupported),
+            swap_total_bytes: Metric::unavailable(Unavailability::NotSupported),
+            pressure: Metric::unavailable(Unavailability::NotSupported),
         },
         gpus: vec![GpuSample {
             id: GPU_ID.into(),

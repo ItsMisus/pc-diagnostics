@@ -16,7 +16,7 @@ import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
 import { hasUnifiedMemory, isFrequencyLimited, primaryGpu, showsDiskStatus, volumeDisplayName } from "@/features/monitoring/selection";
-import { usePlatform } from "@/lib/platform";
+import { useIsMac, usePlatform } from "@/lib/platform";
 import { valueOf } from "@/features/monitoring/series";
 import { InventoryState, WaitingForSample } from "@/features/monitoring/StatusViews";
 import type { CpuSample } from "@/types/generated/CpuSample";
@@ -24,7 +24,7 @@ import type { GpuSample } from "@/types/generated/GpuSample";
 import type { Metric } from "@/types/generated/Metric";
 import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
-import { commitLevel, type Level, memoryLevel, volumeLevel, vramLevel } from "./levels";
+import { commitLevel, type Level, memoryLevel, pressureLevel, volumeLevel, vramLevel } from "./levels";
 import { type Bar, BarRow, GaugeLayout, GaugeSkeleton, metricText, splitUnit, toneOf, useLevelText } from "./parts";
 
 /** Panels are flex columns so a trailing line can sit at the bottom when a row stretches them. */
@@ -286,6 +286,7 @@ export const RamPanel = memo(function RamPanel() {
   const t = useT("overview");
   const tm = useT("monitoring");
   const simple = useIsSimple();
+  const mac = useIsMac();
   const mem = useLive((s) => s.latest?.memory);
   if (!mem) {
     return (
@@ -302,6 +303,10 @@ export const RamPanel = memo(function RamPanel() {
   const memLevel = memoryLevel(valueOf(mem.availableBytes), total);
   const commitText = (v: number) =>
     commitLimit !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(commitLimit) }) : formatBytes(v);
+  const swapTotal = valueOf(mem.swapTotalBytes);
+  const swapText = (v: number) =>
+    swapTotal !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(swapTotal) }) : formatBytes(v);
+  const pLevel = pressureLevel(mem.pressure.status === "available" ? mem.pressure.value : null);
   return (
     <Card title="RAM" className={PANEL} aside={<SourceCaption metric={mem.usedBytes} />}>
       <GaugeLayout
@@ -318,18 +323,32 @@ export const RamPanel = memo(function RamPanel() {
       >
         <BarRow label={t("used")} level={memLevel} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
         <BarRow label={tm("available")} value={<MetricValue metric={mem.availableBytes} format={bytes} />} />
+        {mac && (
+          // The kernel's level is the "memory is short" signal on macOS: shown in both views.
+          // Above normal, the status word ("Avviso" / "Critico") is the value itself.
+          <BarRow
+            label={t("memoryPressure")}
+            level={pLevel}
+            value={pLevel === "normal" ? <MetricValue metric={mem.pressure} format={() => t("pressureNormal")} /> : null}
+          />
+        )}
         {!simple && (
           <>
-            <BarRow
-              label={t("committedMemory")}
-              bar={{
-                percent: ratio(valueOf(mem.commitUsedBytes), commitLimit),
-                label: t("committedMemory"),
-                valueText: metricText(mem.commitUsedBytes, commitText, tm),
-                level: commitLevel(valueOf(mem.commitUsedBytes), commitLimit),
-              }}
-              value={<MetricValue metric={mem.commitUsedBytes} format={commitText} />}
-            />
+            {mac ? (
+              // No bar: macOS grows the swap files on demand, so the total is not a limit.
+              <BarRow label={t("swapUsed")} value={<MetricValue metric={mem.swapUsedBytes} format={swapText} />} />
+            ) : (
+              <BarRow
+                label={t("committedMemory")}
+                bar={{
+                  percent: ratio(valueOf(mem.commitUsedBytes), commitLimit),
+                  label: t("committedMemory"),
+                  valueText: metricText(mem.commitUsedBytes, commitText, tm),
+                  level: commitLevel(valueOf(mem.commitUsedBytes), commitLimit),
+                }}
+                value={<MetricValue metric={mem.commitUsedBytes} format={commitText} />}
+              />
+            )}
             <BarRow label={t("pagesFromDisk")} value={<MetricValue metric={mem.pagesPerSec} format={formatPerSec} />} />
           </>
         )}

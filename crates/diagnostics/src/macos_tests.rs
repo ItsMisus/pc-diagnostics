@@ -44,6 +44,9 @@ fn mac() -> Mac {
         s.memory.commit_used_bytes = not_supported();
         s.memory.commit_limit_bytes = not_supported();
         s.memory.pages_per_sec = avail(5000.0, Unit::Count, Source::Mach);
+        s.memory.swap_used_bytes = avail(3.0 * GIB, Unit::Bytes, Source::Mach);
+        s.memory.swap_total_bytes = avail(4.0 * GIB, Unit::Bytes, Source::Mach);
+        s.memory.pressure = pressure(models::monitor::MemoryPressure::Critical);
         s.gpus[0].usage_percent = avail(99.0, Unit::Percent, Source::IoKit);
         s.gpus[0].dedicated_used_bytes = not_supported();
     });
@@ -131,8 +134,8 @@ fn macos_diagnosis_completes_with_honest_coverage() {
         );
         assert!(
             memory.note.starts_with(lang.pick(
-                "memoria disponibile e paginazione",
-                "available memory and paging"
+                "memoria disponibile, pressione della memoria e paginazione",
+                "available memory, memory pressure and paging"
             )),
             "{}",
             memory.note
@@ -149,6 +152,7 @@ fn macos_diagnosis_completes_with_honest_coverage() {
             "cpu.utilization.sustained",
             "cpu.process.dominant",
             "memory.available.low",
+            "memory.pressure.high",
             "memory.paging.high",
             "gpu.utilization.sustained",
             "storage.volume.low_space",

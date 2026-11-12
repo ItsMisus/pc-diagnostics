@@ -32,6 +32,11 @@ pub fn pages_high_per_sec(platform: models::app::Platform) -> f64 {
         _ => MEM_PAGES_HIGH_PER_SEC,
     }
 }
+/// macOS pressure rank (`MemoryPressure::rank`) at or above this is "high": the kernel's
+/// own Warning level, the yellow band of Activity Monitor's "Memory Pressure" graph.
+pub const MEM_PRESSURE_HIGH_RANK: f64 = 1.0;
+/// Rank of the kernel's Critical level (red band).
+pub const MEM_PRESSURE_CRITICAL_RANK: f64 = 2.0;
 /// Processes listed as evidence.
 pub const MEM_TOP_PROCESSES: usize = 3;
 
@@ -97,6 +102,9 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
     let commit = Sustained::compute(live, commit_pct, |v| v >= MEM_COMMIT_HIGH_PERCENT);
     let pages_high = pages_high_per_sec(ctx.platform);
     let pages = Sustained::compute(live, |s| val(&s.memory.pages_per_sec), |v| v >= pages_high);
+    let rank = |s: &models::monitor::LiveSample| s.memory.pressure.value().map(|p| p.rank());
+    let pressure = Sustained::compute(live, rank, |v| v >= MEM_PRESSURE_HIGH_RANK);
+    let pressure_critical = Sustained::compute(live, rank, |v| v >= MEM_PRESSURE_CRITICAL_RANK);
 
     if !low.usable() {
         cov.not_evaluated(if live.is_empty() {
@@ -119,11 +127,18 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             format!("available memory, commit and paging evaluated over {w}"),
         ),
         lang.pick(
-            format!("memoria disponibile e paginazione valutate su {w}"),
-            format!("available memory and paging evaluated over {w}"),
+            format!("memoria disponibile, pressione della memoria e paginazione valutate su {w}"),
+            format!("available memory, memory pressure and paging evaluated over {w}"),
         ),
     ));
     window_notes(&mut cov, ctx.window_s);
+    // The pressure level exists only on macOS; on Windows commit plays that role.
+    if p == Platform::Macos && !pressure.usable() {
+        cov.partial(lang.pick(
+            "pressione della memoria non disponibile",
+            "memory pressure not available",
+        ));
+    }
     if !commit.usable() {
         match p {
             Platform::Windows => cov.partial(lang.pick(
@@ -354,8 +369,102 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
         out.findings.push(f);
     }
 
+    let pressure_fired = pressure.is_sustained(ctx.window_s);
+    if pressure_fired {
+        let is_critical = pressure_critical.is_sustained(ctx.window_s);
+        let share = fmt::pct(lang, pressure.hit_percent());
+        let mut f = finding(
+            "memory.pressure.high",
+            ComponentKind::Memory,
+            if is_critical {
+                Severity::Critical
+            } else {
+                Severity::Warning
+            },
+            FindingKind::Observation,
+            Confidence::High,
+            lang.pick("Pressione della memoria elevata", "High memory pressure"),
+            lang.pick(
+                format!("Il livello di pressione della memoria riportato da macOS è stato «attenzione» o «critico» nel {share} dei campioni."),
+                format!("The memory pressure level reported by macOS was \"warning\" or \"critical\" in {share} of the samples."),
+            ),
+            simple(
+                if is_critical {
+                    lang.pick(
+                        "Il Mac è rimasto quasi senza memoria",
+                        "The Mac almost ran out of memory",
+                    )
+                } else {
+                    lang.pick(
+                        "La memoria del Mac non basta per tutto quello che è aperto",
+                        "The Mac's memory isn't enough for everything that's open",
+                    )
+                },
+                lang.pick(
+                    "macOS ha segnalato che la memoria (RAM, dove il Mac tiene i programmi aperti) non bastava: per far stare tutto ha compresso dati e ne ha spostati una parte sul disco. È lo stesso indicatore «Pressione memoria» di Monitoraggio Attività. Quando resta alto, il Mac può diventare lento e i programmi possono bloccarsi per qualche istante.",
+                    "macOS reported that the memory (RAM, where the Mac keeps open programs) wasn't enough: to fit everything, it compressed data and moved some of it to the disk. It's the same \"Memory Pressure\" indicator as in Activity Monitor. When it stays high, the Mac can become slow and programs can freeze for a moment.",
+                ),
+                action.clone(),
+            ),
+        );
+        let last = live.iter().rev();
+        let swap_used = last.clone().find_map(|s| val(&s.memory.swap_used_bytes));
+        let swap_total = last.clone().find_map(|s| val(&s.memory.swap_total_bytes));
+        let pressure_src = first
+            .and_then(|s| src(&s.memory.pressure))
+            .unwrap_or(Source::Mach);
+        f.evidence = vec![
+            ev(
+                lang.pick(
+                    "Campioni con pressione «attenzione» o «critica»",
+                    "Samples with \"warning\" or \"critical\" pressure",
+                ),
+                count_of(lang, pressure.hits, pressure.available),
+                pressure_src,
+            ),
+            ev(
+                lang.pick(
+                    "Campioni con pressione «critica»",
+                    "Samples with \"critical\" pressure",
+                ),
+                count_of(lang, pressure_critical.hits, pressure_critical.available),
+                pressure_src,
+            ),
+        ];
+        if let (Some(used), Some(total)) = (swap_used, swap_total) {
+            let (u, t) = (fmt::bytes(lang, used), fmt::bytes(lang, total));
+            f.evidence.push(ev(
+                lang.pick("Swap in uso (ultimo campione)", "Swap in use (last sample)"),
+                lang.pick(format!("{u} su {t}"), format!("{u} of {t}")),
+                Source::Mach,
+            ));
+        }
+        f.evidence.extend(procs.iter().cloned());
+        f.possible_causes = strings(lang.pick(
+            &[
+                "Molti programmi o schede del browser aperti contemporaneamente",
+                "Un programma che usa molta memoria",
+                "Memoria RAM insufficiente per il carico attuale",
+            ],
+            &[
+                "Many programs or browser tabs open at the same time",
+                "A program using a lot of memory",
+                "Not enough RAM for the current workload",
+            ],
+        ));
+        f.recommendation = recommendation(lang).into();
+        f.limitations = strings(&[lang.pick(
+            "Il dato descrive solo la finestra osservata.",
+            "The data describes only the observed window.",
+        )]);
+        if procs.is_empty() {
+            f.limitations.push(no_procs_limitation());
+        }
+        out.findings.push(f);
+    }
+
     if pages.is_sustained(ctx.window_s) {
-        let corroborated = low_fired || commit_fired;
+        let corroborated = low_fired || commit_fired || pressure_fired;
         let mut f = finding(
             "memory.paging.high",
             ComponentKind::Memory,
@@ -525,10 +634,11 @@ mod threshold_tests {
 mod tests {
     use crate::evaluate;
     use crate::testdata::*;
+    use models::app::Platform;
     use models::component::ComponentKind;
     use models::diagnostics::{Confidence, CoverageStatus, FindingKind, Severity};
-    use models::monitor::LiveSample;
-    use models::{Source, Unit};
+    use models::monitor::{LiveSample, MemoryPressure};
+    use models::{Metric, Source, Unavailability, Unit};
 
     fn with_available(n: usize, pct_of_16: f64) -> Vec<LiveSample> {
         live(n, |_, s| {
@@ -621,6 +731,95 @@ mod tests {
         let f = find(&r, "memory.paging.high").expect("paging");
         assert_eq!(f.confidence, Confidence::Medium);
         assert_eq!(f.severity, Severity::Warning);
+    }
+
+    fn mac_pressure(levels: &[MemoryPressure]) -> Vec<LiveSample> {
+        let levels = levels.to_vec();
+        live(60, move |i, s| {
+            s.memory.commit_used_bytes = Metric::unavailable(Unavailability::NotSupported);
+            s.memory.commit_limit_bytes = Metric::unavailable(Unavailability::NotSupported);
+            s.memory.pressure = pressure(levels[i % levels.len()]);
+            s.memory.swap_used_bytes = avail(GIB, Unit::Bytes, Source::Mach);
+            s.memory.swap_total_bytes = avail(2.0 * GIB, Unit::Bytes, Source::Mach);
+        })
+    }
+
+    fn mac_input(s: &[LiveSample]) -> crate::DiagnosticInput<'_> {
+        let mut inp = input(s);
+        inp.platform = Platform::Macos;
+        inp
+    }
+
+    #[test]
+    fn pressure_warning_sustained_fires_on_macos() {
+        use MemoryPressure::{Normal, Warning};
+        // 2 of 3 samples at Warning (67 % ≥ 60 %): sustained.
+        let s = mac_pressure(&[Warning, Warning, Normal]);
+        let r = evaluate(&mac_input(&s));
+        let f = find(&r, "memory.pressure.high").expect("pressure");
+        assert_eq!(f.severity, Severity::Warning);
+        assert_eq!(f.kind, FindingKind::Observation);
+        assert_eq!(f.evidence[0].value, "40 su 60");
+        assert_eq!(f.evidence[1].value, "0 su 60");
+        assert_eq!(f.evidence[2].value, "1,0 GiB su 2,0 GiB");
+        // Memory coverage stays complete: pressure is read, commit is not applicable.
+        let cov = r
+            .coverage
+            .iter()
+            .find(|c| c.component == ComponentKind::Memory)
+            .expect("cov");
+        assert_eq!(cov.status, CoverageStatus::Evaluated, "{}", cov.note);
+        assert!(cov.note.contains("pressione della memoria"), "{}", cov.note);
+    }
+
+    #[test]
+    fn pressure_below_the_sustained_share_or_normal_does_not_fire() {
+        use MemoryPressure::{Normal, Warning};
+        let r = evaluate(&mac_input(&mac_pressure(&[Warning, Normal])));
+        assert!(find(&r, "memory.pressure.high").is_none(), "50 % < 60 %");
+        let r = evaluate(&mac_input(&mac_pressure(&[Normal])));
+        assert!(find(&r, "memory.pressure.high").is_none());
+    }
+
+    #[test]
+    fn critical_pressure_is_critical_and_corroborates_paging() {
+        let s = live(60, |_, s| {
+            s.memory.pressure = pressure(MemoryPressure::Critical);
+            s.memory.pages_per_sec = avail(400.0, Unit::Count, Source::Mach);
+        });
+        let r = evaluate(&mac_input(&s));
+        let f = find(&r, "memory.pressure.high").expect("pressure");
+        assert_eq!(f.severity, Severity::Critical);
+        assert_eq!(f.simple.headline, "Il Mac è rimasto quasi senza memoria");
+        // Swap not read: no swap evidence row.
+        assert_eq!(f.evidence.len(), 2);
+        let paging = find(&r, "memory.paging.high").expect("paging");
+        assert_eq!(paging.confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn missing_pressure_reduces_coverage_on_macos_only() {
+        let s = mac_pressure(&[MemoryPressure::Normal]);
+        let s: Vec<LiveSample> = s
+            .into_iter()
+            .map(|mut x| {
+                x.memory.pressure = missing();
+                x
+            })
+            .collect();
+        let status = |r: &models::diagnostics::DiagnosticReport| {
+            r.coverage
+                .iter()
+                .find(|c| c.component == ComponentKind::Memory)
+                .map(|c| c.status)
+                .expect("cov")
+        };
+        assert_eq!(status(&evaluate(&mac_input(&s))), CoverageStatus::Partial);
+        // Windows samples never carry a pressure level: coverage is unaffected.
+        assert_eq!(
+            status(&evaluate(&input(&live(60, |_, _| {})))),
+            CoverageStatus::Evaluated
+        );
     }
 
     #[test]

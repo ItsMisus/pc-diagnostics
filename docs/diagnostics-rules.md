@@ -131,7 +131,8 @@ reacting to one burst.
 | `cpu.benchmark.sustained_drop` | Latest completed `CpuSustained` run: drop ≥ 15 % (see below) | Hypothesis | Warning | Medium |
 | `memory.available.low` | Available < 10 % of total (sustained); Critical if < 5 % is also sustained | Observation | Warning / Critical | High |
 | `memory.commit.high` | Commit used ≥ 90 % of the commit limit (sustained) | Observation | Warning | High |
-| `memory.paging.high` | `Pages/sec` ≥ 1000 (sustained) | Hypothesis | Warning + Medium if a memory rule above also fired; otherwise Info + Low | — |
+| `memory.pressure.high` | macOS kernel pressure level (`kern.memorystatus_vm_pressure_level`) Warning or Critical (sustained); Critical if the Critical level is also sustained. Swap in use is listed as evidence. Not reported on Windows | Observation | Warning / Critical | High |
+| `memory.paging.high` | `Pages/sec` ≥ 1000 on Windows, pageins/s ≥ 250 on macOS (same ≈ 4 MiB/s; sustained) | Hypothesis | Warning + Medium if a memory rule above also fired; otherwise Info + Low | — |
 | `gpu.utilization.sustained` | Per GPU: busiest engine ≥ 95 % (sustained) | Observation | Info | High |
 | `gpu.vram.high` | Per GPU: dedicated used ≥ 90 % of inventory `dedicated_vram_bytes` (sustained) | Observation | Warning | High |
 | `gpu.driver.problem` | Driver inventory device, category `Gpu`, health `ProblemDetected` or `DriverMissing` | Confirmed | Critical | High (Medium if no problem code) |

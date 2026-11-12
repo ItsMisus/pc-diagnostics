@@ -15,7 +15,9 @@
 //!
 //! macOS has no commit charge and no commit limit (the compressor and dynamic swap files
 //! replace a fixed page file), so `commit_used_bytes` / `commit_limit_bytes` stay
-//! `NotSupported`.
+//! `NotSupported`. The "memory is short" signal on macOS is the kernel's pressure level
+//! (`kern.memorystatus_vm_pressure_level`, what Activity Monitor graphs) and, as
+//! context, the swap in use (`vm.swapusage`). Both sysctls are readable without root.
 
 use std::sync::OnceLock;
 use std::time::Instant;
@@ -66,6 +68,64 @@ pub fn vm_statistics() -> Result<libc::vm_statistics64, AppError> {
                 .with_detail(format!("kern_return {r}")),
         )
     }
+}
+
+/// Reads a fixed-size sysctl value by name. The returned length must match `T` exactly,
+/// so a kernel that changed the layout is reported as a failure, not misread.
+fn sysctl_value<T: Copy>(name: &std::ffi::CStr, zero: T) -> Result<T, AppError> {
+    let mut v = zero;
+    let mut len = std::mem::size_of::<T>();
+    // SAFETY: `name` is NUL-terminated; `v`/`len` describe a writable buffer of
+    // `size_of::<T>()` bytes; no new value is written (null, 0).
+    let r = unsafe {
+        libc::sysctlbyname(
+            name.as_ptr(),
+            (&raw mut v).cast(),
+            &raw mut len,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+    let label = name.to_string_lossy();
+    if r != 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(
+            AppError::new(ErrorCode::Platform, format!("sysctl {label} failed"))
+                .with_detail(err.to_string()),
+        );
+    }
+    if len != std::mem::size_of::<T>() {
+        return Err(AppError::new(
+            ErrorCode::Platform,
+            format!("sysctl {label}: unexpected size"),
+        )
+        .with_detail(format!("{len} bytes")));
+    }
+    Ok(v)
+}
+
+/// Swap `(used, total)` in bytes from `vm.swapusage`. Total is 0 when no swap file exists
+/// yet (macOS creates them on demand).
+pub fn swap_usage() -> Result<(u64, u64), AppError> {
+    // SAFETY: `xsw_usage` is plain integers and a bool-like u32, so all-zero is valid.
+    let zero: libc::xsw_usage = unsafe { std::mem::zeroed() };
+    let u = sysctl_value(c"vm.swapusage", zero)?;
+    if u.xsu_used > u.xsu_total {
+        return Err(
+            AppError::new(ErrorCode::Platform, "vm.swapusage: used above total")
+                .with_detail(format!("{} > {}", u.xsu_used, u.xsu_total)),
+        );
+    }
+    Ok((u.xsu_used, u.xsu_total))
+}
+
+/// The kernel memory-pressure level (`kern.memorystatus_vm_pressure_level`).
+pub fn pressure_level() -> Result<models::monitor::MemoryPressure, AppError> {
+    let level: libc::c_int = sysctl_value(c"kern.memorystatus_vm_pressure_level", 0)?;
+    models::monitor::MemoryPressure::from_kernel_level(level).ok_or_else(|| {
+        AppError::new(ErrorCode::Platform, "unknown memory pressure level")
+            .with_detail(level.to_string())
+    })
 }
 
 /// Rate of a monotonically increasing counter between two readings. `None` when the
@@ -135,5 +195,14 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(200));
         let r = p.rate().expect("rate after baseline");
         assert!(r.is_finite() && r >= 0.0);
+    }
+
+    #[test]
+    fn host_swap_and_pressure_are_readable_without_root() {
+        let (used, total) = swap_usage().expect("vm.swapusage");
+        assert!(used <= total);
+        // Swap files are allocated in whole 1 MiB units or more.
+        assert_eq!(total % (1024 * 1024), 0, "{total}");
+        pressure_level().expect("kern.memorystatus_vm_pressure_level");
     }
 }

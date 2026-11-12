@@ -15,6 +15,7 @@ export const ok = (value: number, unit: Unit = "percent", at = 0): Metric<number
 });
 
 export const missing: Metric<never> = { status: "unavailable", reason: { kind: "providerMissing", detail: "x" } };
+export const notSupported: Metric<never> = { status: "unavailable", reason: { kind: "notSupported" } };
 
 export function gpuSample(id: string, usage: Metric<number>): GpuSample {
   return {
@@ -50,6 +51,9 @@ export function sample(seq: number, overrides: Partial<LiveSample> = {}): LiveSa
       commitUsedBytes: ok(5, "bytes"),
       commitLimitBytes: ok(20, "bytes"),
       pagesPerSec: ok(0, "count"),
+      swapUsedBytes: notSupported,
+      swapTotalBytes: notSupported,
+      pressure: notSupported,
     },
     gpus: [],
     storage: {

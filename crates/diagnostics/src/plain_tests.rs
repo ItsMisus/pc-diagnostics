@@ -221,6 +221,7 @@ fn everything() -> Scenario {
         s.memory.available_bytes = avail(0.5 * GIB, Unit::Bytes, Source::Sysinfo);
         s.memory.commit_used_bytes = avail(31.0 * GIB, Unit::Bytes, Source::Pdh);
         s.memory.pages_per_sec = avail(5000.0, Unit::Count, Source::Pdh);
+        s.memory.pressure = pressure(models::monitor::MemoryPressure::Critical);
         s.gpus[0].usage_percent = avail(99.0, Unit::Percent, Source::Pdh);
         s.gpus[0].dedicated_used_bytes = avail(7.8 * GIB, Unit::Bytes, Source::Pdh);
     });
@@ -286,6 +287,7 @@ fn variants() -> Vec<Scenario> {
     let warning_memory = Scenario {
         live: live(60, |_, s| {
             s.memory.available_bytes = avail(1.4 * GIB, Unit::Bytes, Source::Sysinfo);
+            s.memory.pressure = pressure(models::monitor::MemoryPressure::Warning);
             s.cpu.temperature_c = avail(70.0, Unit::Celsius, Source::Wmi);
         }),
         inventory: None,

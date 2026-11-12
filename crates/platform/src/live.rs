@@ -199,6 +199,16 @@ impl LiveCollector {
             Metric::unavailable(Unavailability::NotSupported),
             Metric::unavailable(Unavailability::NotSupported),
         );
+        #[cfg(target_os = "macos")]
+        let (swap_used_bytes, swap_total_bytes, pressure) = self.mac.memory_swap_pressure();
+        // Windows: the page file is part of the commit limit and there is no kernel
+        // pressure level comparable to macOS'.
+        #[cfg(not(target_os = "macos"))]
+        let (swap_used_bytes, swap_total_bytes, pressure) = (
+            Metric::unavailable(Unavailability::NotSupported),
+            Metric::unavailable(Unavailability::NotSupported),
+            Metric::unavailable(Unavailability::NotSupported),
+        );
         MemorySample {
             total_bytes,
             used_bytes,
@@ -206,6 +216,9 @@ impl LiveCollector {
             commit_used_bytes,
             commit_limit_bytes,
             pages_per_sec,
+            swap_used_bytes,
+            swap_total_bytes,
+            pressure,
         }
     }
 
@@ -340,6 +353,10 @@ mod tests {
             assert!(used > 0.0 && avail > 0.0 && used + avail <= ram + 1.0);
             let pages = *s.memory.pages_per_sec.value().expect("pageins/s");
             assert!(pages.is_finite() && pages >= 0.0);
+            let swap_used = *s.memory.swap_used_bytes.value().expect("swap used");
+            let swap_total = *s.memory.swap_total_bytes.value().expect("swap total");
+            assert!(swap_used >= 0.0 && swap_used <= swap_total);
+            assert!(s.memory.pressure.is_available(), "memory pressure");
             assert_eq!(
                 reason(&s.memory.commit_used_bytes),
                 Some(&Unavailability::NotSupported)
