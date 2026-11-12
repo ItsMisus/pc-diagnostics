@@ -73,6 +73,7 @@ fn fixture() -> Fixture {
         drivers: Some(&drivers),
         benchmarks: &benchmarks,
         language: Language::Italian,
+        platform: Platform::Windows,
     };
     let report = evaluate(&input);
     Fixture {
@@ -95,6 +96,7 @@ fn bundle(f: &Fixture) -> ReportBundle<'_> {
         processes: Some(&f.processes),
         utc_offset_minutes: None,
         language: Language::Italian,
+        platform: Platform::Windows,
     }
 }
 
@@ -225,6 +227,7 @@ fn minimal_bundle_renders() {
         processes: None,
         utc_offset_minutes: None,
         language: Language::Italian,
+        platform: Platform::Windows,
     };
     let html = render_html(&b, true).expect("html");
     assert!(html.contains("Nessun risultato"));

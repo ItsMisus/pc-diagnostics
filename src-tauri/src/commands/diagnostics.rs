@@ -37,6 +37,7 @@ pub async fn run_diagnostics(app: AppHandle) -> Result<DiagnosticReport, AppErro
             drivers: drivers.as_ref(),
             benchmarks: &benchmarks,
             language: state.language(),
+            platform: models::app::Platform::current(),
         });
         state.db()?.save_diagnostic_report(&report)?;
         Ok(report)
@@ -51,8 +52,9 @@ pub async fn get_latest_diagnostics(
     Ok(state.db()?.latest_diagnostic_report()?)
 }
 
-/// Writes the latest report to `Documents\PC Diagnostics`. The path is fixed by the
-/// backend; the frontend cannot choose where files are written.
+/// Writes the latest report to `Documents\PC Diagnostics` (`~/Documents/PC Diagnostics`
+/// on macOS). The path is fixed by the backend; the frontend cannot choose where files
+/// are written.
 #[tauri::command]
 pub async fn export_report(
     app: AppHandle,
@@ -93,6 +95,7 @@ pub async fn export_report(
             processes: processes.as_ref(),
             utc_offset_minutes,
             language: state.language(),
+            platform: models::app::Platform::current(),
         };
         let content = match format {
             ReportFormat::Json => diagnostics::render_json(&bundle, redact)?,
@@ -121,10 +124,14 @@ pub async fn export_report(
 
 /// Cached device inventory, collected now (local only, about 1 s) if the Drivers page was
 /// never opened, so diagnostics do not report drivers as "not evaluated" needlessly.
-/// A collection failure only reduces coverage.
+/// A collection failure only reduces coverage. Where there is no driver inventory
+/// (macOS) it is skipped quietly: the rules report it as not evaluated, with the reason.
 fn driver_inventory_for_report(
     state: &AppState,
 ) -> Result<Option<models::drivers::DriverInventory>, AppError> {
+    if !drivers::inventory_supported() {
+        return Ok(None);
+    }
     if let Some(cached) = state.driver_inventory()? {
         return Ok(Some(cached));
     }

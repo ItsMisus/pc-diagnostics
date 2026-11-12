@@ -16,10 +16,13 @@ pub mod rules;
 mod window;
 
 #[cfg(test)]
+mod macos_tests;
+#[cfg(test)]
 mod plain_tests;
 #[cfg(test)]
 mod testdata;
 
+use models::app::Platform;
 use models::benchmark_run::BenchmarkResult;
 use models::component::ComponentKind;
 use models::diagnostics::DiagnosticReport;
@@ -57,6 +60,11 @@ pub struct DiagnosticInput<'a> {
     /// Language of every text in the report (the effective UI language at generation
     /// time). A stored report keeps it: texts are never re-translated.
     pub language: Language,
+    /// Platform the data was collected on (`Platform::current()` in the app). It selects
+    /// the OS-specific wording (tool names, "Windows" vs "macOS"); thresholds and rules
+    /// are the same everywhere. Texts for platforms other than Windows are written for
+    /// macOS, the only other platform with real providers.
+    pub platform: Platform,
 }
 
 const COMPONENT_ORDER: [ComponentKind; 7] = [
@@ -84,6 +92,7 @@ pub fn evaluate(input: &DiagnosticInput) -> DiagnosticReport {
         input,
         window_s,
         lang,
+        platform: input.platform,
     };
 
     let mut out = rules::Outcome::default();

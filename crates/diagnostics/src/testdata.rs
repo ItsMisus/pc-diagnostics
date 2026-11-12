@@ -22,6 +22,7 @@ use models::system::SystemInfo;
 use models::{Metric, Source, Unavailability, Unit};
 
 use crate::DiagnosticInput;
+use models::app::Platform;
 
 pub const T0: u64 = 1_793_755_260_000; // 2026-11-04 01:21:00 UTC
 pub const GIB: f64 = 1024.0 * 1024.0 * 1024.0;
@@ -346,5 +347,6 @@ pub fn input<'a>(live: &'a [LiveSample]) -> DiagnosticInput<'a> {
         drivers: None,
         benchmarks: &[],
         language: Language::Italian,
+        platform: Platform::Windows,
     }
 }

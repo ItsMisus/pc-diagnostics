@@ -1,6 +1,8 @@
-//! Storage rules: free space, Windows disk health summary, storage benchmarks.
+//! Storage rules: free space, OS disk health summary (Windows; macOS when the inventory
+//! provides one), storage benchmarks.
 
 use models::Source;
+use models::app::Platform;
 use models::benchmark::BenchmarkKind;
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, FindingKind, Severity};
@@ -9,10 +11,11 @@ use models::settings::Language;
 use models::{Metric, Unavailability};
 
 use super::cpu::latest;
-use super::{Cov, Ctx, Outcome, ev, finding, no_action, simple, strings};
+use super::{Cov, Ctx, Outcome, by_os, ev, finding, no_action, simple, strings};
 use crate::compare::{compare_in, find_previous_comparable};
 use crate::fmt;
 use crate::report::kind_label;
+use crate::window::src;
 
 const GIB: u64 = 1024 * 1024 * 1024;
 /// Free space below this share of the volume → Warning.
@@ -26,11 +29,55 @@ pub const FREE_ABSOLUTE_MIN_VOLUME_BYTES: u64 = 2 * FREE_WARNING_BYTES;
 /// Worsening of a storage benchmark metric vs the previous comparable run.
 pub const STORAGE_BENCH_DROP_PERCENT: f64 = 25.0;
 
-fn health_limitation(lang: Language) -> &'static str {
-    lang.pick(
-        "Stato riassuntivo di Windows, non un'analisi SMART completa.",
-        "Windows summary status, not a full SMART analysis.",
+fn health_limitation(lang: Language, platform: Platform) -> &'static str {
+    by_os(
+        platform,
+        lang.pick(
+            "Stato riassuntivo di Windows, non un'analisi SMART completa.",
+            "Windows summary status, not a full SMART analysis.",
+        ),
+        lang.pick(
+            "Stato riassuntivo di macOS, non un'analisi SMART completa.",
+            "macOS summary status, not a full SMART analysis.",
+        ),
     )
+}
+
+/// Plain-language headline for a volume low on space. Windows names the drive letter
+/// (`C:`); macOS volumes are mount points, so `/` is called the startup disk and other
+/// volumes keep their mount point (`/Volumes/Dati`). Volume labels are never used: they
+/// may be personal and the report redaction removes them.
+fn low_space_headline(lang: Language, platform: Platform, mount: &str, critical: bool) -> String {
+    if platform == Platform::Windows {
+        let drive = drive_name(mount);
+        return if critical {
+            lang.pick(
+                format!("Il disco {drive} è quasi pieno"),
+                format!("Drive {drive} is almost full"),
+            )
+        } else {
+            lang.pick(
+                format!("Sul disco {drive} resta poco spazio libero"),
+                format!("Drive {drive} is running low on free space"),
+            )
+        };
+    }
+    let (it, en) = if mount == "/" {
+        ("disco di avvio".to_owned(), "The startup disk".to_owned())
+    } else {
+        (format!("disco {mount}"), format!("Drive {mount}"))
+    };
+    if critical {
+        lang.pick(
+            format!("Il {it} è quasi pieno"),
+            format!("{en} is almost full"),
+        )
+    } else {
+        lang.pick(
+            format!("Sul {it} resta poco spazio libero"),
+            format!("{en} is running low on free space"),
+        )
+    }
 }
 
 /// Drive name as users see it in Esplora file: `C:\` → `C:`.
@@ -60,6 +107,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
     let mut out = Outcome::default();
     let mut cov = Cov::new(ComponentKind::Storage);
     let lang = ctx.lang;
+    let p = ctx.platform;
 
     match ctx.input.inventory {
         None => cov.not_evaluated(lang.pick(
@@ -87,7 +135,6 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                 };
                 let Some(severity) = severity else { continue };
                 let mount = &v.mount_point;
-                let drive = drive_name(mount);
                 let (free, size, pct) = (
                     fmt::bytes_u64(lang, v.available_bytes),
                     fmt::bytes_u64(lang, v.total_bytes),
@@ -113,24 +160,28 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                         format!("Volume {mount} has {free} free of {size} ({pct})."),
                     ),
                     simple(
-                        if severity == Severity::Critical {
+                        low_space_headline(lang, p, mount, severity == Severity::Critical),
+                        by_os(
+                            p,
                             lang.pick(
-                                format!("Il disco {drive} è quasi pieno"),
-                                format!("Drive {drive} is almost full"),
-                            )
-                        } else {
+                                format!("Restano liberi solo {free_plain} su {size_plain}, cioè {pct_plain} dello spazio. Con poco spazio Windows può non riuscire a installare gli aggiornamenti, i programmi possono non riuscire a salvare i file e il PC può rallentare."),
+                                format!("Only {free_plain} of {size_plain} is free, which is {pct_plain} of the space. With little space, Windows may fail to install updates, programs may fail to save files, and the PC can slow down."),
+                            ),
                             lang.pick(
-                                format!("Sul disco {drive} resta poco spazio libero"),
-                                format!("Drive {drive} is running low on free space"),
-                            )
-                        },
-                        lang.pick(
-                            format!("Restano liberi solo {free_plain} su {size_plain}, cioè {pct_plain} dello spazio. Con poco spazio Windows può non riuscire a installare gli aggiornamenti, i programmi possono non riuscire a salvare i file e il PC può rallentare."),
-                            format!("Only {free_plain} of {size_plain} is free, which is {pct_plain} of the space. With little space, Windows may fail to install updates, programs may fail to save files, and the PC can slow down."),
+                                format!("Restano liberi solo {free_plain} su {size_plain}, cioè {pct_plain} dello spazio. Con poco spazio macOS può non riuscire a installare gli aggiornamenti, i programmi possono non riuscire a salvare i file e il PC può rallentare."),
+                                format!("Only {free_plain} of {size_plain} is free, which is {pct_plain} of the space. With little space, macOS may fail to install updates, programs may fail to save files, and the PC can slow down."),
+                            ),
                         ),
-                        lang.pick(
-                            "Libera spazio: svuota il Cestino, elimina i file che non ti servono (ad esempio nella cartella Download) e usa «Pulizia disco» o «Sensore memoria» di Windows. Se hai un altro disco con spazio libero, puoi spostarci foto e video.",
-                            "Free up space: empty the Recycle Bin, delete files you don't need (for example, in the Downloads folder), and use the Windows “Disk Cleanup” or “Storage Sense” tools. If you have another drive with free space, you can move photos and videos there.",
+                        by_os(
+                            p,
+                            lang.pick(
+                                "Libera spazio: svuota il Cestino, elimina i file che non ti servono (ad esempio nella cartella Download) e usa «Pulizia disco» o «Sensore memoria» di Windows. Se hai un altro disco con spazio libero, puoi spostarci foto e video.",
+                                "Free up space: empty the Recycle Bin, delete files you don't need (for example, in the Downloads folder), and use the Windows “Disk Cleanup” or “Storage Sense” tools. If you have another drive with free space, you can move photos and videos there.",
+                            ),
+                            lang.pick(
+                                "Libera spazio: svuota il Cestino, elimina i file che non ti servono (ad esempio nella cartella Download) e guarda i suggerimenti in Impostazioni di Sistema > Generali > Spazio. Se hai un altro disco con spazio libero, puoi spostarci foto e video.",
+                                "Free up space: empty the Trash, delete files you don't need (for example, in the Downloads folder), and check the recommendations in System Settings > General > Storage. If you have another drive with free space, you can move photos and videos there.",
+                            ),
                         ),
                     ),
                 );
@@ -152,16 +203,31 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                 f.possible_causes = strings(lang.pick(
                     &[
                         "File temporanei, download o file personali accumulati",
-                        "Aggiornamenti di Windows o punti di ripristino",
+                        by_os(
+                            p,
+                            "Aggiornamenti di Windows o punti di ripristino",
+                            "Aggiornamenti di macOS o istantanee locali di Time Machine",
+                        ),
                     ],
                     &[
                         "Accumulated temporary files, downloads or personal files",
-                        "Windows updates or restore points",
+                        by_os(
+                            p,
+                            "Windows updates or restore points",
+                            "macOS updates or local Time Machine snapshots",
+                        ),
                     ],
                 ));
-                f.recommendation = lang.pick(
-                    "Liberare spazio: rimuovere file non necessari, svuotare il Cestino, usare Pulizia disco o Sensore memoria di Windows, oppure spostare file personali su un altro volume.",
-                    "Free up space: remove unneeded files, empty the Recycle Bin, use Windows Disk Cleanup or Storage Sense, or move personal files to another volume.",
+                f.recommendation = by_os(
+                    p,
+                    lang.pick(
+                        "Liberare spazio: rimuovere file non necessari, svuotare il Cestino, usare Pulizia disco o Sensore memoria di Windows, oppure spostare file personali su un altro volume.",
+                        "Free up space: remove unneeded files, empty the Recycle Bin, use Windows Disk Cleanup or Storage Sense, or move personal files to another volume.",
+                    ),
+                    lang.pick(
+                        "Liberare spazio: rimuovere file non necessari, svuotare il Cestino, usare Impostazioni di Sistema > Generali > Spazio, oppure spostare file personali su un altro volume.",
+                        "Free up space: remove unneeded files, empty the Trash, use System Settings > General > Storage, or move personal files to another volume.",
+                    ),
                 ).into();
                 f.limitations = strings(&[lang.pick(
                     "Lo spazio libero è misurato al momento della raccolta dell'inventario.",
@@ -195,6 +261,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                 } else {
                                     lang.pick("avviso (Warning)", "Warning")
                                 };
+                                let os = by_os(p, "Windows", "macOS");
                                 let mut f = finding(
                                     "storage.disk.health",
                                     ComponentKind::Storage,
@@ -206,28 +273,28 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                     FindingKind::Confirmed,
                                     Confidence::High,
                                     lang.pick(
-                                        format!("Windows segnala un problema di salute del disco: {name}"),
-                                        format!("Windows reports a disk health problem: {name}"),
+                                        format!("{os} segnala un problema di salute del disco: {name}"),
+                                        format!("{os} reports a disk health problem: {name}"),
                                     ),
                                     lang.pick(
-                                        format!("Lo stato di salute riportato da Windows per il disco «{name}» è «{status}»."),
-                                        format!("The health status Windows reports for disk “{name}” is “{status}”."),
+                                        format!("Lo stato di salute riportato da {os} per il disco «{name}» è «{status}»."),
+                                        format!("The health status {os} reports for disk “{name}” is “{status}”."),
                                     ),
                                     simple(
                                         if unhealthy {
                                             lang.pick(
-                                                format!("Windows segnala che un disco ha un problema serio: {name}"),
-                                                format!("Windows reports that a disk has a serious problem: {name}"),
+                                                format!("{os} segnala che un disco ha un problema serio: {name}"),
+                                                format!("{os} reports that a disk has a serious problem: {name}"),
                                             )
                                         } else {
                                             lang.pick(
-                                                format!("Windows segnala un avviso sullo stato di un disco: {name}"),
-                                                format!("Windows reports a warning about a disk's condition: {name}"),
+                                                format!("{os} segnala un avviso sullo stato di un disco: {name}"),
+                                                format!("{os} reports a warning about a disk's condition: {name}"),
                                             )
                                         },
                                         lang.pick(
-                                            "Di solito significa che il disco ha registrato errori o segni di usura. Un disco in queste condizioni può perdere i dati che contiene, quindi è importante metterli al sicuro. È un riepilogo fornito da Windows, non un controllo completo del disco.",
-                                            "This usually means the disk has recorded errors or signs of wear. A disk in this condition can lose the data on it, so it's important to keep that data safe. This is a summary provided by Windows, not a full check of the disk.",
+                                            format!("Di solito significa che il disco ha registrato errori o segni di usura. Un disco in queste condizioni può perdere i dati che contiene, quindi è importante metterli al sicuro. È un riepilogo fornito da {os}, non un controllo completo del disco."),
+                                            format!("This usually means the disk has recorded errors or signs of wear. A disk in this condition can lose the data on it, so it's important to keep that data safe. This is a summary provided by {os}, not a full check of the disk."),
                                         ),
                                         lang.pick(
                                             "Fai subito una copia dei tuoi file importanti su un'altra unità o su un servizio di archiviazione online, poi controlla lo stato del disco con il programma del produttore.",
@@ -236,12 +303,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                     ),
                                 );
                                 f.evidence = vec![ev(
-                                    lang.pick(
-                                        "Stato di salute (MSFT_PhysicalDisk.HealthStatus)",
-                                        "Health status (MSFT_PhysicalDisk.HealthStatus)",
+                                    by_os(
+                                        p,
+                                        lang.pick(
+                                            "Stato di salute (MSFT_PhysicalDisk.HealthStatus)",
+                                            "Health status (MSFT_PhysicalDisk.HealthStatus)",
+                                        ),
+                                        lang.pick("Stato di salute", "Health status"),
                                     ),
                                     if unhealthy { "Unhealthy" } else { "Warning" },
-                                    Source::Wmi,
+                                    by_os(p, Source::Wmi, src(&d.health).unwrap_or(Source::IoKit)),
                                 )];
                                 f.possible_causes = strings(&[lang.pick(
                                     "Il disco ha segnalato errori o usura tramite i propri contatori interni",
@@ -251,7 +322,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                                     "Eseguire subito un backup dei dati importanti e verificare i dettagli con lo strumento del produttore del disco.",
                                     "Back up important data right away and check the details with the disk manufacturer's tool.",
                                 ).into();
-                                f.limitations = strings(&[health_limitation(lang)]);
+                                f.limitations = strings(&[health_limitation(lang, p)]);
                                 out.findings.push(f);
                             }
                             Some(DiskHealthStatus::Healthy) => {}
@@ -263,9 +334,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                             }
                         }
                     }
-                    cov.note(lang.pick(
-                        "stato dei dischi: riepilogo di Windows, non un'analisi SMART completa",
-                        "disk status: Windows summary, not a full SMART analysis",
+                    cov.note(by_os(
+                        p,
+                        lang.pick(
+                            "stato dei dischi: riepilogo di Windows, non un'analisi SMART completa",
+                            "disk status: Windows summary, not a full SMART analysis",
+                        ),
+                        lang.pick(
+                            "stato dei dischi: riepilogo di macOS, non un'analisi SMART completa",
+                            "disk status: macOS summary, not a full SMART analysis",
+                        ),
                     ));
                 }
             }

@@ -15,6 +15,7 @@ pub mod storage;
 pub mod system;
 
 use models::Source;
+use models::app::Platform;
 use models::component::ComponentKind;
 use models::diagnostics::{
     Confidence, CoverageItem, CoverageStatus, Evidence, Finding, FindingKind, Severity,
@@ -32,6 +33,18 @@ pub struct Ctx<'a, 'b> {
     pub window_s: u32,
     /// Language of every text the rules produce (`input.language`).
     pub lang: Language,
+    /// Platform of the data (`input.platform`), for OS-specific wording ([`by_os`]).
+    pub platform: Platform,
+}
+
+/// `windows` on Windows, `macos` on every other platform (see
+/// `DiagnosticInput::platform`). Used for texts that name the operating system or its
+/// tools; the Windows texts are the original ones, unchanged.
+pub fn by_os<T>(platform: Platform, windows: T, macos: T) -> T {
+    match platform {
+        Platform::Windows => windows,
+        Platform::Macos | Platform::Linux | Platform::Other => macos,
+    }
 }
 
 #[derive(Default)]

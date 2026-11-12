@@ -1,12 +1,15 @@
 //! GPU rules (live telemetry). GPU driver problems are evaluated in `drivers`.
 
 use models::Source;
+use models::app::Platform;
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, FindingKind, Severity};
 use models::hardware::GpuInfo;
 use models::monitor::GpuSample;
 
-use super::{Cov, Ctx, Outcome, count_of, ev, finding, no_samples, simple, strings, window_notes};
+use super::{
+    Cov, Ctx, Outcome, by_os, count_of, ev, finding, no_samples, simple, strings, window_notes,
+};
 use crate::fmt;
 use crate::window::{Sustained, val};
 
@@ -145,17 +148,32 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             f.limitations = strings(lang.pick(
                 &[
                     "Una GPU al 100 % durante un gioco è normale e non indica un problema.",
-                    "L'utilizzo è quello del motore più impegnato (convenzione di Gestione attività).",
+                    by_os(
+                        ctx.platform,
+                        "L'utilizzo è quello del motore più impegnato (convenzione di Gestione attività).",
+                        "L'utilizzo è il valore complessivo della GPU riportato da macOS.",
+                    ),
                 ],
                 &[
                     "A GPU at 100% during a game is normal and does not indicate a problem.",
-                    "Usage is that of the busiest engine (the Task Manager convention).",
+                    by_os(
+                        ctx.platform,
+                        "Usage is that of the busiest engine (the Task Manager convention).",
+                        "Usage is the overall GPU value reported by macOS.",
+                    ),
                 ],
             ));
             out.findings.push(f);
         }
 
         match info.map(|g| g.dedicated_vram_bytes).filter(|v| *v > 0) {
+            // Apple Silicon GPUs ("Apple M…") have no dedicated memory at all.
+            None if ctx.platform != Platform::Windows && name.starts_with("Apple ") => {
+                cov.partial(lang.pick(
+                    format!("memoria video dedicata non presente per {name} (le GPU Apple usano la memoria unificata, condivisa con il processore): uso VRAM non valutato"),
+                    format!("no dedicated video memory for {name} (Apple GPUs use unified memory, shared with the processor): VRAM usage not evaluated"),
+                ))
+            }
             None => cov.partial(lang.pick(
                 format!("memoria video dedicata totale non nota per {name}: uso VRAM non valutato"),
                 format!(

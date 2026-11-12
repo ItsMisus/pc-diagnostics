@@ -7,6 +7,7 @@ mod redact;
 use serde::{Deserialize, Serialize};
 
 use models::AppError;
+use models::app::Platform;
 use models::benchmark::{BenchmarkKind, BenchmarkState};
 use models::benchmark_run::BenchmarkResult;
 use models::component::ComponentKind;
@@ -48,6 +49,9 @@ pub struct ReportBundle<'a> {
     /// Language of the texts the export adds (headings, labels, dates). The findings keep
     /// the language they were generated in.
     pub language: Language,
+    /// Platform the data comes from: selects OS-specific labels in the HTML (e.g. who
+    /// reports the disk status). The JSON document does not change with it.
+    pub platform: Platform,
 }
 
 /// One device with a problem. `instance_id` is omitted when redacted.
@@ -212,7 +216,7 @@ pub fn render_json(bundle: &ReportBundle, redact: bool) -> Result<String, AppErr
 
 pub fn render_html(bundle: &ReportBundle, redact: bool) -> Result<String, AppError> {
     let doc = prepare(bundle, redact)?;
-    Ok(html::render(&doc))
+    Ok(html::render(&doc, bundle.platform))
 }
 
 /// `pc-diagnostics-2026-11-04-1021.html`: local time of the report when the offset is
