@@ -1,13 +1,14 @@
 //! Memory (RAM) rules.
 
 use models::Source;
+use models::app::Platform;
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, Evidence, FindingKind, Severity};
 use models::settings::Language;
 
 use super::{
-    Cov, Ctx, Outcome, count_of, ev, finding, no_samples, simple, strings, top_ram_processes,
-    window_notes,
+    Cov, Ctx, Outcome, by_os, count_of, ev, finding, no_samples, simple, strings,
+    top_ram_processes, window_notes,
 };
 use crate::fmt;
 use crate::window::{Sustained, src, val};
@@ -102,21 +103,44 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
         return out;
     }
     let w = fmt::seconds(ctx.window_s);
-    cov.note(lang.pick(
-        format!("memoria disponibile, commit e paginazione valutati su {w}"),
-        format!("available memory, commit and paging evaluated over {w}"),
+    let p = ctx.platform;
+    cov.note(by_os(
+        p,
+        lang.pick(
+            format!("memoria disponibile, commit e paginazione valutati su {w}"),
+            format!("available memory, commit and paging evaluated over {w}"),
+        ),
+        lang.pick(
+            format!("memoria disponibile e paginazione valutate su {w}"),
+            format!("available memory and paging evaluated over {w}"),
+        ),
     ));
     window_notes(&mut cov, ctx.window_s);
     if !commit.usable() {
-        cov.partial(lang.pick(
-            "memoria impegnata (commit) non disponibile",
-            "committed memory (commit) not available",
-        ));
+        match p {
+            Platform::Windows => cov.partial(lang.pick(
+                "memoria impegnata (commit) non disponibile",
+                "committed memory (commit) not available",
+            )),
+            // Commit charge and commit limit do not exist on macOS (the monitor reports
+            // them NotSupported): the rule does not apply, so coverage is not reduced.
+            Platform::Macos | Platform::Linux | Platform::Other => cov.note(lang.pick(
+                "memoria impegnata (commit): esiste solo su Windows, regola non applicabile",
+                "committed memory (commit): exists only on Windows, rule not applicable",
+            )),
+        }
     }
     if !pages.usable() {
-        cov.partial(lang.pick(
-            "paginazione (Pages/sec) non disponibile",
-            "paging (Pages/sec) not available",
+        cov.partial(by_os(
+            p,
+            lang.pick(
+                "paginazione (Pages/sec) non disponibile",
+                "paging (Pages/sec) not available",
+            ),
+            lang.pick(
+                "paginazione (pagine lette dal disco al secondo) non disponibile",
+                "paging (pages read from disk per second) not available",
+            ),
         ));
     }
 
@@ -340,14 +364,28 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             },
             lang.pick("Paginazione su disco elevata", "High disk paging"),
             if corroborated {
-                lang.pick(
-                    "La paginazione da disco è stata elevata insieme a una pressione sulla memoria: è probabile che il sistema stia compensando la RAM insufficiente con il file di paging.",
-                    "Disk paging was high together with memory pressure: the system is probably making up for insufficient RAM with the paging file.",
+                by_os(
+                    p,
+                    lang.pick(
+                        "La paginazione da disco è stata elevata insieme a una pressione sulla memoria: è probabile che il sistema stia compensando la RAM insufficiente con il file di paging.",
+                        "Disk paging was high together with memory pressure: the system is probably making up for insufficient RAM with the paging file.",
+                    ),
+                    lang.pick(
+                        "La paginazione da disco è stata elevata insieme a una pressione sulla memoria: è probabile che il sistema stia compensando la RAM insufficiente con lo spazio di swap su disco.",
+                        "Disk paging was high together with memory pressure: the system is probably making up for insufficient RAM with swap space on disk.",
+                    ),
                 )
             } else {
-                lang.pick(
-                    "La paginazione da disco è stata elevata, ma la memoria disponibile e il commit erano nella norma: può dipendere dalla lettura di file mappati in memoria più che da una carenza di RAM.",
-                    "Disk paging was high, but available memory and commit were normal: it may come from reading memory-mapped files rather than from a lack of RAM.",
+                by_os(
+                    p,
+                    lang.pick(
+                        "La paginazione da disco è stata elevata, ma la memoria disponibile e il commit erano nella norma: può dipendere dalla lettura di file mappati in memoria più che da una carenza di RAM.",
+                        "Disk paging was high, but available memory and commit were normal: it may come from reading memory-mapped files rather than from a lack of RAM.",
+                    ),
+                    lang.pick(
+                        "La paginazione da disco è stata elevata, ma la memoria disponibile era nella norma: può dipendere dalla lettura di file mappati in memoria più che da una carenza di RAM.",
+                        "Disk paging was high, but available memory was normal: it may come from reading memory-mapped files rather than from a lack of RAM.",
+                    ),
                 )
             },
             if corroborated {
@@ -356,9 +394,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                         "Il PC probabilmente sta usando il disco per compensare la memoria piena",
                         "The PC is probably using the disk to make up for full memory",
                     ),
-                    lang.pick(
-                        "Windows ha spostato spesso dati tra la memoria e il disco mentre la memoria era quasi piena. Il disco è molto più lento della memoria, quindi questo potrebbe rendere il PC lento e poco reattivo.",
-                        "Windows often moved data between memory and the disk while memory was almost full. The disk is much slower than memory, so this might make the PC slow and less responsive.",
+                    by_os(
+                        p,
+                        lang.pick(
+                            "Windows ha spostato spesso dati tra la memoria e il disco mentre la memoria era quasi piena. Il disco è molto più lento della memoria, quindi questo potrebbe rendere il PC lento e poco reattivo.",
+                            "Windows often moved data between memory and the disk while memory was almost full. The disk is much slower than memory, so this might make the PC slow and less responsive.",
+                        ),
+                        lang.pick(
+                            "macOS ha letto spesso dati dal disco verso la memoria mentre la memoria era quasi piena. Il disco è molto più lento della memoria, quindi questo potrebbe rendere il PC lento e poco reattivo.",
+                            "macOS often read data from the disk into memory while memory was almost full. The disk is much slower than memory, so this might make the PC slow and less responsive.",
+                        ),
                     ),
                     action.clone(),
                 )
@@ -368,9 +413,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                         "Molti scambi di dati tra memoria e disco, forse normali",
                         "A lot of data moving between memory and the disk, possibly normal",
                     ),
-                    lang.pick(
-                        "Windows ha letto spesso dati dal disco verso la memoria, ma la memoria non era piena. Potrebbe essere normale, ad esempio quando un programma apre file molto grandi, e non è detto che indichi un problema.",
-                        "Windows often read data from the disk into memory, but memory wasn't full. This might be normal, for example when a program opens very large files, and it doesn't necessarily mean there's a problem.",
+                    by_os(
+                        p,
+                        lang.pick(
+                            "Windows ha letto spesso dati dal disco verso la memoria, ma la memoria non era piena. Potrebbe essere normale, ad esempio quando un programma apre file molto grandi, e non è detto che indichi un problema.",
+                            "Windows often read data from the disk into memory, but memory wasn't full. This might be normal, for example when a program opens very large files, and it doesn't necessarily mean there's a problem.",
+                        ),
+                        lang.pick(
+                            "macOS ha letto spesso dati dal disco verso la memoria, ma la memoria non era piena. Potrebbe essere normale, ad esempio quando un programma apre file molto grandi, e non è detto che indichi un problema.",
+                            "macOS often read data from the disk into memory, but memory wasn't full. This might be normal, for example when a program opens very large files, and it doesn't necessarily mean there's a problem.",
+                        ),
                     ),
                     lang.pick(
                         format!(
@@ -425,9 +477,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             ))
         };
         f.recommendation = recommendation(lang).into();
-        f.limitations = strings(&[lang.pick(
-            "Pages/sec include anche letture di file mappati in memoria, non solo l'uso del file di paging.",
-            "Pages/sec also includes reads of memory-mapped files, not only paging file use.",
+        f.limitations = strings(&[by_os(
+            p,
+            lang.pick(
+                "Pages/sec include anche letture di file mappati in memoria, non solo l'uso del file di paging.",
+                "Pages/sec also includes reads of memory-mapped files, not only paging file use.",
+            ),
+            lang.pick(
+                "Il valore conta le pagine lette dal disco verso la memoria (pagein di macOS), comprese le letture di file mappati in memoria, non solo lo swap.",
+                "The value counts pages read from disk into memory (macOS pageins), including reads of memory-mapped files, not only swap.",
+            ),
         )]);
         out.findings.push(f);
     }

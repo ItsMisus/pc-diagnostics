@@ -6,7 +6,8 @@
 //! 1. device instance ids (`PCI\VEN_10DE&DEV_2484&SUBSYS_…\4&1A2B…`): only the bus and
 //!    the vendor/device/product parts are kept (`PCI\VEN_10DE&DEV_2484\<id dispositivo>`);
 //!    serial-like trailing segments and SUBSYS/REV parts are dropped.
-//! 2. absolute file paths (`C:\dir\file`, `\\server\share\…`, `\\?\C:\…`): the directory
+//! 2. absolute file paths (`C:\dir\file`, `\\server\share\…`, `\\?\C:\…`, POSIX paths
+//!    under `/Users/`, `/Volumes/`, `/Applications/` and the other system roots): the directory
 //!    part is replaced by `<percorso>`; the file name is kept only for `.exe`/`.sys`/`.dll`
 //!    (diagnostically useful). Bare drive roots (`C:\`) are kept: actions need them.
 //! 3. remaining user profile segments `…\Users\<name>…` → `…\Users\<utente>…`.
@@ -87,14 +88,21 @@ impl Redactor {
         r
     }
 
-    /// Account names of the current Windows user from the environment
-    /// (`USERNAME`, last segment of `USERPROFILE`).
+    /// Account names of the current user from the environment: on Windows `USERNAME`
+    /// and the last segment of `USERPROFILE`; elsewhere (macOS) `USER`, `LOGNAME` and the
+    /// last segment of `HOME` (`/Users/<name>`).
     pub fn current_user_names() -> Vec<String> {
+        #[cfg(windows)]
+        let (names, profile) = (["USERNAME"].as_slice(), "USERPROFILE");
+        #[cfg(not(windows))]
+        let (names, profile) = (["USER", "LOGNAME"].as_slice(), "HOME");
         let mut out = Vec::new();
-        if let Ok(u) = std::env::var("USERNAME") {
-            out.push(u);
+        for var in names {
+            if let Ok(u) = std::env::var(var) {
+                out.push(u);
+            }
         }
-        if let Ok(p) = std::env::var("USERPROFILE")
+        if let Ok(p) = std::env::var(profile)
             && let Some(last) = p.trim_end_matches(['\\', '/']).rsplit(['\\', '/']).next()
         {
             out.push(last.to_owned());
@@ -249,16 +257,36 @@ fn scrub_profile_paths(s: &str) -> String {
 
 // ---- file paths ----
 
-/// Byte index where an absolute path starts at `i`: `X:\` / `X:/` (not preceded by a
-/// word char) or `\\` (UNC / `\\?\`).
+/// Top-level folders that start an absolute POSIX path (macOS): only these, so that
+/// prose such as "I/O" or "MB/s" is never taken for a path.
+const POSIX_ROOTS: [&str; 11] = [
+    "/Users/",
+    "/Volumes/",
+    "/Applications/",
+    "/Library/",
+    "/System/",
+    "/private/",
+    "/var/",
+    "/tmp/",
+    "/opt/",
+    "/usr/",
+    "/home/",
+];
+
+/// Byte index where an absolute path starts at `i` (not preceded by a word char):
+/// `X:\` / `X:/`, `\\` (UNC / `\\?\`) or a POSIX path under one of [`POSIX_ROOTS`].
 fn path_start_at(s: &str, i: usize) -> bool {
     let b = s.as_bytes();
     let prev_ok = i == 0 || !(b[i - 1].is_ascii_alphanumeric() || b[i - 1] == b'_');
-    if !prev_ok {
+    if !prev_ok || i >= b.len() {
         return false;
     }
     if i + 2 < b.len() && b[i].is_ascii_alphabetic() && b[i + 1] == b':' {
         return matches!(b[i + 2], b'\\' | b'/');
+    }
+    if b[i] == b'/' {
+        // Byte comparison: `i` may not be a char boundary when called after whitespace.
+        return POSIX_ROOTS.iter().any(|r| b[i..].starts_with(r.as_bytes()));
     }
     i + 1 < b.len() && b[i] == b'\\' && b[i + 1] == b'\\'
 }
@@ -431,6 +459,27 @@ mod tests {
             red.scrub(r"profilo c:/users/luca/doc"),
             "profilo <percorso>"
         );
+    }
+
+    #[test]
+    fn posix_paths_are_reduced() {
+        assert_eq!(
+            r().scrub("Il file /Users/mario/Progetti/cliente/offerta.pdf è grande."),
+            "Il file <percorso> è grande."
+        );
+        assert_eq!(
+            r().scrub("(/Applications/Foo.app/Contents/MacOS/Foo)"),
+            "(<percorso>)"
+        );
+        assert_eq!(
+            r().scrub("/Volumes/Backup Mario/foto.jpg; ok"),
+            "<percorso>; ok"
+        );
+        // Prose with slashes is not a path.
+        assert_eq!(r().scrub("I/O a 30 MB/s e 1/2"), "I/O a 30 MB/s e 1/2");
+        assert_eq!(r().scrub("cartella /Utenti/x"), "cartella /Utenti/x");
+        // Multi-byte whitespace before a path start does not split a char.
+        assert_eq!(r().scrub("a\u{a0}/Users/mario/x b"), "a\u{a0}<percorso> b");
     }
 
     #[test]

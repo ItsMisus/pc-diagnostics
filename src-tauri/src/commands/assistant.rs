@@ -1,7 +1,7 @@
 //! "Risolvi" assistant commands. See `docs/assistant.md` for the safety model.
 //!
-//! - The API key is write-only from the UI: it goes to Windows Credential Manager and is
-//!   read back only here, right before a request.
+//! - The API key is write-only from the UI: it goes to Windows Credential Manager (the
+//!   login Keychain on macOS) and is read back only here, right before a request.
 //! - `preview_fix` builds the redacted payload; nothing leaves the machine.
 //! - `request_fix` accepts only a preview token and sends exactly that payload.
 //! - `execute_fix_step` runs one validated action, once.
@@ -84,8 +84,8 @@ pub async fn get_assistant_status(app: AppHandle) -> Result<AssistantStatus, App
     blocking(move || status_from(&app.state::<AppState>())).await
 }
 
-/// Stores the key in Windows Credential Manager (replacing any previous one). The key is
-/// never returned, logged or written to the database.
+/// Stores the key in Windows Credential Manager or the macOS login Keychain (replacing any
+/// previous one). The key is never returned, logged or written to the database.
 #[tauri::command]
 pub async fn set_assistant_api_key(
     app: AppHandle,
