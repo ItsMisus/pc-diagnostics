@@ -17,17 +17,18 @@ import { useBenchView } from "./viewStore";
 
 /**
  * Enters when a run starts and leaves when it ends. The values are constant, so the many
- * progress re-renders in between never restart the animation. Fixed height (`h-10`): the
- * strip takes its place in one step, no height animation.
+ * progress re-renders in between never restart the animation. It floats over the content,
+ * so nothing below moves when it appears.
  */
 const stripMotion = {
-  initial: { opacity: 0, y: -4 },
+  initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0, transition: { duration: duration.component, ease: ease.out } },
   exit: { opacity: 0, transition: { duration: 0.1, ease: ease.in } },
 } as const;
 
 /**
- * Global "benchmark running" strip at the top of the main area, on every page: the one place
+ * Global "benchmark running" strip, a glass capsule floating at the bottom of the main area on
+ * every page (AppShell positions it): the one place
  * for a run's progress and its Stop action (the benchmark screen shows only the interim
  * readings). Monochrome; the only control is Stop. It is the only shell component subscribed
  * to the progress slice, so progress events re-render it (and the interim readings) but not
@@ -46,7 +47,7 @@ export function RunningBar() {
           role="region"
           aria-label={t("runningRegion")}
           {...stripMotion}
-          className="sticky top-0 z-20 border-b border-line bg-surface"
+          className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-6"
         >
           {/* While exiting, AnimatePresence keeps rendering the last `run` it was given. */}
           <Strip run={run} />
@@ -69,16 +70,16 @@ function Strip({ run }: { run: BenchmarkProgress }) {
   const pct = Math.round(Math.min(1, Math.max(0, run.fraction)) * 100);
 
   return (
-    <>
-      <div className="mx-auto flex h-10 max-w-6xl items-center gap-3 px-6 lg:px-10">
-        <Tooltip content={t("openScreen")} side="bottom" className="min-w-0 shrink">
+    <div className="glass pointer-events-auto w-[min(46rem,100%)] rounded-2xl">
+      <div className="flex h-12 items-center gap-3 pr-2 pl-3">
+        <Tooltip content={t("openScreen")} side="top" className="min-w-0 shrink">
           <button
             type="button"
             onClick={() => {
               openComponent(componentOfKind(run.kind));
               setSection("benchmarks");
             }}
-            className="-ml-1.5 flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left text-[13px] transition-colors duration-150 hover:bg-surface-2"
+            className="flex min-w-0 items-center gap-2 rounded-full px-2 py-1 text-left text-sm transition-colors duration-150 hover:bg-control"
           >
             <span className="truncate">
               <span className="font-semibold text-fg">{label}</span>
@@ -106,7 +107,7 @@ function Strip({ run }: { run: BenchmarkProgress }) {
         </Button>
       </div>
       {cancelError && (
-        <div className="mx-auto max-w-6xl px-6 pb-2 lg:px-10">
+        <div className="px-4 pb-3">
           <StateView
             compact
             kind="error"
@@ -116,7 +117,7 @@ function Strip({ run }: { run: BenchmarkProgress }) {
           />
         </div>
       )}
-    </>
+    </div>
   );
 }
 

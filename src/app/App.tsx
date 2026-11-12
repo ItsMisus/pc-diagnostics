@@ -7,7 +7,7 @@ import { DiagnosticsPage } from "@/features/diagnostics/DiagnosticsPage";
 import { FixDialog } from "@/features/assistant/FixDialog";
 import { liveStore } from "@/features/monitoring/liveStore";
 import { OverviewPage } from "@/features/overview/OverviewPage";
-import { useLangSync, useThemeSync } from "@/hooks/useThemeSync";
+import { useLangSync, usePlatformSync, useThemeSync } from "@/hooks/useThemeSync";
 import { getPlatform, usePlatform } from "@/lib/platform";
 import { isSectionAvailable, type SectionId } from "./sections";
 import { useAppStore } from "./store";
@@ -81,6 +81,7 @@ export function App() {
   const loadPlatform = useAppStore((s) => s.loadPlatform);
   useThemeSync();
   useLangSync();
+  usePlatformSync();
 
   useEffect(() => {
     void loadPlatform();
