@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::device::DeviceShape;
 use crate::error::AppError;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -104,6 +105,9 @@ pub struct AppSettings {
     pub assistant_model: String,
     /// Interface language. Databases from before this field load as `System`.
     pub language: LanguagePreference,
+    /// Device model shown in the Overview, chosen by the user. `None` (the default, and
+    /// what databases from before this field load as) follows the detected form factor.
+    pub device_shape: Option<DeviceShape>,
 }
 
 impl Default for AppSettings {
@@ -118,6 +122,7 @@ impl Default for AppSettings {
             assistant_enabled: false,
             assistant_model: crate::assistant::DEFAULT_ASSISTANT_MODEL.to_owned(),
             language: LanguagePreference::System,
+            device_shape: None,
         }
     }
 }
@@ -182,6 +187,17 @@ mod tests {
         assert_eq!(s.language, LanguagePreference::System);
         let s: AppSettings = serde_json::from_str(r#"{"language":"en"}"#).expect("parse");
         assert_eq!(s.language, LanguagePreference::English);
+    }
+
+    #[test]
+    fn device_shape_is_optional_and_persists() {
+        let s: AppSettings = serde_json::from_str(r#"{"theme":"dark"}"#).expect("parse");
+        assert_eq!(s.device_shape, None);
+        let s: AppSettings = serde_json::from_str(r#"{"deviceShape":"mini"}"#).expect("parse");
+        assert_eq!(s.device_shape, Some(DeviceShape::Mini));
+        let json = serde_json::to_value(AppSettings::default()).expect("serialize");
+        assert!(json["deviceShape"].is_null());
+        assert!(serde_json::from_str::<AppSettings>(r#"{"deviceShape":"phone"}"#).is_err());
     }
 
     #[test]

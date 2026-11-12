@@ -47,6 +47,23 @@ pub fn power_source() -> PowerSource {
     }
 }
 
+/// Whether the machine has a system battery (`SYSTEM_POWER_STATUS.BatteryFlag`, see
+/// `crate::form_factor::battery_from_flag`). A UPS on USB can show up as a battery.
+pub fn internal_battery() -> Metric<bool> {
+    let mut st = SYSTEM_POWER_STATUS::default();
+    // SAFETY: `st` is a valid, writable SYSTEM_POWER_STATUS.
+    if let Err(e) = unsafe { GetSystemPowerStatus(&mut st) } {
+        return Metric::unavailable(Unavailability::Failed(
+            AppError::new(ErrorCode::Platform, "GetSystemPowerStatus failed")
+                .with_detail(e.to_string()),
+        ));
+    }
+    match crate::form_factor::battery_from_flag(st.BatteryFlag) {
+        Some(b) => Metric::available(b, Unit::None, Source::PowerApi),
+        None => Metric::unavailable(Unavailability::NotSupported),
+    }
+}
+
 pub fn active_power_plan() -> Option<String> {
     let mut guid_ptr: *mut GUID = std::ptr::null_mut();
     // SAFETY: out pointer is valid; on success the OS allocates the GUID with LocalAlloc.

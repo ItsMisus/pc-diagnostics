@@ -9,6 +9,7 @@ export default {
   reason_permissionDenied: "Requires elevated privileges",
   reason_notImplemented: "Provider not implemented yet",
   reason_failed: "Read failed: {message}",
+  reason_inconclusive: "Sources disagree or are not decisive: {detail}",
 
   // lib/plain.ts: the same reasons in everyday words ("Simple").
   simpleReason_notSupported: "This PC does not provide this information",
@@ -18,6 +19,7 @@ export default {
   "simpleReason_permissionDenied@macos": "macOS does not give the app access to this information",
   simpleReason_notImplemented: "Not supported by the app yet",
   simpleReason_failed: "Couldn't read it, try again later",
+  simpleReason_inconclusive: "The system doesn't give enough information to tell",
   reasonTooltip: "{plain}. Technical detail: {technical}",
 
   // lib/format.ts: errorTitle ("Advanced").
