@@ -1,4 +1,4 @@
-import { Card } from "@/components/common/Card";
+import { Panel } from "@/components/common/Panel";
 import { DefinitionList } from "@/components/common/DefinitionList";
 import { NotReported } from "@/components/common/Table";
 import { useT } from "@/i18n";
@@ -10,9 +10,9 @@ import { metricItem } from "./metricItem";
 export function CpuSection({ cpu }: { cpu: CpuInfo }) {
   const t = useT("hardware");
   return (
-    <Card title="CPU">
+    <Panel title="CPU" icon="cpu">
       <DefinitionList
-        aligned
+        divided
         items={[
           { label: t("model"), value: cpu.brand ?? <NotReported /> },
           { label: t("manufacturer"), value: cpu.vendor ?? <NotReported /> },
@@ -22,6 +22,6 @@ export function CpuSection({ cpu }: { cpu: CpuInfo }) {
           metricItem(t("maxNominalFrequency"), cpu.maxMhz, formatMhz),
         ]}
       />
-    </Card>
+    </Panel>
   );
 }

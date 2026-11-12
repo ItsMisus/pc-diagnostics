@@ -1,5 +1,6 @@
-import { Card } from "@/components/common/Card";
+import { DefinitionList } from "@/components/common/DefinitionList";
 import { MetricValue } from "@/components/common/MetricValue";
+import { Panel } from "@/components/common/Panel";
 import { SourceCaption } from "@/components/common/SourceCaption";
 import { StateView } from "@/components/common/StateView";
 import { NotReported, Table, Td } from "@/components/common/Table";
@@ -11,9 +12,10 @@ import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 
 /**
- * Disks and volumes as installed. Volumes are listed by mount point as the OS reports it: drive
- * letters on Windows (`C:\`), POSIX paths on macOS (`/`, `/Volumes/…`); the column header says
- * which. Activity, free space and the OS disk status are on Overview.
+ * Disks and volumes as installed. Each physical disk is a short spec sheet; volumes are a
+ * table listed by mount point as the OS reports it: drive letters on Windows (`C:\`), POSIX
+ * paths on macOS (`/`, `/Volumes/…`); the column header says which. Activity, free space
+ * and the OS disk status are on Overview.
  */
 export function StorageSection({
   disks,
@@ -24,41 +26,60 @@ export function StorageSection({
 }) {
   const t = useT("hardware");
   return (
-    <Card title={t("storageTitle")}>
-      <h3 className="eyebrow mb-2.5">{t("physicalDisks")}</h3>
-      <DisksTable disks={disks} />
-      <h3 className="eyebrow mt-5 mb-2.5">{t("volumes")}</h3>
+    <Panel title={t("storageTitle")} icon="storage">
+      <h3 className="eyebrow mb-2">{t("physicalDisks")}</h3>
+      <Disks disks={disks} />
+      <h3 className="eyebrow mt-6 mb-2">{t("volumes")}</h3>
       <VolumesTable volumes={volumes} />
-    </Card>
+    </Panel>
   );
 }
 
-function DisksTable({ disks }: { disks: Metric<PhysicalDiskInfo[]> }) {
+function Disks({ disks }: { disks: Metric<PhysicalDiskInfo[]> }) {
   const t = useT("hardware");
-  const tm = useT("monitoring");
   if (disks.status === "unavailable") {
-    return <MetricValue metric={disks} format={() => ""} className="text-sm" />;
+    return (
+      <p className="text-sm">
+        <MetricValue metric={disks} format={() => ""} />
+      </p>
+    );
   }
   if (disks.value.length === 0) {
     return <StateView compact kind="empty" title={t("noDisks")} />;
   }
   return (
     <>
-      <Table caption={t("physicalDisks")} headers={[t("model"), t("bus"), t("media"), t("capacity"), t("firmware")]}>
-        {disks.value.map((d) => (
-          <tr key={d.id}>
-            <Td>{d.model ?? tm("diskFallback", { id: d.id })}</Td>
-            <Td>{busLabel(d.bus, tm)}</Td>
-            <Td>{mediaLabel(d.media, tm)}</Td>
-            <Td>{formatStorageBytes(d.sizeBytes)}</Td>
-            <Td className="font-mono text-xs">{d.firmware ?? <NotReported />}</Td>
-          </tr>
-        ))}
-      </Table>
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-5 @2xl:grid-cols-2">
+          {disks.value.map((d) => (
+            <DiskBlock key={d.id} disk={d} />
+          ))}
+        </div>
+      </div>
       <p className="mt-2 empty:hidden">
         <SourceCaption metric={disks} />
       </p>
     </>
+  );
+}
+
+function DiskBlock({ disk }: { disk: PhysicalDiskInfo }) {
+  const t = useT("hardware");
+  const tm = useT("monitoring");
+  const name = disk.model ?? tm("diskFallback", { id: disk.id });
+  return (
+    <article className="min-w-0" aria-label={name}>
+      <h4 className="mb-2 min-w-0 text-sm leading-5 font-semibold break-words text-fg">{name}</h4>
+      <DefinitionList
+        divided
+        items={[
+          { label: t("capacity"), value: formatStorageBytes(disk.sizeBytes) },
+          { label: t("bus"), value: busLabel(disk.bus, tm) },
+          { label: t("media"), value: mediaLabel(disk.media, tm) },
+          { label: t("firmware"), value: disk.firmware ? <span className="font-mono text-xs">{disk.firmware}</span> : <NotReported /> },
+        ]}
+      />
+    </article>
   );
 }
 

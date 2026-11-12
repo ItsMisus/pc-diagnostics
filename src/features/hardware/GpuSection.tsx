@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Card } from "@/components/common/Card";
+import { Panel } from "@/components/common/Panel";
 import { DefinitionList, type DefinitionItem } from "@/components/common/DefinitionList";
 import { StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -18,21 +18,21 @@ export function GpuSection({ gpus }: { gpus: readonly GpuInfo[] }) {
   const t = useT("hardware");
   const ordered = useMemo(() => orderGpus(gpus), [gpus]);
   return (
-    <Card title="GPU">
+    <Panel title="GPU" icon="gpu">
       {ordered.length === 0 ? (
         <StateView compact kind="empty" title={t("noGpuAdapters")} />
       ) : (
-        // Its own size container: the card can be half the page wide (next to Memory), so
-        // adapters go side by side only when the card itself has the room.
+        // Its own size container: the panel can be half the page wide, so adapters go side
+        // by side only when the panel itself has the room.
         <div className="@container">
-          <div className="grid grid-cols-1 gap-x-8 gap-y-5 @2xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-10 gap-y-6 @2xl:grid-cols-2">
             {ordered.map((gpu) => (
               <GpuBlock key={gpu.id} gpu={gpu} />
             ))}
           </div>
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -63,14 +63,12 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
   }
   return (
     <article className="min-w-0" aria-label={gpu.name}>
-      <header className="mb-2.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-        <h3 className="min-w-0 truncate text-sm leading-5 font-medium text-fg" title={gpu.name}>
-          {gpu.name}
-        </h3>
+      <header className="mb-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+        <h3 className="min-w-0 text-sm leading-5 font-semibold break-words text-fg">{gpu.name}</h3>
         {gpu.isSoftware && <StatusBadge tone="neutral" label={t("softwareAdapter")} />}
         {gpu.isVirtual && <StatusBadge tone="neutral" label={t("virtualDisplay")} />}
       </header>
-      <DefinitionList aligned items={items} />
+      <DefinitionList divided items={items} />
     </article>
   );
 }
