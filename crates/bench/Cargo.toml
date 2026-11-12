@@ -13,14 +13,19 @@ platform.workspace = true
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-# GPU compute workload (runs only in the isolated worker process). DX12 first, Vulkan
-# as fallback; no GL/Metal/WebGPU backends.
+# GPU compute workload (runs only in the isolated worker process). Windows: DX12 first,
+# Vulkan as fallback; macOS: Metal (below). No GL/WebGPU backends.
 wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "dx12", "vulkan", "wgsl"] }
 pollster = "0.4"
 
 # macOS: the GPU workload runs on Metal (DX12/Vulkan are not available there).
 [target.'cfg(target_os = "macos")'.dependencies]
 wgpu = { version = "30.0.1", default-features = false, features = ["metal"] }
+# Storage benchmark (O_NOFOLLOW on the test file) and the GPU worker's parent watchdog.
+libc = "0.2"
+# GPU worker: the Metal device's I/O Kit registry id (`MTLDevice.registryID`), the id the
+# parent names the GPU by (same version wgpu-hal uses).
+objc2-metal = { version = "0.3", default-features = false, features = ["std", "MTLDevice"] }
 
 [lints]
 workspace = true

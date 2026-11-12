@@ -251,6 +251,23 @@ fn invalid_requests_are_rejected_synchronously() {
             ErrorCode::InvalidInput
         );
     }
+    // macOS: a mount point that is not a present fixed volume, and paths that are not
+    // mount points at all (the data volume, a directory, a device).
+    #[cfg(target_os = "macos")]
+    for bad in [
+        "/Volumes/PCDiagnosticsNoSuchVolume",
+        "/System/Volumes/Data",
+        "/Users",
+        "/dev/disk0",
+    ] {
+        let mut r = storage(BenchmarkKind::StorageSequential, 1024);
+        r.storage_volume = Some(bad.into());
+        assert_eq!(
+            c.start(r, IT, |_| {}, |_| {}).expect_err("volume").code,
+            ErrorCode::InvalidInput,
+            "{bad}"
+        );
+    }
     assert!(c.status().is_none(), "nothing started");
     assert_eq!(
         c.cancel("00000000-0000-0000-0000-000000000000")
@@ -458,7 +475,7 @@ fn memory_bandwidth_completes() {
 }
 
 /// A fixed volume where a small test file passes the free-space rule: the system volume
-/// first (file in %TEMP%), otherwise another fixed volume. `None` → the test is skipped.
+/// first (file in %TEMP% / $TMPDIR), otherwise another fixed volume. `None` → the test is skipped.
 fn storage_volume() -> Option<String> {
     let sys = platform::bench_env::system_volume();
     let mut vols = platform::bench_env::fixed_volumes();
@@ -534,11 +551,17 @@ fn storage_random_cancel_cleans_up_its_file() {
         );
         std::thread::sleep(Duration::from_millis(10));
     }
-    assert!(
-        path.exists(),
-        "file exists while running: {}",
-        path.display()
-    );
+    if cfg!(target_os = "macos") {
+        // Unlinked right after it was opened (the macOS equivalent of
+        // FILE_FLAG_DELETE_ON_CLOSE): the open file has no name while the run goes on.
+        assert!(!path.exists(), "no name while running: {}", path.display());
+    } else {
+        assert!(
+            path.exists(),
+            "file exists while running: {}",
+            path.display()
+        );
+    }
     let cancelled_at = Instant::now();
     h.ctrl.cancel(&id).expect("cancel");
     let f = h.wait(Duration::from_secs(5));

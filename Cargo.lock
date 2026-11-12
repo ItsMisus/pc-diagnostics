@@ -161,8 +161,10 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 name = "bench"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "models",
  "monitor",
+ "objc2-metal",
  "platform",
  "pollster",
  "serde",
@@ -2711,6 +2713,7 @@ dependencies = [
  "models",
  "nvml-wrapper",
  "objc2-core-foundation",
+ "objc2-foundation",
  "objc2-io-kit",
  "objc2-metal",
  "security-framework",
