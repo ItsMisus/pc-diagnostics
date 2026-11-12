@@ -10,6 +10,7 @@ import { Modal } from "@/components/common/Modal";
 import { Readout } from "@/components/common/Readout";
 import { StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { Tooltip } from "@/components/common/Tooltip";
 import { UsageBar } from "@/components/common/UsageBar";
 import { usePolling } from "@/hooks/usePolling";
 import { useT } from "@/i18n";
@@ -95,7 +96,9 @@ function SheetHeader({ lastSeen, titleId }: { lastSeen: ProcessRow; titleId: str
           {row.isSelf && <SelfTag />}
         </p>
       </div>
-      <Button variant="ghost" size="sm" iconOnly icon="close" aria-label={common("close")} onClick={() => select(null)} className="-mt-0.5 -mr-2" />
+      <Tooltip content={common("close")} side="left">
+        <Button variant="ghost" size="sm" iconOnly icon="close" aria-label={common("close")} onClick={() => select(null)} className="-mt-0.5 -mr-2" />
+      </Tooltip>
     </header>
   );
 }

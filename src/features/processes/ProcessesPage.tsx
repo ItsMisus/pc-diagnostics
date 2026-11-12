@@ -10,7 +10,7 @@ import { useT } from "@/i18n";
 import { ProcessDetailSheet } from "./ProcessDetail";
 import { ProcessTable } from "./ProcessTable";
 import { processStore, type ProcessStatus, useProcesses } from "./processStore";
-import { CATEGORY_FILTERS, type CategoryFilter } from "./rows";
+import { CATEGORY_FILTERS, type CategoryFilter, filterRows } from "./rows";
 import { ScoreExplanation } from "./ScoreExplanation";
 import { rankingKey, type RankingMode, useProcessView } from "./viewStore";
 
@@ -166,6 +166,7 @@ function Toolbar() {
           size="sm"
         />
       </div>
+      {category === "system" && <p className="basis-full text-xs text-fg-muted">{t("filterSystemNote")}</p>}
     </div>
   );
 }
@@ -180,6 +181,13 @@ function Summary() {
   const total = useProcesses((s) => s.snapshot?.totalProcesses ?? 0);
   const inaccessible = useProcesses((s) => s.snapshot?.inaccessibleProcesses ?? 0);
   const shown = useProcesses((s) => s.snapshot?.[rankingKey(mode)].length ?? 0);
+  const query = useProcessView((s) => s.query);
+  const category = useProcessView((s) => s.category);
+  const filtered = query.trim() !== "" || category !== "all";
+  // A number, so the selector stays cheap to compare; computed only while a filter is on.
+  const visible = useProcesses((s) =>
+    filtered ? filterRows(s.snapshot?.[rankingKey(mode)] ?? [], query, category).length : shown,
+  );
 
   return (
     <p className="flex flex-wrap items-center justify-end gap-x-1 text-xs text-fg-muted tabular" aria-live="off">
@@ -200,6 +208,12 @@ function Summary() {
       )}
       <span aria-hidden="true">·</span>
       <span>{t("summaryShown", { shown })}</span>
+      {filtered && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span className="text-fg">{t("summaryVisible", { visible })}</span>
+        </>
+      )}
     </p>
   );
 }
