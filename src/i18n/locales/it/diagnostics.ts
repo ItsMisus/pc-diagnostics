@@ -56,6 +56,25 @@ export default {
   meaning: "Cosa significa",
   whatYouCanDo: "Cosa puoi fare",
   showTechnical: "Mostra dettagli tecnici",
+  cause: "Causa",
+  cause_confirmed: "Causa confermata",
+  cause_possible: "Causa possibile",
+  cause_undetermined: "Causa non determinata",
+  evidenceBasis_one: "Basata su {count} misura",
+  evidenceBasis_other: "Basata su {count} misure",
+  suggestedActions: "Azioni suggerite",
+  openSection: "Apri {section}",
+  openSectionAria: "Apri {section}: {label}",
+  ruleId: "Regola {id}",
+
+  // Summary
+  outcomeEyebrow: "Esito",
+  noFindingsHeadline: "Nessun problema rilevato",
+  overallCritical_one: "{count} problema critico",
+  overallCritical_other: "{count} problemi critici",
+  overallWarning_one: "{count} avviso da controllare",
+  overallWarning_other: "{count} avvisi da controllare",
+  countsAria: "Segnalazioni per gravità",
 
   // Overview "System Insights" card
   insightsTitle: "Segnalazioni",
