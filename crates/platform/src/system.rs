@@ -17,13 +17,17 @@ pub fn system_info() -> SystemInfo {
 }
 
 /// Local UTC offset (minutes, DST-aware) at the instant `at_ms` (Unix epoch ms). `None`
-/// when the OS cannot convert it (or on non-Windows builds).
+/// when the OS cannot convert it (or on builds other than Windows and macOS).
 pub fn utc_offset_minutes(at_ms: u64) -> Option<i32> {
     #[cfg(windows)]
     {
         crate::windows::time::utc_offset_minutes(at_ms)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::time::utc_offset_minutes(at_ms)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = at_ms;
         None
@@ -32,7 +36,7 @@ pub fn utc_offset_minutes(at_ms: u64) -> Option<i32> {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     #[test]
     fn utc_offset_is_whole_quarter_hours() {
         let now = models::time::now_unix_ms();
