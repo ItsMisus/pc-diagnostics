@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { result } from "@/features/benchmarks/testing/fixtures";
-import { compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, nextSort, sortHistory } from "./model";
+import { activeKind, compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, matchesOutcome, nextSort, sortHistory } from "./model";
 
 const runs = [
   result("a", { startedAt: 100 }),
@@ -17,8 +17,24 @@ describe("history", () => {
     expect(filterHistory([], "all")).toEqual([]);
   });
 
+  it("filters by outcome, combined with the kind", () => {
+    const mixed = [...runs, result("e", { startedAt: 400, state: "failed", metrics: [] })];
+    expect(filterHistory(mixed, "all", "completed").map((r) => r.runId)).toEqual(["b", "c", "a"]);
+    expect(filterHistory(mixed, "all", "stopped").map((r) => r.runId)).toEqual(["e", "d"]);
+    expect(filterHistory(mixed, "memoryLatency", "stopped")).toEqual([]);
+    expect(matchesOutcome({ state: "cancelled" }, "all")).toBe(true);
+    expect(matchesOutcome({ state: "completed" }, "stopped")).toBe(false);
+  });
+
   it("lists the kinds present", () => {
     expect(kindsInHistory(runs)).toEqual(["cpuSingleCore", "memoryLatency"]);
+  });
+
+  it("falls back to all kinds when the filtered kind is gone", () => {
+    const kinds = kindsInHistory(runs);
+    expect(activeKind("memoryLatency", kinds)).toBe("memoryLatency");
+    expect(activeKind("all", kinds)).toBe("all");
+    expect(activeKind("memoryLatency", ["cpuSingleCore"])).toBe("all");
   });
 
   it("offers only other completed runs of the same kind for comparison", () => {

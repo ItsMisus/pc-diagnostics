@@ -3,10 +3,22 @@ import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 
 export type KindFilter = BenchmarkKind | "all";
 
-/** Results of the selected kind, newest first (stable for equal timestamps). */
-export function filterHistory(results: readonly BenchmarkResult[], filter: KindFilter): BenchmarkResult[] {
+/** Outcome filter: every run, only completed ones, or the ones that stopped early (cancelled or failed). */
+export type OutcomeFilter = "all" | "completed" | "stopped";
+
+export function matchesOutcome(result: Pick<BenchmarkResult, "state">, filter: OutcomeFilter): boolean {
+  if (filter === "all") return true;
+  return filter === "completed" ? result.state === "completed" : result.state !== "completed";
+}
+
+/** Results of the selected kind (and outcome), newest first (stable for equal timestamps). */
+export function filterHistory(
+  results: readonly BenchmarkResult[],
+  filter: KindFilter,
+  outcome: OutcomeFilter = "all",
+): BenchmarkResult[] {
   return results
-    .filter((r) => filter === "all" || r.kind === filter)
+    .filter((r) => (filter === "all" || r.kind === filter) && matchesOutcome(r, outcome))
     .map((r, i) => ({ r, i }))
     .sort((a, b) => b.r.startedAt - a.r.startedAt || a.i - b.i)
     .map((x) => x.r);
@@ -17,6 +29,15 @@ export function kindsInHistory(results: readonly BenchmarkResult[]): BenchmarkKi
   const seen: BenchmarkKind[] = [];
   for (const r of results) if (!seen.includes(r.kind)) seen.push(r.kind);
   return seen;
+}
+
+/**
+ * The kind filter actually in force: a kind that no longer appears after a reload (e.g. its
+ * runs fell past the limit) falls back to "all", so the select never shows a value it has no
+ * option for while the list silently stays empty.
+ */
+export function activeKind(filter: KindFilter, kinds: readonly BenchmarkKind[]): KindFilter {
+  return filter === "all" || kinds.includes(filter) ? filter : "all";
 }
 
 export type HistorySortKey = "date" | "duration";
