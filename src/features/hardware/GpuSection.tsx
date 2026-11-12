@@ -18,7 +18,7 @@ export function GpuSection({ gpus }: { gpus: readonly GpuInfo[] }) {
   const t = useT("hardware");
   const ordered = useMemo(() => orderGpus(gpus), [gpus]);
   return (
-    <Panel title="GPU" icon="gpu">
+    <Panel title="GPU" icon="gpu" level={3}>
       {ordered.length === 0 ? (
         <StateView compact kind="empty" title={t("noGpuAdapters")} />
       ) : (
@@ -64,7 +64,7 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
   return (
     <article className="min-w-0" aria-label={gpu.name}>
       <header className="mb-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
-        <h3 className="min-w-0 text-sm leading-5 font-semibold break-words text-fg">{gpu.name}</h3>
+        <h4 className="min-w-0 text-sm leading-5 font-semibold break-words text-fg">{gpu.name}</h4>
         {gpu.isSoftware && <StatusBadge tone="neutral" label={t("softwareAdapter")} />}
         {gpu.isVirtual && <StatusBadge tone="neutral" label={t("virtualDisplay")} />}
       </header>

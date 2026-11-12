@@ -10,7 +10,7 @@ import { metricItem } from "./metricItem";
 export function CpuSection({ cpu }: { cpu: CpuInfo }) {
   const t = useT("hardware");
   return (
-    <Panel title="CPU" icon="cpu">
+    <Panel title="CPU" icon="cpu" level={3}>
       <DefinitionList
         divided
         items={[

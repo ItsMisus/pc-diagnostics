@@ -26,10 +26,10 @@ export function StorageSection({
 }) {
   const t = useT("hardware");
   return (
-    <Panel title={t("storageTitle")} icon="storage">
-      <h3 className="eyebrow mb-2">{t("physicalDisks")}</h3>
+    <Panel title={t("storageTitle")} icon="storage" level={3}>
+      <h4 className="eyebrow mb-2">{t("physicalDisks")}</h4>
       <Disks disks={disks} />
-      <h3 className="eyebrow mt-6 mb-2">{t("volumes")}</h3>
+      <h4 className="eyebrow mt-6 mb-2">{t("volumes")}</h4>
       <VolumesTable volumes={volumes} />
     </Panel>
   );
@@ -69,7 +69,7 @@ function DiskBlock({ disk }: { disk: PhysicalDiskInfo }) {
   const name = disk.model ?? tm("diskFallback", { id: disk.id });
   return (
     <article className="min-w-0" aria-label={name}>
-      <h4 className="mb-2 min-w-0 text-sm leading-5 font-semibold break-words text-fg">{name}</h4>
+      <h5 className="mb-2 min-w-0 text-sm leading-5 font-semibold break-words text-fg">{name}</h5>
       <DefinitionList
         divided
         items={[

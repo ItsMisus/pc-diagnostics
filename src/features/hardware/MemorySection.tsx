@@ -33,7 +33,7 @@ export function MemorySection({ memory }: { memory: MemoryInfo }) {
     },
   ];
   return (
-    <Panel title={t("memoryTitle")} icon="memory">
+    <Panel title={t("memoryTitle")} icon="memory" level={3}>
       <DefinitionList divided items={items} />
       {modules.status === "available" && modules.value.length > 0 && <ModulesTable modules={modules} />}
     </Panel>
@@ -44,7 +44,7 @@ function ModulesTable({ modules }: { modules: Extract<Metric<MemoryModule[]>, { 
   const t = useT("hardware");
   return (
     <>
-      <h3 className="eyebrow mt-6 mb-2">{t("moduleDetails")}</h3>
+      <h4 className="eyebrow mt-6 mb-2">{t("moduleDetails")}</h4>
       <Table
         caption={t("modulesCaption")}
         headers={[t("slot"), t("capacity"), t("ratedSpeed"), t("configuredSpeed"), t("manufacturer"), t("partNumber")]}

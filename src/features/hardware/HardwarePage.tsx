@@ -114,13 +114,16 @@ function PageSkeleton() {
           <DefinitionSkeleton rows={4} />
         </span>
       </span>
-      <span className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {[0, 1].map((i) => (
-          <span key={i} className="surface-secondary block p-4">
-            <Skeleton className="mb-4 h-4 w-24" />
-            <SkeletonLines lines={4} />
-          </span>
-        ))}
+      {/* Same container rule as the real grid (its width, not the window's). */}
+      <span className="@container block">
+        <span className="grid grid-cols-1 gap-4 @3xl:grid-cols-2">
+          {[0, 1].map((i) => (
+            <span key={i} className="surface-secondary block p-4">
+              <Skeleton className="mb-4 h-4 w-24" />
+              <SkeletonLines lines={4} />
+            </span>
+          ))}
+        </span>
       </span>
     </span>
   );

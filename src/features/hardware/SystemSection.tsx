@@ -78,14 +78,11 @@ function Identity({ info }: { info: FormFactorInfo }) {
       </span>
       <div className="min-w-0">
         <p className="font-display text-2xl font-semibold break-words text-fg">{headline}</p>
-        {line && (
-          <p className="mt-0.5 text-sm text-fg-muted">
-            {line}
-            <span className="ml-2 empty:hidden">
-              <SourceCaption metric={ff} />
-            </span>
-          </p>
-        )}
+        {/* The source caption (Advanced view only) shows even when there is no line text. */}
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm text-fg-muted empty:hidden">
+          {line}
+          <SourceCaption metric={ff} />
+        </p>
       </div>
     </div>
   );
