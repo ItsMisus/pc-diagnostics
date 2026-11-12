@@ -80,9 +80,6 @@ export default {
   insightsTitle: "Segnalazioni",
   openDiagnostics: "Apri Diagnostics",
   insightsUnavailable: "Report diagnostico non disponibile",
-  insightsNeverRunDescription:
-    "Nessuna segnalazione è mostrata perché la diagnosi non è stata eseguita, non perché il sistema sia privo di problemi.",
-  insightsCheckedAt: "Controllo del {date}",
   insightsReportAt: "Report del {date}",
   insightsCoverage: "Copertura: {sentence}",
   insightsCritical_one: "{count} critico",

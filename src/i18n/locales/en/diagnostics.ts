@@ -83,9 +83,6 @@ export default {
   insightsTitle: "System Insights",
   openDiagnostics: "Open Diagnostics",
   insightsUnavailable: "Diagnostic report not available",
-  insightsNeverRunDescription:
-    "No findings are shown because diagnostics haven't been run, not because the system has no problems.",
-  insightsCheckedAt: "Checked on {date}",
   insightsReportAt: "Report from {date}",
   insightsCoverage: "Coverage: {sentence}",
   insightsCritical_one: "{count} critical",

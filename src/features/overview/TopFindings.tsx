@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { RisolviButton } from "@/features/assistant/RisolviButton";
 import { useFindingIndex } from "@/features/diagnostics/DiagnosticsPage";
 import { useDiag } from "@/features/diagnostics/diagStore";
-import { KindBadge, SimpleKindHint } from "@/features/diagnostics/FindingCard";
+import { CauseBadge, SimpleKindHint } from "@/features/diagnostics/FindingCard";
 import { coverageSentence, coverageSummary, noFindingsCopy, platformCoverage, severityLabel, severityTone, topFindings } from "@/features/diagnostics/model";
 import { simpleFindingText, simpleNotAGuarantee, simpleNothingFound, simpleSeverityLabel } from "@/features/diagnostics/simple";
 import { useIsSimple } from "@/hooks/useViewMode";
@@ -98,7 +98,7 @@ function FindingList({ report }: { report: DiagnosticReport }) {
                 <p className="min-w-0 flex-1 text-sm break-words text-fg">{title}</p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
-                {simple ? <SimpleKindHint finding={f} /> : <KindBadge kind={f.kind} />}
+                {simple ? <SimpleKindHint finding={f} /> : <CauseBadge kind={f.kind} />}
                 <RisolviButton compact finding={f} findingIndex={indexOf(f)} label={title} />
               </div>
             </li>
