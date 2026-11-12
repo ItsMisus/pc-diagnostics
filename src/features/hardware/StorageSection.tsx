@@ -4,7 +4,7 @@ import { SourceCaption } from "@/components/common/SourceCaption";
 import { StateView } from "@/components/common/StateView";
 import { NotReported, Table, Td } from "@/components/common/Table";
 import { useT } from "@/i18n";
-import { formatBytes } from "@/lib/format";
+import { formatStorageBytes } from "@/lib/format";
 import { busLabel, mediaLabel } from "@/features/monitoring/labels";
 import type { Metric } from "@/types/generated/Metric";
 import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
@@ -50,7 +50,7 @@ function DisksTable({ disks }: { disks: Metric<PhysicalDiskInfo[]> }) {
             <Td>{d.model ?? tm("diskFallback", { id: d.id })}</Td>
             <Td>{busLabel(d.bus, tm)}</Td>
             <Td>{mediaLabel(d.media, tm)}</Td>
-            <Td>{formatBytes(d.sizeBytes)}</Td>
+            <Td>{formatStorageBytes(d.sizeBytes)}</Td>
             <Td className="font-mono text-xs">{d.firmware ?? <NotReported />}</Td>
           </tr>
         ))}
@@ -73,7 +73,7 @@ function VolumesTable({ volumes }: { volumes: readonly VolumeInfo[] }) {
           <Td className="font-mono text-xs">{v.mountPoint}</Td>
           <Td>{v.label || <NotReported />}</Td>
           <Td>{v.fileSystem ?? <NotReported />}</Td>
-          <Td>{formatBytes(v.totalBytes)}</Td>
+          <Td>{formatStorageBytes(v.totalBytes)}</Td>
           <Td>{v.removable ? t("yes") : t("no")}</Td>
         </tr>
       ))}

@@ -141,8 +141,8 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                     fmt::pct(lang, free_pct),
                 );
                 let (free_plain, size_plain, pct_plain) = (
-                    fmt::bytes_plain(lang, v.available_bytes as f64),
-                    fmt::bytes_plain(lang, v.total_bytes as f64),
+                    fmt::storage_plain(lang, p, v.available_bytes as f64),
+                    fmt::storage_plain(lang, p, v.total_bytes as f64),
                     fmt::il_pct(lang, free_pct),
                 );
                 let mut f = finding(

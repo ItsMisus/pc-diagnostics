@@ -5,6 +5,7 @@
 //! uses a thousands separator.
 
 use models::Unit;
+use models::app::Platform;
 use models::settings::Language;
 
 /// Placeholder for a value that cannot be shown.
@@ -80,6 +81,31 @@ pub fn bytes_plain(lang: Language, b: f64) -> String {
         .replace("MiB", "MB")
         .replace("GiB", "GB")
         .replace("TiB", "TB")
+}
+
+/// Disk, volume or file size for plain-language text. Windows: `bytes_plain`. macOS:
+/// powers of 1000 with KB, MB, GB, TB, the units Finder and Disk Utility use for storage,
+/// so the number matches what a Mac user sees there (the UI's `formatStorageBytes`).
+/// Memory sizes keep `bytes_plain` on every OS.
+pub fn storage_plain(lang: Language, platform: Platform, b: f64) -> String {
+    if platform != Platform::Macos {
+        return bytes_plain(lang, b);
+    }
+    if !b.is_finite() || b < 0.0 {
+        return not_available(lang).into();
+    }
+    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+    let mut v = b;
+    let mut i = 0;
+    while v >= 1000.0 && i < UNITS.len() - 1 {
+        v /= 1000.0;
+        i += 1;
+    }
+    if i == 0 {
+        format!("{} B", num(lang, v, 0))
+    } else {
+        format!("{} {}", num(lang, v, 1), UNITS[i])
+    }
 }
 
 /// Italian "a", "a e b", "a, b e c"; English "a", "a and b", "a, b, and c".
@@ -256,6 +282,23 @@ mod tests {
 
     const IT: Language = Language::Italian;
     const EN: Language = Language::English;
+
+    #[test]
+    fn storage_sizes_follow_finder_on_macos_only() {
+        // This Mac's internal disk: Finder shows 994,61 GB.
+        let total = 994_610_155_520.0;
+        assert_eq!(storage_plain(IT, Platform::Macos, total), "994,6 GB");
+        assert_eq!(storage_plain(EN, Platform::Macos, total), "994.6 GB");
+        assert_eq!(storage_plain(IT, Platform::Macos, 999.0), "999 B");
+        assert_eq!(storage_plain(IT, Platform::Macos, 2e12), "2,0 TB");
+        assert_eq!(storage_plain(IT, Platform::Macos, -1.0), "n/d");
+        // Windows: unchanged, the File Explorer labels on powers of 1024.
+        assert_eq!(storage_plain(IT, Platform::Windows, total), "926,3 GB");
+        assert_eq!(
+            storage_plain(IT, Platform::Windows, total),
+            bytes_plain(IT, total)
+        );
+    }
 
     #[test]
     fn local_times_carry_their_offset() {

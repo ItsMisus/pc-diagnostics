@@ -57,6 +57,12 @@ Rules:
   uses the exact IEC names (KiB, MiB, GiB, TiB). Always format them with `formatBytes` /
   `formatBytesPerSec` / `formatMib` (`src/lib/format.ts`), never a hand-written unit. The
   backend's texts follow the same rule (`fmt::bytes_plain` / `fmt::bytes`).
+- Disk, volume and file sizes use `formatStorageBytes` (backend: `fmt::storage_plain`). It
+  is `formatBytes` everywhere except "Semplice" on macOS, where it uses powers of 1000 with
+  KB/MB/GB/TB like Finder and Disk Utility ("994,6 GB" for the disk Finder shows as
+  994,61 GB). Memory (RAM, VRAM, swap, process memory), throughput and benchmark file sizes
+  (`formatMib`) stay on powers of 1024 on macOS too: Activity Monitor and About This Mac
+  label memory that way ("16 GB" for 16 GiB).
 - Section labels inside cards: `eyebrow` utility (11 px, uppercase, tracked, `fg-subtle`).
 - Hierarchy of headings: page title 26 px (`PageHeader`) > section heading 20 px
   (`SectionHeading`, a group of cards such as "Andamento recente" or "Avvisi") > card title

@@ -217,6 +217,18 @@ fn macos_texts_use_macos_names() {
             .action
             .contains("Impostazioni di Sistema > Generali > Spazio")
     );
+    // Sizes in plain text follow Finder (powers of 1000): 4 GiB of 460 GiB.
+    let boot = low_it
+        .iter()
+        .find(|f| f.simple.headline == "Il disco di avvio è quasi pieno")
+        .expect("boot volume");
+    assert!(
+        boot.simple.meaning.contains("4,3 GB su 493,9 GB"),
+        "{}",
+        boot.simple.meaning
+    );
+    // The technical description keeps the exact IEC units.
+    assert!(boot.description.contains("4,0 GiB"), "{}", boot.description);
     let low_en = find(&en, "storage.volume.low_space");
     assert!(low_en[0].simple.action.contains("empty the Trash"));
     assert!(

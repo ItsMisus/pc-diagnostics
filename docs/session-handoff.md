@@ -16,8 +16,11 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
 - `npm run check` on macOS: Rust 509 passed / 3 ignored, web 325 passed, build OK,
   clippy `-D warnings` clean (2026-11-12).
 - What works, measured values and what is still open: `docs/roadmap.md` "macOS port".
-  Main open items: Windows compile check of the port (no Windows target here),
-  NVMe SMART health, Developer ID signing/notarization.
+  Main open items: Windows tests of the port (CI on the pull request; the core crates
+  already pass clippy for x86_64-pc-windows-msvc from this Mac), NVMe SMART health,
+  Developer ID signing/notarization.
+- Windows type-check from the Mac: `cargo clippy -p models -p platform -p diagnostics -p monitor
+  -p bench -p processes -p drivers --all-targets --target x86_64-pc-windows-msvc -- -D warnings`.
 - Build the app: `npx tauri build` (`.app` + `.dmg`, ad-hoc signed, `src-tauri/tauri.macos.conf.json`).
   Data: `~/Library/Application Support/com.pcdiagnostics.desktop/`.
 

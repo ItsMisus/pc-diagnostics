@@ -4,6 +4,7 @@ import type { Source } from "@/types/generated/Source";
 import type { Unavailability } from "@/types/generated/Unavailability";
 import type { Unit } from "@/types/generated/Unit";
 import { getLang, localeTag, translatorFor } from "@/i18n";
+import { getPlatform } from "@/lib/platform";
 
 /**
  * A number with a fixed number of decimals in the current language: "19,4" in Italian,
@@ -27,9 +28,9 @@ function withPercent(number: string): string {
  *   matches what the user sees in Windows. Used in the "Semplice" view.
  * - `iec`: KiB, MiB, GiB, TiB, the exact technical names. Used in the "Avanzata" view.
  * The backend follows the same rule (`fmt::bytes_plain` / `fmt::bytes` in crates/diagnostics).
- * On macOS the same powers of 1024 are used on purpose, so UI and backend texts agree:
- * Activity Monitor labels memory the same way; Finder and About This Mac give disk and file
- * sizes in powers of 1000, so a disk size here reads about 7 % lower than in Finder.
+ * Memory (RAM, VRAM, process memory) uses powers of 1024 on every OS: Activity Monitor and
+ * About This Mac label memory that way too ("16 GB" for 16 GiB). Disk, volume and file sizes
+ * go through `formatStorageBytes`, which follows Finder on macOS (see there).
  */
 export type ByteUnits = "windows" | "iec";
 
@@ -60,6 +61,32 @@ export function formatBytes(bytes: number, fractionDigits = 1, units: ByteUnits 
   let unit = 0;
   while (value >= 1024 && unit < labels.length - 1) {
     value /= 1024;
+    unit += 1;
+  }
+  const digits = unit === 0 ? 0 : fractionDigits;
+  return `${formatNumber(value, digits)} ${labels[unit]}`;
+}
+
+/**
+ * A disk, volume or file size. Like `formatBytes`, except in the "Semplice" view on macOS:
+ * there it uses powers of 1000 with KB/MB/GB/TB, the units Finder, Disk Utility and About
+ * This Mac use for storage, so a Mac user reads the same number as in Finder ("865,3 GB"
+ * free rather than "805,9 GB"). The backend's `fmt::storage_plain` does the same.
+ * Throughput (MB/s) and memory are not storage sizes and keep `formatBytes`.
+ */
+export function formatStorageBytes(bytes: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
+  if (units === "windows" && getPlatform() === "macos") return formatDecimalBytes(bytes, fractionDigits);
+  return formatBytes(bytes, fractionDigits, units);
+}
+
+/** Powers of 1000 with KB, MB, GB, TB (Finder's storage units). */
+function formatDecimalBytes(bytes: number, fractionDigits: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  const labels = BYTE_LABELS.windows;
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1000 && unit < labels.length - 1) {
+    value /= 1000;
     unit += 1;
   }
   const digits = unit === 0 ? 0 : fractionDigits;

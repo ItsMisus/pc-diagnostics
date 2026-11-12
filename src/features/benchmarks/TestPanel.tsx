@@ -5,7 +5,7 @@ import { UnavailableReason, useUnavailabilityText } from "@/components/common/Me
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatMib } from "@/lib/format";
+import { formatMib, formatStorageBytes } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
 import { volumeDisplayName } from "@/features/monitoring/selection";
@@ -231,7 +231,7 @@ function Controls({
               {volumes.map((v) => (
                 <option key={v.mountPoint} value={v.mountPoint}>
                   {volumeDisplayName(v)} · {mediaLabel(v.media, tm)} ·{" "}
-                  {t("volumeFree", { size: formatBytes(v.availableBytes) })}
+                  {t("volumeFree", { size: formatStorageBytes(v.availableBytes) })}
                   {v.removable ? ` · ${t("removable")}` : ""}
                 </option>
               ))}
@@ -275,7 +275,7 @@ function Controls({
           </label>
           {cap.maxBytesWritten !== null && (
             <p className="mt-1.5 pl-6.5 text-xs text-fg-muted tabular">
-              {t("maxWritten", { size: formatBytes(cap.maxBytesWritten) })}
+              {t("maxWritten", { size: formatStorageBytes(cap.maxBytesWritten) })}
             </p>
           )}
         </div>

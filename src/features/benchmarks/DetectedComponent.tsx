@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import { type Translator, translatorFor, useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatMts } from "@/lib/format";
+import { formatBytes, formatMts, formatStorageBytes } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
 import { dedicatedVram } from "@/features/monitoring/selection";
@@ -127,7 +127,7 @@ function items(
         value: [
           v.label || null,
           mediaLabel(v.media, tm),
-          t("freeOfTotal", { free: formatBytes(v.availableBytes), total: formatBytes(v.totalBytes) }),
+          t("freeOfTotal", { free: formatStorageBytes(v.availableBytes), total: formatStorageBytes(v.totalBytes) }),
           v.removable ? t("removable") : null,
         ]
           .filter(Boolean)

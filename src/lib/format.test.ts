@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { setLang } from "@/i18n";
 import type { Metric } from "@/types/generated/Metric";
 import { stateKindForError } from "./errors";
+import { setPlatform } from "./platform";
 import {
   errorTitle,
   formatBytes,
@@ -10,6 +11,7 @@ import {
   formatDateTime,
   formatDuration,
   formatElapsed,
+  formatStorageBytes,
   formatFlopsPerSec,
   formatIsoDate,
   formatMetric,
@@ -98,6 +100,41 @@ describe("stateKindForError", () => {
   it("treats consentRequired as a user choice, busy as a retriable error", () => {
     expect(stateKindForError(err("consentRequired"))).toBe("consent");
     expect(stateKindForError(err("busy"))).toBe("error");
+  });
+});
+
+describe("formatStorageBytes", () => {
+  // This Mac's internal disk: Finder shows 994,61 GB total, 865,31 GB available.
+  const TOTAL = 994_610_155_520;
+  const FREE = 865_308_856_320;
+  afterEach(() => {
+    setPlatform("windows");
+    setByteUnits("windows");
+  });
+
+  it("is formatBytes on Windows, in both views", () => {
+    expect(formatStorageBytes(TOTAL)).toBe(formatBytes(TOTAL));
+    expect(formatStorageBytes(TOTAL)).toBe("926,3 GB");
+    setByteUnits("iec");
+    expect(formatStorageBytes(TOTAL)).toBe("926,3 GiB");
+  });
+
+  it("uses Finder's decimal units on macOS in the simple view", () => {
+    setPlatform("macos");
+    expect(formatStorageBytes(TOTAL)).toBe("994,6 GB");
+    expect(formatStorageBytes(FREE)).toBe("865,3 GB");
+    expect(formatStorageBytes(999)).toBe("999 B");
+    expect(formatStorageBytes(1000)).toBe("1,0 KB");
+    expect(formatStorageBytes(2e12)).toBe("2,0 TB");
+    expect(formatStorageBytes(-1)).toBe("—");
+    // Memory never follows it.
+    expect(formatBytes(16 * 1024 ** 3)).toBe("16,0 GB");
+  });
+
+  it("keeps the exact IEC units on macOS in the advanced view", () => {
+    setPlatform("macos");
+    setByteUnits("iec");
+    expect(formatStorageBytes(TOTAL)).toBe("926,3 GiB");
   });
 });
 

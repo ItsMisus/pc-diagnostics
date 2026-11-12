@@ -10,7 +10,7 @@ import { StateView } from "@/components/common/StateView";
 import { Tooltip } from "@/components/common/Tooltip";
 import { useIsSimple, useViewMode } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
-import { formatBytes, formatBytesPerSec, formatCelsius, formatMhz, formatPercent, formatPerSec, formatRpm, formatTime, formatWatts } from "@/lib/format";
+import { formatBytes, formatBytesPerSec, formatCelsius, formatMhz, formatPercent, formatPerSec, formatRpm, formatStorageBytes, formatTime, formatWatts } from "@/lib/format";
 import { DiskHealth } from "@/features/monitoring/DiskHealth";
 import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
@@ -476,7 +476,7 @@ function VolumeRow({ volume: v }: { volume: VolumeInfo }) {
         valueText: percent !== null ? tm("percentUsed", { percent: formatPercent(percent) }) : tm("notAvailableText"),
         level: volumeLevel(v.availableBytes, v.totalBytes),
       }}
-      value={t("ofTotal", { used: formatBytes(used), total: formatBytes(v.totalBytes) })}
+      value={t("ofTotal", { used: formatStorageBytes(used), total: formatStorageBytes(v.totalBytes) })}
     />
   );
 }

@@ -10,7 +10,7 @@ import { toast } from "@/components/common/Toast";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatDateTime, formatDuration } from "@/lib/format";
+import { formatDateTime, formatDuration, formatStorageBytes } from "@/lib/format";
 import { usePlatform } from "@/lib/platform";
 import type { CoverageItem } from "@/types/generated/CoverageItem";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
@@ -369,7 +369,7 @@ function ExportPanel() {
               {t(state.result.redacted ? "exportSavedRedacted" : "exportSavedPersonal", {
                 format: state.format.toUpperCase(),
               })}{" "}
-              · <span className="tabular">{formatBytes(state.result.bytes)}</span>
+              · <span className="tabular">{formatStorageBytes(state.result.bytes)}</span>
             </p>
             <p className="mt-0.5 font-mono text-2xs break-all text-fg-muted">{state.result.path}</p>
           </div>
