@@ -8,6 +8,7 @@ import { stateKindForError } from "@/lib/errors";
 import { formatBytes, formatMib } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
+import { volumeDisplayName } from "@/features/monitoring/selection";
 import type { AppError } from "@/types/generated/AppError";
 import type { BenchmarkCapability } from "@/types/generated/BenchmarkCapability";
 import type { BenchmarkGpuTarget } from "@/types/generated/BenchmarkGpuTarget";
@@ -229,7 +230,7 @@ function Controls({
               {volumes.length === 0 && <option value="">{t("noVolumes")}</option>}
               {volumes.map((v) => (
                 <option key={v.mountPoint} value={v.mountPoint}>
-                  {v.mountPoint} {v.label ? `${v.label} ` : ""}· {mediaLabel(v.media, tm)} ·{" "}
+                  {volumeDisplayName(v)} · {mediaLabel(v.media, tm)} ·{" "}
                   {t("volumeFree", { size: formatBytes(v.availableBytes) })}
                   {v.removable ? ` · ${t("removable")}` : ""}
                 </option>

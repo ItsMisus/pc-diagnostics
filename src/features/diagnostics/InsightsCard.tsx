@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
+import { usePlatform } from "@/lib/platform";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
 import type { Finding } from "@/types/generated/Finding";
 import { RisolviButton } from "@/features/assistant/RisolviButton";
@@ -19,6 +20,7 @@ import {
   coverageSentence,
   coverageSummary,
   noFindingsCopy,
+  platformCoverage,
   severityCounts,
   severityLabel,
   severityTone,
@@ -110,7 +112,8 @@ function Summary({ report }: { report: DiagnosticReport }) {
   const counts = useMemo(() => severityCounts(report.findings), [report.findings]);
   const top = useMemo(() => topFindings(report.findings, 3), [report.findings]);
   const indexOf = useFindingIndex(report);
-  const coverage = useMemo(() => coverageSummary(report.coverage), [report.coverage]);
+  const platform = usePlatform();
+  const coverage = useMemo(() => coverageSummary(platformCoverage(report.coverage, platform)), [report.coverage, platform]);
   const simple = useIsSimple();
   const t = useT("diagnostics");
 

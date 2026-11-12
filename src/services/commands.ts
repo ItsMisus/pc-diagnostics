@@ -29,7 +29,7 @@ export const commands = {
   getSystemInfo: () => call<SystemInfo>("get_system_info"),
   getSettings: () => call<AppSettings>("get_settings"),
   updateSettings: (settings: AppSettings) => call<AppSettings>("update_settings", { settings }),
-  /** Effective language (preference with "system" resolved against the Windows display language). */
+  /** Effective language (preference with "system" resolved against the OS display language). */
   getLanguage: () => call<Language>("get_language"),
   /** Cached by the backend; `refresh: true` forces a new (slow, WMI-backed) collection. */
   getHardwareInventory: (refresh = false) => call<HardwareInventory>("get_hardware_inventory", { refresh }),
@@ -44,7 +44,8 @@ export const commands = {
   /** Cached device/driver inventory; `refresh: true` re-enumerates devices (no network). */
   getDriverInventory: (refresh = false) => call<DriverInventory>("get_driver_inventory", { refresh }),
   /**
-   * Searches Windows Update for driver updates (network, can take a minute or more).
+   * Searches Windows Update for driver updates (network, can take a minute or more). Windows
+   * only: the UI offers it nowhere else (`hasWindowsFeatures`).
    * Rejects with consentRequired when online checks are disabled, busy if one is running.
    */
   checkDriverUpdates: () => call<DriverInventory>("check_driver_updates"),
@@ -69,7 +70,7 @@ export const commands = {
   exportReport: (format: ReportFormat, redact: boolean) => call<ExportedReport>("export_report", { format, redact }),
 
   // "Risolvi" assistant. The API key is write-only: it goes to the backend (Windows
-  // Credential Manager) and is never returned, stored or logged by the frontend.
+  // Credential Manager, macOS Keychain) and is never returned, stored or logged by the frontend.
   getAssistantStatus: () => call<AssistantStatus>("get_assistant_status"),
   setAssistantApiKey: (key: string) => call<AssistantStatus>("set_assistant_api_key", { key }),
   clearAssistantApiKey: () => call<AssistantStatus>("clear_assistant_api_key"),

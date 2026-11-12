@@ -1,6 +1,7 @@
 import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { tr } from "@/i18n";
+import { getPlatform } from "@/lib/platform";
 import { commands } from "@/services/commands";
 import { toAppError } from "@/services/ipc";
 import type { AppError } from "@/types/generated/AppError";
@@ -8,7 +9,8 @@ import type { AssistantStatus } from "@/types/generated/AssistantStatus";
 import type { FixPlan } from "@/types/generated/FixPlan";
 import type { FixPreview } from "@/types/generated/FixPreview";
 import type { StepOutcome } from "@/types/generated/StepOutcome";
-import { assistantReadiness, isPreviewExpired, type AssistantReadiness } from "./model";
+import type { Platform } from "@/types/generated/Platform";
+import { actionRunsOn, assistantReadiness, isPreviewExpired, type AssistantReadiness } from "./model";
 
 /**
  * State machine of the "Risolvi" dialog. Nothing leaves the machine before `send()`;
@@ -75,11 +77,15 @@ export function isFlowBusy(phase: FixPhase): boolean {
   return phase.kind === "plan" && Object.values(phase.steps).some((s) => s.status === "running");
 }
 
-/** A step can still be executed: not done, not running, and no other step running. */
-export function canExecuteStep(phase: FixPhase, stepId: string): boolean {
+/**
+ * A step can still be executed: its action exists on this platform (`actionRunsOn`), it is not
+ * done, not running, and no other step is running.
+ */
+export function canExecuteStep(phase: FixPhase, stepId: string, platform: Platform = getPlatform()): boolean {
   if (phase.kind !== "plan") return false;
   const step = phase.plan.steps.find((s) => s.id === stepId);
   if (!step?.action) return false;
+  if (!actionRunsOn(step.action, platform)) return false;
   if (Object.values(phase.steps).some((s) => s.status === "running")) return false;
   const run = phase.steps[stepId] ?? { status: "idle" };
   return run.status === "idle" || run.status === "confirming" || (run.status === "error" && run.error.retriable);

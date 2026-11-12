@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
 import { formatBytes, formatDateTime, formatDuration } from "@/lib/format";
+import { usePlatform } from "@/lib/platform";
 import type { CoverageItem } from "@/types/generated/CoverageItem";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
 import type { Finding } from "@/types/generated/Finding";
@@ -26,6 +27,7 @@ import {
   coverageTone,
   groupFindings,
   noFindingsCopy,
+  platformCoverage,
   severityGroupLabel,
   sortFindings,
 } from "./model";
@@ -157,8 +159,9 @@ function SimpleReportView({ report }: { report: DiagnosticReport }) {
   const t = useT("diagnostics");
   const findings = useMemo(() => sortFindings(report.findings), [report.findings]);
   const indexOf = useFindingIndex(report);
+  const coverage = useReportCoverage(report);
   // `t` changes with the language, so the summary is rebuilt in the new language.
-  const summary = useMemo(() => simpleSummary(report.findings, report.coverage), [report.findings, report.coverage, t]);
+  const summary = useMemo(() => simpleSummary(report.findings, coverage), [report.findings, coverage, t]);
   const headingId = useId();
 
   return (
@@ -185,7 +188,7 @@ function SimpleReportView({ report }: { report: DiagnosticReport }) {
         </section>
       )}
 
-      <CoverageCard items={report.coverage} simple />
+      <CoverageCard items={coverage} simple />
 
       {report.limitations.length > 0 && (
         <Card>
@@ -209,6 +212,7 @@ function ReportView({ report }: { report: DiagnosticReport }) {
   const t = useT("diagnostics");
   const groups = useMemo(() => groupFindings(report.findings), [report.findings]);
   const indexOf = useFindingIndex(report);
+  const coverage = useReportCoverage(report);
   const baseId = useId();
 
   return (
@@ -224,7 +228,7 @@ function ReportView({ report }: { report: DiagnosticReport }) {
         <ShortWindowNote>{t("shortWindow", { window: formatDuration(report.observedWindowS), min: SHORT_WINDOW_S })}</ShortWindowNote>
       )}
 
-      <CoverageCard items={report.coverage} simple={false} />
+      <CoverageCard items={coverage} simple={false} />
 
       {report.findings.length === 0 ? (
         <Card title={t("findingsTitle")}>
@@ -268,6 +272,12 @@ export function useFindingIndex(report: DiagnosticReport): (f: Finding) => numbe
     const map = new Map(report.findings.map((f, i) => [f, i] as const));
     return (f: Finding) => map.get(f) ?? -1;
   }, [report.findings]);
+}
+
+/** The report's coverage as it applies on this platform (`platformCoverage`). */
+function useReportCoverage(report: DiagnosticReport): readonly CoverageItem[] {
+  const platform = usePlatform();
+  return useMemo(() => platformCoverage(report.coverage, platform), [report.coverage, platform]);
 }
 
 /**

@@ -10,7 +10,11 @@ import type { Metric } from "@/types/generated/Metric";
 import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 
-/** Disks and volumes as installed. Activity, free space and Windows disk status are on Overview. */
+/**
+ * Disks and volumes as installed. Volumes are listed by mount point as the OS reports it: drive
+ * letters on Windows (`C:\`), POSIX paths on macOS (`/`, `/Volumes/…`); the column header says
+ * which. Activity, free space and the OS disk status are on Overview.
+ */
 export function StorageSection({
   disks,
   volumes,

@@ -13,6 +13,7 @@ import { AppOverheadCard } from "./AppOverheadCard";
 import { AssistantCard } from "./AssistantCard";
 import { Row, Toggle } from "./controls";
 import { localeTag, useLang, useT, type Translator } from "@/i18n";
+import { hasWindowsFeatures, usePlatform } from "@/lib/platform";
 import type { LanguagePreference } from "@/types/generated/LanguagePreference";
 
 const THEMES: readonly ThemePreference[] = ["system", "light", "dark"];
@@ -41,6 +42,9 @@ export function SettingsPage() {
   const t = useT("settings");
   const tc = useT("common");
   const { themes, intervals } = useOptions(t);
+  // "Consenti verifiche online" gates the Windows Update driver search, the only online
+  // check: elsewhere the toggle would do nothing, so the card says why it is absent.
+  const onlineChecks = hasWindowsFeatures(usePlatform());
   const languageOptions: { value: LanguagePreference; label: string }[] = [
     { value: "system", label: t("languageSystem") },
     // Language names are always written in their own language.
@@ -122,13 +126,17 @@ export function SettingsPage() {
           <AppOverheadCard />
 
           <Card title={t("privacy")}>
-            <Row label={t("onlineChecks")} hint={t("onlineChecksHint")}>
-              <Toggle
-                label={t("onlineChecks")}
-                checked={settings.value.allowOnlineChecks}
-                onChange={(allowOnlineChecks) => void update({ allowOnlineChecks })}
-              />
-            </Row>
+            {onlineChecks ? (
+              <Row label={t("onlineChecks")} hint={t("onlineChecksHint")}>
+                <Toggle
+                  label={t("onlineChecks")}
+                  checked={settings.value.allowOnlineChecks}
+                  onChange={(allowOnlineChecks) => void update({ allowOnlineChecks })}
+                />
+              </Row>
+            ) : (
+              <p className="max-w-lg text-xs leading-[18px] text-fg-muted">{t("onlineChecksWindowsOnly")}</p>
+            )}
           </Card>
 
           <AssistantCard

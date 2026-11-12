@@ -132,6 +132,7 @@ export default {
   modules: "Moduli",
   moduleN: "Modulo {n}",
   detailUnavailable: "Dettaglio non disponibile",
+  noModulesReported: "Nessuno riportato dal sistema",
   volumesLabel: "Volumi",
   noVolumes: "Nessun volume rilevato",
   freeOfTotal: "{free} liberi di {total}",

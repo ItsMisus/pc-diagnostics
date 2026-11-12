@@ -21,6 +21,7 @@ import type { BenchmarkContext } from "@/types/generated/BenchmarkContext";
 import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 import type { BenchmarkSeries } from "@/types/generated/BenchmarkSeries";
 import type { ResultMetric } from "@/types/generated/ResultMetric";
+import { useIsMac } from "@/lib/platform";
 import {
   isDebugBuild,
   isStorageKind,
@@ -222,9 +223,11 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
 
 function ContextList({ context }: { context: BenchmarkContext }) {
   const t = useT("benchmarks");
+  // Power plans are a Windows concept: on macOS an absent plan is no missing reading.
+  const showPowerPlan = context.powerPlan !== null || !useIsMac();
   const items: DefinitionItem[] = [
     { label: t("powerSource"), value: powerSourceLabel(context.powerSource, t) },
-    { label: t("powerPlan"), value: context.powerPlan ?? t("notReported") },
+    ...(showPowerPlan ? [{ label: t("powerPlan"), value: context.powerPlan ?? t("notReported") }] : []),
     {
       label: t("backgroundCpu"),
       value: <MetricValue metric={context.backgroundCpuPercent} format={(v) => formatPercent(v, 1)} />,

@@ -7,7 +7,7 @@ import { useIsSimple } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
 import { formatBytes, sourceLabel } from "@/lib/format";
 import { gpuVendorLabel } from "@/features/monitoring/labels";
-import { orderGpus } from "@/features/monitoring/selection";
+import { hasUnifiedMemory, orderGpus } from "@/features/monitoring/selection";
 import type { GpuInfo } from "@/types/generated/GpuInfo";
 import { metricItem } from "./metricItem";
 
@@ -40,10 +40,13 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
   const t = useT("hardware");
   const tm = useT("monitoring");
   const simple = useIsSimple();
+  const unified = hasUnifiedMemory(gpu);
   const items: DefinitionItem[] = [
     { label: t("manufacturer"), value: gpuVendorLabel(gpu.vendor, gpu.vendorId, tm) },
-    { label: t("dedicatedVram"), value: formatBytes(gpu.dedicatedVramBytes) },
-    { label: t("sharedMemory"), value: formatBytes(gpu.sharedMemoryBytes) },
+    // Apple silicon: no VRAM at all (unified memory), said in words instead of "0 B".
+    { label: t("dedicatedVram"), value: unified ? t("unifiedMemory") : formatBytes(gpu.dedicatedVramBytes) },
+    // With unified memory a zero here is no reading, not a size: shown only when reported.
+    ...(unified && gpu.sharedMemoryBytes === 0 ? [] : [{ label: t("sharedMemory"), value: formatBytes(gpu.sharedMemoryBytes) }]),
     metricItem(t("driverVersion"), gpu.driverVersion, text),
   ];
   // Which providers measure this adapter: technical, like sources (Advanced view only).

@@ -15,7 +15,7 @@ import { DiskHealth } from "@/features/monitoring/DiskHealth";
 import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
-import { isFrequencyLimited, primaryGpu } from "@/features/monitoring/selection";
+import { hasUnifiedMemory, isFrequencyLimited, primaryGpu, volumeDisplayName } from "@/features/monitoring/selection";
 import { valueOf } from "@/features/monitoring/series";
 import { InventoryState, WaitingForSample } from "@/features/monitoring/StatusViews";
 import type { CpuSample } from "@/types/generated/CpuSample";
@@ -149,7 +149,7 @@ function CpuBody({ cpu }: { cpu: CpuSample }) {
   );
 }
 
-/** Shown only when Windows reports a limit below the nominal maximum; the cause is unknown. */
+/** Shown only when the OS reports a limit below the nominal maximum; the cause is unknown. */
 function FrequencyLimit({ cpu }: { cpu: CpuSample }) {
   const t = useT("overview");
   if (!isFrequencyLimited(cpu.limitMhz, cpu.maxMhz)) return null;
@@ -188,13 +188,23 @@ export const GpuPanel = memo(function GpuPanel() {
           {...(data.gpus.length > 0 ? { description: t("onlySoftwareAdapters") } : {})}
         />
       ) : (
-        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={gpu.dedicatedVramBytes} />
+        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={gpu.dedicatedVramBytes} unifiedMemory={hasUnifiedMemory(gpu)} />
       )}
     </Card>
   );
 });
 
-function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; dedicatedVramBytes: number }) {
+function GpuBody({
+  id,
+  name,
+  dedicatedVramBytes,
+  unifiedMemory,
+}: {
+  id: string;
+  name: string;
+  dedicatedVramBytes: number;
+  unifiedMemory: boolean;
+}) {
   const tm = useT("monitoring");
   const hasSample = useLive((s) => s.latest !== null);
   const gpu = useLive((s) => s.latest?.gpus.find((g) => g.id === id));
@@ -208,7 +218,7 @@ function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; d
   if (!gpu) return <StateView compact kind="empty" title={tm("noSampleForAdapter")} description={name} />;
   return (
     <>
-      <GpuReadings gpu={gpu} dedicatedVramBytes={dedicatedVramBytes} />
+      <GpuReadings gpu={gpu} dedicatedVramBytes={dedicatedVramBytes} unifiedMemory={unifiedMemory} />
       {/* Which adapter (DXGI primary); pinned to the bottom edge when the row stretches the panel. */}
       <p className="mt-auto truncate pt-3 text-xs text-fg-subtle" title={name}>
         {name}
@@ -217,9 +227,19 @@ function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; d
   );
 }
 
-function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVramBytes: number }) {
+function GpuReadings({
+  gpu,
+  dedicatedVramBytes,
+  unifiedMemory,
+}: {
+  gpu: GpuSample;
+  dedicatedVramBytes: number;
+  /** Apple silicon: no VRAM exists, the GPU uses the RAM shown in the RAM panel. */
+  unifiedMemory: boolean;
+}) {
   const t = useT("overview");
   const tm = useT("monitoring");
+  const th = useT("hardware");
   const temp = useTemperatureBar(gpu.temperatureC, "GPU");
   const power = gpuPowerReading(gpu, tm);
   const powerBar: Bar | undefined =
@@ -248,7 +268,11 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
       <BarRow label={tm("coreClock")} value={<MetricValue metric={gpu.coreClockMhz} format={formatMhz} />} />
       <BarRow label={tm("power")} bar={powerBar} value={<MetricValue metric={power.metric} format={power.format} />} />
       <BarRow label={tm("fan")} value={<MetricValue metric={gpu.fanRpm} format={formatRpm} />} />
-      <BarRow label="VRAM" bar={vramBar} value={<MetricValue metric={gpu.dedicatedUsedBytes} format={vramText} />} />
+      {unifiedMemory && gpu.dedicatedUsedBytes.status === "unavailable" ? (
+        <BarRow label="VRAM" value={<span className="text-fg-muted">{th("unifiedMemory")}</span>} />
+      ) : (
+        <BarRow label="VRAM" bar={vramBar} value={<MetricValue metric={gpu.dedicatedUsedBytes} format={vramText} />} />
+      )}
     </GaugeLayout>
   );
 }
@@ -418,7 +442,7 @@ function VolumeRow({ volume: v }: { volume: VolumeInfo }) {
   const percent = ratio(used, v.totalBytes);
   return (
     <BarRow
-      label={v.label ? `${v.mountPoint} ${v.label}` : v.mountPoint}
+      label={volumeDisplayName(v)}
       title={v.label || undefined}
       bar={{
         percent,

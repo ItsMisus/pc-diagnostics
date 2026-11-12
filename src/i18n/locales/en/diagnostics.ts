@@ -15,6 +15,8 @@ export default {
   neverRun: "Diagnostics not run yet",
   neverRunDescription:
     "Diagnostics run only when you ask: they analyze the monitoring data, processes and drivers already collected, without running any load tests.",
+  "neverRunDescription@macos":
+    "Diagnostics run only when you ask: they analyze the monitoring data and processes already collected, without running any load tests.",
   loadingLatest: "Reading the latest report…",
 
   // "Simple" report
@@ -40,6 +42,8 @@ export default {
   exporting: "Exporting…",
   redact: "Remove personal data",
   exportHint: "Saved in Documents\\PC Diagnostics. “Remove personal data” leaves out the computer name, paths and device IDs.",
+  "exportHint@macos":
+    "Saved in Documents/PC Diagnostics. “Remove personal data” leaves out the computer name, paths and device IDs.",
   exportSavedToast: "Report saved",
   exportSavedRedacted: "{format} report saved (personal data removed)",
   exportSavedPersonal: "{format} report saved (includes personal data)",
