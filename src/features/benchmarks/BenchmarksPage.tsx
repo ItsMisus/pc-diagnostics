@@ -245,7 +245,8 @@ function ComponentScreen({ component }: { component: BenchComponent }) {
               <Segmented label={t("testType")} options={options} value={cap.kind} onChange={setKind} />
             </div>
           )}
-          <TestPanel key={cap.kind} cap={cap} />
+          {/* Sibling keys must differ: both remount per kind. */}
+          <TestPanel key={`test-${cap.kind}`} cap={cap} />
           {/* Appears when a run starts (not when returning to a screen mid-run). */}
           <AnimatePresence initial={false}>
             {liveRunId !== null && (
@@ -254,7 +255,7 @@ function ComponentScreen({ component }: { component: BenchComponent }) {
               </m.div>
             )}
           </AnimatePresence>
-          <LatestResult key={cap.kind} kind={cap.kind} />
+          <LatestResult key={`result-${cap.kind}`} kind={cap.kind} />
         </>
       )}
     </div>
