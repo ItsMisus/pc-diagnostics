@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { result } from "@/features/benchmarks/testing/fixtures";
-import { compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, nextSort, sortHistory } from "./model";
+import { compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, matchesOutcome, nextSort, sortHistory } from "./model";
 
 const runs = [
   result("a", { startedAt: 100 }),
@@ -15,6 +15,15 @@ describe("history", () => {
     expect(filterHistory(runs, "cpuSingleCore").map((r) => r.runId)).toEqual(["d", "c", "a"]);
     expect(filterHistory(runs, "storageRandom")).toEqual([]);
     expect(filterHistory([], "all")).toEqual([]);
+  });
+
+  it("filters by outcome, combined with the kind", () => {
+    const mixed = [...runs, result("e", { startedAt: 400, state: "failed", metrics: [] })];
+    expect(filterHistory(mixed, "all", "completed").map((r) => r.runId)).toEqual(["b", "c", "a"]);
+    expect(filterHistory(mixed, "all", "stopped").map((r) => r.runId)).toEqual(["e", "d"]);
+    expect(filterHistory(mixed, "memoryLatency", "stopped")).toEqual([]);
+    expect(matchesOutcome({ state: "cancelled" }, "all")).toBe(true);
+    expect(matchesOutcome({ state: "completed" }, "stopped")).toBe(false);
   });
 
   it("lists the kinds present", () => {

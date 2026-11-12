@@ -1,23 +1,22 @@
-import { m } from "motion/react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
-import { Card } from "@/components/common/Card";
 import { Icon } from "@/components/common/Icon";
+import { Modal } from "@/components/common/Modal";
+import { Panel } from "@/components/common/Panel";
+import { Segmented } from "@/components/common/Segmented";
 import { Skeleton } from "@/components/common/Skeleton";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { SortHeader, Td, Table } from "@/components/common/Table";
+import { SortHeader, Td, Table, Th, Tr } from "@/components/common/Table";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useBench } from "@/features/benchmarks/benchStore";
 import { ComparisonPanel } from "@/features/benchmarks/ComparisonPanel";
 import { headlineMetric, isDebugBuild, kindLabel, stateLabel, stateTone } from "@/features/benchmarks/model";
 import { ResultView } from "@/features/benchmarks/ResultView";
-import { Th } from "@/features/benchmarks/ui";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
 import { formatDateTime, formatElapsed, formatUnitValue } from "@/lib/format";
-import { duration, ease } from "@/lib/motion";
 import { commands } from "@/services/commands";
 import { toAppError } from "@/services/ipc";
 import type { AppError } from "@/types/generated/AppError";
@@ -31,6 +30,7 @@ import {
   type KindFilter,
   kindsInHistory,
   nextSort,
+  type OutcomeFilter,
   sortHistory,
 } from "./model";
 
@@ -49,27 +49,24 @@ const SELECT = "h-8 pl-2.5";
  * `relative`), and the keyboard focus ring is drawn on that overlay, around the row.
  */
 const ROW_BUTTON =
-  "rounded-sm text-left text-fg focus-visible:outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:outline-2 focus-visible:after:outline-solid focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--focus)";
+  "rounded-sm text-left font-medium text-fg focus-visible:outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:outline-2 focus-visible:after:outline-solid focus-visible:after:-outline-offset-2 focus-visible:after:outline-(--focus)";
 
-const detailIn = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0, transition: { duration: duration.component, ease: ease.out } },
-} as const;
-
+/**
+ * History: every stored benchmark run on this machine. The run list is the focal panel; a run
+ * opens in a trailing sheet with the same result view as Benchmarks and the comparison picker.
+ */
 export function HistoryPage() {
   const t = useT("history");
-  const tb = useT("benchmarks");
-  const tc = useT("common");
   const [state, setState] = useState<LoadState>({ status: "loading", data: null });
   const [nonce, setNonce] = useState(0);
-  const [filter, setFilter] = useState<KindFilter>("all");
+  const [kind, setKind] = useState<KindFilter>("all");
+  const [outcome, setOutcome] = useState<OutcomeFilter>("all");
   const [sort, setSort] = useState<HistorySort>(DEFAULT_SORT);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // `openId` drives the sheet; `shownId` keeps its content during the exit animation.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [shownId, setShownId] = useState<string | null>(null);
   // Reload when a run finishes (the backend has stored it by then).
   const lastFinishedId = useBench((s) => s.lastFinished?.runId ?? null);
-  const filterId = useId();
-  const detailRef = useRef<HTMLDivElement>(null);
-  const revealOnSelect = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -83,186 +80,228 @@ export function HistoryPage() {
     };
   }, [nonce, lastFinishedId]);
 
-  // The detail sits under the table: bring it into view when the user picks a run.
-  useEffect(() => {
-    if (!revealOnSelect.current || selectedId === null) return;
-    revealOnSelect.current = false;
-    revealDetail(detailRef.current);
-  }, [selectedId]);
-
-  const select = (id: string) => {
-    if (id === selectedId) {
-      revealDetail(detailRef.current);
-      return;
-    }
-    revealOnSelect.current = true;
-    setSelectedId(id);
+  const open = (id: string) => {
+    setShownId(id);
+    setOpenId(id);
   };
 
   const all = state.data;
-  const rows = useMemo(() => (all ? sortHistory(filterHistory(all, filter), sort) : []), [all, filter, sort]);
+  const rows = useMemo(
+    () => (all ? sortHistory(filterHistory(all, kind, outcome), sort) : []),
+    [all, kind, outcome, sort],
+  );
   const kinds = useMemo(() => (all ? kindsInHistory(all) : []), [all]);
-  const selected = useMemo(() => all?.find((r) => r.runId === selectedId) ?? null, [all, selectedId]);
+  const shown = useMemo(() => all?.find((r) => r.runId === shownId) ?? null, [all, shownId]);
   const loading = state.status === "loading";
+  const reload = () => setNonce((n) => n + 1);
+  const errorKind = state.status === "error" ? stateKindForError(state.error) : null;
 
   return (
     <>
       <PageHeader
         title="History"
         actions={
-          <Button onClick={() => setNonce((n) => n + 1)} disabled={loading} aria-busy={loading}>
+          <Button onClick={reload} disabled={loading} aria-busy={loading}>
             {loading ? <Spinner /> : <Icon name="refresh" />}
             {t("refresh")}
           </Button>
         }
       />
 
-      {state.status === "error" && (
-        <Card className="mb-4">
-          <StateView
-            compact={state.data !== null}
-            kind={stateKindForError(state.error)}
-            title={state.data ? t("refreshFailed") : t("unavailable")}
-            {...(stateKindForError(state.error) === "unsupported"
-              ? { description: t("unsupportedDesc") }
-              : {})}
-            error={state.error}
-            onRetry={() => setNonce((n) => n + 1)}
-          />
-        </Card>
-      )}
+      <div className="flex flex-col gap-4">
+        {state.status === "error" && (
+          <Panel variant={state.data === null ? "primary" : "secondary"}>
+            <StateView
+              layout={state.data === null ? "hero" : "inline"}
+              kind={errorKind ?? "error"}
+              title={state.data ? t("refreshFailed") : t("unavailable")}
+              {...(errorKind === "unsupported" ? { description: t("unsupportedDesc") } : {})}
+              error={state.error}
+              onRetry={reload}
+            />
+          </Panel>
+        )}
 
-      {all === null ? (
-        loading && <HistorySkeleton />
-      ) : all.length === 0 ? (
-        <Card>
+        {all === null ? (
+          loading && <HistorySkeleton />
+        ) : all.length === 0 ? (
           <EmptyHistory />
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <Card
+        ) : (
+          <Panel
+            variant="primary"
             flush
             title={t("runs")}
             aside={
-              <label htmlFor={filterId} className="flex items-center gap-2 text-xs text-fg-muted">
-                {t("testType")}
-                <select
-                  id={filterId}
-                  className={SELECT}
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as KindFilter)}
-                >
-                  <option value="all">{t("filterAll")}</option>
-                  {kinds.map((k) => (
-                    <option key={k} value={k}>
-                      {kindLabel(k, tb)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <span className="tabular text-xs whitespace-nowrap text-fg-subtle" aria-live="polite">
+                {t.plural("runCount", rows.length)}
+              </span>
             }
           >
+            <HistoryFilters
+              kinds={kinds}
+              kind={kind}
+              onKind={setKind}
+              outcome={outcome}
+              onOutcome={setOutcome}
+            />
             {rows.length === 0 ? (
-              <div className="px-4 pb-4">
-                <StateView compact kind="empty" title={t("noRunsOfKind")} />
+              <div className="px-5 pb-5">
+                <StateView
+                  kind="empty"
+                  title={kind !== "all" && outcome === "all" ? t("noRunsOfKind") : t("noRunsMatch")}
+                  description={t("noRunsMatchDesc")}
+                  action={
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setKind("all");
+                        setOutcome("all");
+                      }}
+                    >
+                      {t("resetFilters")}
+                    </Button>
+                  }
+                />
               </div>
             ) : (
               <HistoryTable
                 rows={rows}
-                selectedId={selectedId}
-                onSelect={select}
+                selectedId={openId}
+                onOpen={open}
                 sort={sort}
                 onSort={(key) => setSort((s) => nextSort(s, key))}
               />
             )}
             {all.length >= HISTORY_LIMIT && (
-              <p className="border-t border-line px-4 py-2.5 text-xs text-fg-subtle">
+              <p className="border-t border-line px-5 py-3 text-xs text-fg-subtle">
                 {t("limitNote", { count: HISTORY_LIMIT })}
               </p>
             )}
-          </Card>
+          </Panel>
+        )}
+      </div>
 
-          {selected && (
-            <m.div key={selected.runId} ref={detailRef} className="scroll-mt-16" {...detailIn}>
-              <Card
-                title={`${kindLabel(selected.kind, tb)} · ${formatDateTime(selected.startedAt)}`}
-                aside={
-                  <Button variant="ghost" size="sm" className="-mr-1.5" onClick={() => setSelectedId(null)}>
-                    <Icon name="close" size={14} />
-                    {tc("close")}
-                  </Button>
-                }
-              >
-                <ResultView
-                  key={selected.runId}
-                  result={selected}
-                  meta={false}
-                  comparison={<HistoryComparison all={all} current={selected} />}
-                />
-              </Card>
-            </m.div>
-          )}
-        </div>
-      )}
+      <RunSheet
+        run={shown}
+        all={all ?? []}
+        open={openId !== null && shown !== null}
+        onClose={() => setOpenId(null)}
+        onExitComplete={() => setShownId(null)}
+      />
     </>
   );
 }
 
-/** Scrolls the detail card into view (minimal scroll; instant with reduced motion). */
-function revealDetail(el: HTMLElement | null) {
-  if (!el) return;
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+/** Test type (native select: the list grows with the kinds present) and outcome (segmented). */
+function HistoryFilters({
+  kinds,
+  kind,
+  onKind,
+  outcome,
+  onOutcome,
+}: {
+  kinds: readonly BenchmarkResult["kind"][];
+  kind: KindFilter;
+  onKind: (k: KindFilter) => void;
+  outcome: OutcomeFilter;
+  onOutcome: (o: OutcomeFilter) => void;
+}) {
+  const t = useT("history");
+  const tb = useT("benchmarks");
+  const kindId = useId();
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 pb-4">
+      <label htmlFor={kindId} className="flex min-w-0 items-center gap-2 text-xs text-fg-muted">
+        <span className="shrink-0">{t("testType")}</span>
+        <select
+          id={kindId}
+          className={`${SELECT} min-w-0 max-w-64`}
+          value={kind}
+          onChange={(e) => onKind(e.target.value as KindFilter)}
+        >
+          <option value="all">{t("filterAll")}</option>
+          {kinds.map((k) => (
+            <option key={k} value={k}>
+              {kindLabel(k, tb)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex min-w-0 items-center gap-2 text-xs text-fg-muted">
+        <span aria-hidden="true" className="shrink-0">
+          {t("outcomeLabel")}
+        </span>
+        <Segmented
+          size="sm"
+          label={t("outcomeLabel")}
+          value={outcome}
+          onChange={onOutcome}
+          options={[
+            { value: "all", label: t("outcomeAll") },
+            { value: "completed", label: t("outcomeCompleted") },
+            { value: "stopped", label: t("outcomeStopped") },
+          ]}
+        />
+      </div>
+    </div>
+  );
 }
 
 /** First load only: rows shaped like the table. Later reloads keep the table on screen. */
 function HistorySkeleton() {
   const t = useT("history");
   return (
-    <Card title={t("runs")}>
+    <Panel variant="primary" title={t("runs")}>
       <div role="status" aria-busy="true">
         <span className="sr-only">{t("loading")}</span>
+        <div className="mb-4 flex gap-3">
+          <Skeleton className="h-8 w-44" round />
+          <Skeleton className="h-8 w-56" round />
+        </div>
         {["w-24", "w-32", "w-20", "w-28", "w-24"].map((w, i) => (
-          <div key={i} className="flex items-center gap-8 border-t border-line py-3 first:border-t-0 first:pt-1">
-            <Skeleton className="h-3 w-32" />
+          <div key={i} className="flex items-center gap-8 border-t border-line py-3.5">
+            <Skeleton className="h-3 w-28" />
             <Skeleton className={`h-3 ${w}`} />
             <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-3 w-20" />
+            <Skeleton className="ml-auto h-3 w-12" />
           </div>
         ))}
       </div>
-    </Card>
+    </Panel>
   );
 }
 
+/** No run stored yet: the whole page is one calm invitation to the Benchmarks screen. */
 function EmptyHistory() {
   const t = useT("history");
   const setSection = useAppStore((s) => s.setSection);
   return (
-    <div className="flex flex-col items-start gap-1 pb-2">
+    <Panel variant="primary">
       <StateView
+        layout="hero"
         kind="empty"
         title={t("emptyTitle")}
         description={t("emptyDesc")}
+        action={
+          <Button variant="primary" icon="benchmarks" onClick={() => setSection("benchmarks")}>
+            {t("goToBenchmarks")}
+          </Button>
+        }
       />
-      <Button variant="primary" onClick={() => setSection("benchmarks")}>
-        <Icon name="benchmarks" />
-        {t("goToBenchmarks")}
-      </Button>
-    </div>
+    </Panel>
   );
 }
 
 function HistoryTable({
   rows,
   selectedId,
-  onSelect,
+  onOpen,
   sort,
   onSort,
 }: {
   rows: readonly BenchmarkResult[];
   selectedId: string | null;
-  onSelect: (id: string) => void;
+  onOpen: (id: string) => void;
   sort: HistorySort;
   onSort: (key: HistorySortKey) => void;
 }) {
@@ -272,10 +311,10 @@ function HistoryTable({
   return (
     <Table
       caption={t("tableCaption")}
-      className="pb-1"
+      className="pb-2"
       head={
         <>
-          <SortHeader label={t("colDate")} direction={direction("date")} onSort={() => onSort("date")} className="pl-4" />
+          <SortHeader label={t("colDate")} direction={direction("date")} onSort={() => onSort("date")} className="pl-5" />
           <Th>{t("colTest")}</Th>
           <Th>{t("colState")}</Th>
           <Th>{t("colHeadline")}</Th>
@@ -284,6 +323,7 @@ function HistoryTable({
             align="right"
             direction={direction("duration")}
             onSort={() => onSort("duration")}
+            className="pr-5"
           />
         </>
       }
@@ -292,29 +332,28 @@ function HistoryTable({
         const head = headlineMetric(r);
         const selected = r.runId === selectedId;
         return (
-          <tr
-            key={r.runId}
-            className={`relative transition-colors duration-150 ${selected ? "bg-accent-soft" : "hover:bg-surface-2/60"}`}
-          >
-            <Td className={`pl-4 whitespace-nowrap ${selected ? "shadow-[inset_2px_0_0_var(--accent)]" : ""}`}>
-              <button type="button" onClick={() => onSelect(r.runId)} aria-pressed={selected} className={ROW_BUTTON}>
+          <Tr key={r.runId} interactive selected={selected} className="relative">
+            <Td className={`py-3 pl-5 whitespace-nowrap ${selected ? "shadow-[inset_2px_0_0_var(--accent)]" : ""}`}>
+              <button type="button" onClick={() => onOpen(r.runId)} aria-haspopup="dialog" className={ROW_BUTTON}>
                 {formatDateTime(r.startedAt)}
                 <span className="sr-only">{t("openDetail")}</span>
               </button>
             </Td>
-            <Td>{kindLabel(r.kind, tb)}</Td>
-            <Td>
+            <Td className="py-3">
+              <span className="block min-w-24">{kindLabel(r.kind, tb)}</span>
+            </Td>
+            <Td className="py-3">
               <span className="flex flex-wrap items-center gap-1">
-                <StatusBadge tone={stateTone(r.state)} label={stateLabel(r.state, tb)} />
+                <StatusBadge tone={stateTone(r.state)} label={stateLabel(r.state, tb)} glyph={r.state !== "completed"} />
                 {isDebugBuild(r) && <StatusBadge tone="warn" label={r.buildProfile} />}
               </span>
             </Td>
-            <Td>
+            <Td className="py-3">
               {head ? (
-                <>
-                  <span className="font-medium">{formatUnitValue(head.value, head.unit)}</span>{" "}
+                <span className="flex min-w-0 flex-col">
+                  <span className="font-medium whitespace-nowrap text-fg">{formatUnitValue(head.value, head.unit)}</span>
                   <span className="text-xs text-fg-subtle">{head.label}</span>
-                </>
+                </span>
               ) : (
                 <span className="text-fg-subtle">
                   <span aria-hidden="true">—</span>
@@ -322,11 +361,63 @@ function HistoryTable({
                 </span>
               )}
             </Td>
-            <Td className="text-right whitespace-nowrap">{formatElapsed(r.durationMs)}</Td>
-          </tr>
+            <Td className="py-3 pr-5 text-right whitespace-nowrap text-fg-muted">{formatElapsed(r.durationMs)}</Td>
+          </Tr>
         );
       })}
     </Table>
+  );
+}
+
+/** The selected run in a trailing sheet: state, result (same view as Benchmarks) and comparison. */
+function RunSheet({
+  run,
+  all,
+  open,
+  onClose,
+  onExitComplete,
+}: {
+  run: BenchmarkResult | null;
+  all: readonly BenchmarkResult[];
+  open: boolean;
+  onClose: () => void;
+  onExitComplete: () => void;
+}) {
+  const t = useT("history");
+  const tb = useT("benchmarks");
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      onExitComplete={onExitComplete}
+      presentation="sheet"
+      size="lg"
+      icon="benchmarks"
+      closeOnBackdrop
+      title={run ? kindLabel(run.kind, tb) : undefined}
+      description={
+        run ? (
+          <span className="tabular">
+            {t("detailMeta", { date: formatDateTime(run.startedAt), duration: formatElapsed(run.durationMs) })}
+          </span>
+        ) : undefined
+      }
+    >
+      {run && (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge tone={stateTone(run.state)} label={stateLabel(run.state, tb)} glyph={run.state !== "completed"} />
+            {isDebugBuild(run) && <StatusBadge tone="warn" label={run.buildProfile} />}
+          </div>
+          <ResultView
+            key={run.runId}
+            result={run}
+            meta={false}
+            comparison={<HistoryComparison all={all} current={run} />}
+          />
+        </div>
+      )}
+    </Modal>
   );
 }
 

@@ -3,10 +3,22 @@ import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 
 export type KindFilter = BenchmarkKind | "all";
 
-/** Results of the selected kind, newest first (stable for equal timestamps). */
-export function filterHistory(results: readonly BenchmarkResult[], filter: KindFilter): BenchmarkResult[] {
+/** Outcome filter: every run, only completed ones, or the ones that stopped early (cancelled or failed). */
+export type OutcomeFilter = "all" | "completed" | "stopped";
+
+export function matchesOutcome(result: Pick<BenchmarkResult, "state">, filter: OutcomeFilter): boolean {
+  if (filter === "all") return true;
+  return filter === "completed" ? result.state === "completed" : result.state !== "completed";
+}
+
+/** Results of the selected kind (and outcome), newest first (stable for equal timestamps). */
+export function filterHistory(
+  results: readonly BenchmarkResult[],
+  filter: KindFilter,
+  outcome: OutcomeFilter = "all",
+): BenchmarkResult[] {
   return results
-    .filter((r) => filter === "all" || r.kind === filter)
+    .filter((r) => (filter === "all" || r.kind === filter) && matchesOutcome(r, outcome))
     .map((r, i) => ({ r, i }))
     .sort((a, b) => b.r.startedAt - a.r.startedAt || a.i - b.i)
     .map((x) => x.r);
