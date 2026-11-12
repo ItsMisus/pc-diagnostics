@@ -71,6 +71,16 @@ describe("Overview disk status block", () => {
   });
 });
 
+describe("process memory labels", () => {
+  it("names the physical footprint on macOS, private memory on Windows", () => {
+    expect(tr("processes", "privateMemory")).toBe("Memoria privata");
+    setPlatform("macos");
+    expect(tr("processes", "privateMemory")).toBe("Impronta in memoria");
+    setLang("en");
+    expect(tr("processes", "privateMemory")).toBe("Memory footprint");
+  });
+});
+
 describe("Apple silicon GPU", () => {
   const apple = { ...gpuInfo("gpu0"), name: "Apple M5", vendor: "other" as const, vendorId: 0 };
 

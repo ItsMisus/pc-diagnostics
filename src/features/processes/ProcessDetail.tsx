@@ -14,7 +14,6 @@ import { usePolling } from "@/hooks/usePolling";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
 import { formatBytes, formatBytesPerSec, formatPercent, formatNumber } from "@/lib/format";
-import { useIsMac } from "@/lib/platform";
 import { commands } from "@/services/commands";
 import type { ProcessHistory } from "@/types/generated/ProcessHistory";
 import type { ProcessRow } from "@/types/generated/ProcessRow";
@@ -53,9 +52,6 @@ function ProcessDetail({ lastSeen }: { lastSeen: ProcessRow }) {
   const t = useT("processes");
   const common = useT("common");
   const select = useProcessView((s) => s.select);
-  // macOS has no per-process commit charge: the backend fills "private bytes" with the resident
-  // size, the same value as the working set row, so the row would only repeat it.
-  const showPrivate = !useIsMac();
   // Re-renders once per snapshot; the panel also polls at the same cadence.
   const current = useProcesses((s) => findRow(s.snapshot, lastSeen.key));
   const row = current ?? lastSeen;
@@ -101,9 +97,7 @@ function ProcessDetail({ lastSeen }: { lastSeen: ProcessRow }) {
           <DefinitionList
             items={[
               { label: t("workingSet"), value: <MetricValue metric={row.workingSetBytes} format={bytes} /> },
-              ...(showPrivate
-                ? [{ label: t("privateMemory"), value: <MetricValue metric={row.privateBytes} format={bytes} /> }]
-                : []),
+              { label: t("privateMemory"), value: <MetricValue metric={row.privateBytes} format={bytes} /> },
             ]}
           />
         </Section>

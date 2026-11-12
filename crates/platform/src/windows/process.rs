@@ -160,7 +160,7 @@ fn parse(buf: &[u64], valid: usize) -> Vec<RawProcess> {
             create_time_100ns: create.max(0),
             cpu_time_100ns: nonneg(user).saturating_add(nonneg(kernel)),
             working_set_bytes: e.WorkingSetSize as u64,
-            private_bytes: e.PrivatePageCount as u64,
+            private_bytes: Some(e.PrivatePageCount as u64),
             io_read_bytes: nonneg(e.Reserved7[3]),
             io_write_bytes: nonneg(e.Reserved7[4]),
         });

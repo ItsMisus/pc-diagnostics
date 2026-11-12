@@ -4,9 +4,13 @@
 //! Field mapping onto the Windows-shaped [`RawProcess`]:
 //! - `cpu_time_100ns`: user + system CPU time (sysinfo reports ms), converted to 100 ns.
 //! - `working_set_bytes`: resident size.
-//! - `private_bytes`: also the resident size. macOS has no commit charge per process, and
-//!   the UI only shows it in the process detail; the resident size is the closest value
-//!   macOS gives without extra privileges.
+//! - `private_bytes`: the physical footprint (`proc_pid_rusage` `ri_phys_footprint`), the
+//!   value Activity Monitor shows in its "Memory" column: memory charged to the process
+//!   (private dirty, compressed and swapped pages, IOKit/GPU allocations it owns), not
+//!   shared library pages. macOS has no per-process commit charge, so this is the closest
+//!   meaning to Windows' private bytes. It is readable without privileges only for the
+//!   user's own processes (about 2.5 µs per call on an M5); for other users' processes
+//!   the call fails with EPERM and the value is reported as unavailable.
 //! - `io_*_bytes`: cumulative disk bytes (`rusage` `ri_diskio_*`). macOS does not count
 //!   network or device I/O per process, unlike the Windows transfer counters.
 //! - `session_id`: there are no Windows sessions. Processes of system accounts (uid
@@ -83,7 +87,7 @@ impl Enumerator {
                     create_time_100ns: start_time_100ns(p.start_time()),
                     cpu_time_100ns: p.accumulated_cpu_time().saturating_mul(10_000),
                     working_set_bytes: p.memory(),
-                    private_bytes: p.memory(),
+                    private_bytes: phys_footprint(pid.as_u32()),
                     io_read_bytes: disk.total_read_bytes,
                     io_write_bytes: disk.total_written_bytes,
                 }
@@ -95,6 +99,24 @@ impl Enumerator {
             processes,
         })
     }
+}
+
+/// Physical footprint of `pid` (`ri_phys_footprint`). `None` when the OS refuses
+/// (EPERM for other users' processes) or the process is gone (ESRCH).
+pub fn phys_footprint(pid: u32) -> Option<u64> {
+    let pid = libc::c_int::try_from(pid).ok()?;
+    // SAFETY: `rusage_info_v4` is plain integers, so all-zero is a valid value.
+    let mut info: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
+    // SAFETY: `info` is a writable `rusage_info_v4`, exactly the buffer the
+    // `RUSAGE_INFO_V4` flavor fills; the pointer is only used for this call.
+    let r = unsafe {
+        libc::proc_pid_rusage(
+            pid,
+            libc::RUSAGE_INFO_V4,
+            (&raw mut info).cast::<libc::rusage_info_t>(),
+        )
+    };
+    (r == 0).then_some(info.ri_phys_footprint)
 }
 
 fn start_time_100ns(start_secs: u64) -> i64 {
@@ -181,6 +203,16 @@ pub fn memory_status() -> Result<MemoryStatus, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn host_phys_footprint_own_process_only() {
+        let me = phys_footprint(std::process::id()).expect("own process footprint");
+        // A running test binary owns at least a few hundred KiB and far less than RAM.
+        assert!(me > 256 * 1024 && me < 64 * 1024 * 1024 * 1024, "{me}");
+        // launchd (pid 1) belongs to root: refused without privileges.
+        assert_eq!(phys_footprint(1), None);
+        assert_eq!(phys_footprint(u32::MAX), None);
+    }
 
     #[test]
     fn app_bundle_detection() {

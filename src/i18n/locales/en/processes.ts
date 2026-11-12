@@ -63,6 +63,8 @@ export default {
   workingSet: "Working set",
   "workingSet@macos": "Resident memory",
   privateMemory: "Private memory",
+  // Physical footprint: the "Memory" column of Activity Monitor.
+  "privateMemory@macos": "Memory footprint",
   exePathSection: "Executable path",
   localInfoAria: "Local information",
   exePathUnavailable: "Not available for this process",

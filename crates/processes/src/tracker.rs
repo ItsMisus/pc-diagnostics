@@ -82,7 +82,8 @@ struct Latest {
     at: u64,
     cpu: Result<f64, RateGap>,
     ws: f64,
-    private: f64,
+    /// `None`: the OS refused to report it (see `RawProcess::private_bytes`).
+    private: Option<f64>,
     read: Result<f64, RateGap>,
     write: Result<f64, RateGap>,
     pressure: Pressure,
@@ -363,7 +364,7 @@ impl Tracker {
                     at: now,
                     cpu,
                     ws,
-                    private: f64_of(raw.private_bytes),
+                    private: raw.private_bytes.map(f64_of),
                     read,
                     write,
                     pressure: p,
@@ -424,7 +425,9 @@ impl Tracker {
             exe_path: t.exe_path(),
             cpu_percent: metric(&l.cpu, Unit::Percent, l.at),
             working_set_bytes: bytes(l.ws),
-            private_bytes: bytes(l.private),
+            private_bytes: l
+                .private
+                .map_or(Metric::unavailable(Unavailability::PermissionDenied), bytes),
             io_read_bytes_per_sec: metric(&l.read, Unit::BytesPerSecond, l.at),
             io_write_bytes_per_sec: metric(&l.write, Unit::BytesPerSecond, l.at),
             pressure,
@@ -581,7 +584,7 @@ mod tests {
             create_time_100ns: unix_ms_to_filetime(created_ms),
             cpu_time_100ns: cpu_100ns,
             working_set_bytes: ws,
-            private_bytes: ws / 2,
+            private_bytes: Some(ws / 2),
             io_read_bytes: 0,
             io_write_bytes: 0,
         }
@@ -650,6 +653,44 @@ mod tests {
         assert_eq!(s.total_processes, 1);
         assert_eq!(s.methodology_version, IMPACT_METHODOLOGY_VERSION);
         assert_eq!(s.context.logical_processors, 8);
+    }
+
+    #[test]
+    fn unreadable_private_memory_is_unavailable_not_zero() {
+        let c = Clock {
+            base: Instant::now(),
+        };
+        let mut t = Tracker::new(cfg());
+        let refused = |cpu| RawProcess {
+            private_bytes: None,
+            ..raw(10, T0 - 1, cpu, GIB)
+        };
+        feed(
+            &mut t,
+            &c.scan(0, vec![refused(0), raw(11, T0 - 1, 0, GIB)]),
+        );
+        feed(
+            &mut t,
+            &c.scan(2, vec![refused(SEC), raw(11, T0 - 1, 0, GIB)]),
+        );
+        let s = t.snapshot(10).expect("snapshot");
+        let row = |pid| {
+            s.ranking_instant
+                .iter()
+                .find(|r| r.pid == pid)
+                .expect("row")
+        };
+        assert_eq!(
+            row(10).private_bytes,
+            Metric::unavailable(Unavailability::PermissionDenied)
+        );
+        assert_eq!(
+            row(11).private_bytes.value().copied(),
+            Some(GIB as f64 / 2.0)
+        );
+        // The working set is still read and still drives RAM pressure.
+        assert!(row(10).working_set_bytes.is_available());
+        assert!(row(10).pressure.ram > 0.0);
     }
 
     #[test]

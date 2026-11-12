@@ -1105,7 +1105,7 @@ mod tests {
             create_time_100ns: created,
             cpu_time_100ns: 0,
             working_set_bytes: 0,
-            private_bytes: 0,
+            private_bytes: Some(0),
             io_read_bytes: 0,
             io_write_bytes: 0,
         }

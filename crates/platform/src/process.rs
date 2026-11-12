@@ -31,8 +31,11 @@ pub struct RawProcess {
     /// Kernel + user CPU time, 100 ns units, summed across all threads.
     pub cpu_time_100ns: u64,
     pub working_set_bytes: u64,
-    /// Private committed bytes (Task Manager "Commit size").
-    pub private_bytes: u64,
+    /// Memory that belongs to this process alone. Windows: private committed bytes (Task
+    /// Manager "Commit size"). macOS: the physical footprint (`ri_phys_footprint`, the
+    /// "Memory" column of Activity Monitor). `None` when the OS refuses to report it
+    /// (macOS: processes of other users, e.g. root daemons, without privileges).
+    pub private_bytes: Option<u64>,
     /// Cumulative logical read / write transfer counts (files, network, devices).
     pub io_read_bytes: u64,
     pub io_write_bytes: u64,
@@ -215,7 +218,7 @@ mod tests {
             .expect("own pid present")
             .clone();
         assert!(mine.working_set_bytes > 0);
-        assert!(mine.private_bytes > 0);
+        assert!(mine.private_bytes.is_some_and(|b| b > 0));
         assert!(mine.create_time_100ns > FILETIME_UNIX_EPOCH);
         #[cfg(windows)]
         {

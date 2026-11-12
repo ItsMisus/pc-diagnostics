@@ -27,7 +27,13 @@ exePath: string | null,
 /**
  * Share of the whole machine, 0–100 (normalized by logical processor count).
  */
-cpuPercent: Metric<number>, workingSetBytes: Metric<number>, privateBytes: Metric<number>, 
+cpuPercent: Metric<number>, workingSetBytes: Metric<number>, 
+/**
+ * Memory that belongs to this process alone: private committed bytes on Windows, the
+ * physical footprint on macOS (Activity Monitor "Memory"). `PermissionDenied` when
+ * the OS refuses it (macOS: other users' processes).
+ */
+privateBytes: Metric<number>, 
 /**
  * Logical I/O issued by the process (files, network, devices). Not physical disk bytes.
  */

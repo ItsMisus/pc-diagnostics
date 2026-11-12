@@ -78,6 +78,9 @@ pub struct ProcessRow {
     /// Share of the whole machine, 0–100 (normalized by logical processor count).
     pub cpu_percent: Metric<f64>,
     pub working_set_bytes: Metric<f64>,
+    /// Memory that belongs to this process alone: private committed bytes on Windows, the
+    /// physical footprint on macOS (Activity Monitor "Memory"). `PermissionDenied` when
+    /// the OS refuses it (macOS: other users' processes).
     pub private_bytes: Metric<f64>,
     /// Logical I/O issued by the process (files, network, devices). Not physical disk bytes.
     pub io_read_bytes_per_sec: Metric<f64>,
