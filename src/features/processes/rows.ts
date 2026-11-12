@@ -94,12 +94,35 @@ export function sortRows(rows: readonly ProcessRow[], sort: SortState): ProcessR
     .map((x) => x.row);
 }
 
-/** Case-insensitive substring match on the process name. Empty query: same array. */
-export function filterRows(rows: readonly ProcessRow[], query: string): readonly ProcessRow[] {
+/**
+ * Category filter of the toolbar. `system` groups the OS's own processes and services;
+ * `unknown` processes appear only under `all` (the backend could not classify them).
+ */
+export type CategoryFilter = "all" | "application" | "background" | "system";
+
+export const CATEGORY_FILTERS: readonly CategoryFilter[] = ["all", "application", "background", "system"];
+
+/** True when a process of `category` is shown under `filter`. */
+export function matchesCategory(category: ProcessCategory, filter: CategoryFilter): boolean {
+  switch (filter) {
+    case "all":
+      return true;
+    case "system":
+      return category === "system" || category === "service";
+    default:
+      return category === filter;
+  }
+}
+
+/**
+ * Case-insensitive substring match on the process name, plus the category filter.
+ * Empty query and `all`: same array.
+ */
+export function filterRows(rows: readonly ProcessRow[], query: string, category: CategoryFilter = "all"): readonly ProcessRow[] {
   const tag = localeTag();
   const q = query.trim().toLocaleLowerCase(tag);
-  if (!q) return rows;
-  return rows.filter((r) => r.name.toLocaleLowerCase(tag).includes(q));
+  if (!q && category === "all") return rows;
+  return rows.filter((r) => matchesCategory(r.category, category) && (!q || r.name.toLocaleLowerCase(tag).includes(q)));
 }
 
 function sameMetric(a: Metric<number>, b: Metric<number>): boolean {

@@ -19,6 +19,18 @@ export default {
   summaryProtected_one: "{count} protetto",
   summaryProtected_other: "{count} protetti",
   summaryShown: "primi {shown} per Impact Score",
+  summaryVisible: "{visible} visualizzati",
+  panelTitle: "In esecuzione",
+  filterLabel: "Categoria",
+  filter_all: "Tutti",
+  filter_application: "App",
+  filter_background: "In background",
+  filter_system: "Sistema",
+  filterSystemNote: "«Sistema» comprende i processi del sistema operativo e i servizi.",
+  noMatchCategory: "Nessun processo di questa categoria è in classifica.",
+  noMatchCategoryQuery: "Nessun processo di questa categoria corrisponde a «{query}».",
+  noMatchHint: "La classifica contiene solo i processi con l'Impact Score più alto.",
+  clearFilters: "Mostra tutti",
 
   // ProcessTable
   protectedNote:
@@ -35,7 +47,6 @@ export default {
   noMatch: "Nessun processo corrisponde a «{query}».",
   tableCaption: "Processi ordinati per {column}",
   rowShowDetails: "{name}, PID {pid}: mostra dettagli",
-  rowHideDetails: "{name}, PID {pid}: chiudi dettagli",
   protectedShort: "protetto",
   impactOf: "Impact Score di {name}",
   outOf100: "{value} su 100",
@@ -48,8 +59,14 @@ export default {
   category_unknown: "Non classificato",
 
   // ProcessDetail
-  detailTitle: "Dettaglio",
-  detailEmpty: "Seleziona un processo nella tabella per vederne l'andamento recente.",
+  impactScale: "su 100",
+  peakValue: "picco {value}",
+  nowSection: "Valori attuali",
+  ioReadNow: "Lettura I/O",
+  "ioReadNow@macos": "Lettura da disco",
+  ioWriteNow: "Scrittura I/O",
+  "ioWriteNow@macos": "Scrittura su disco",
+  historySection: "Andamento recente",
   protectedDetail:
     "Processo protetto: percorso dell'eseguibile non leggibile senza privilegi elevati (metriche reali dal kernel)",
   "protectedDetail@macos":

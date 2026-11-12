@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { setLang } from "@/i18n";
 import {
+  CATEGORY_FILTERS,
   categoryLabel,
   DEFAULT_SORT,
   filterRows,
+  matchesCategory,
   ioTotal,
   nextSort,
   sameRowDisplay,
@@ -80,6 +82,31 @@ describe("filterRows", () => {
 
   it("returns the same array for an empty query", () => {
     expect(filterRows(rows, "   ")).toBe(rows);
+  });
+
+  it("filters by category, combined with the query", () => {
+    const mixed = [
+      row("chrome", { category: "application" }),
+      row("kernel_task", { category: "system" }),
+      row("launchd", { category: "service" }),
+      row("backupd", { category: "background" }),
+      row("mystery", { category: "unknown" }),
+    ];
+    expect(filterRows(mixed, "", "all")).toBe(mixed);
+    expect(names(filterRows(mixed, "", "application"))).toEqual(["chrome"]);
+    expect(names(filterRows(mixed, "", "system"))).toEqual(["kernel_task", "launchd"]);
+    expect(names(filterRows(mixed, "", "background"))).toEqual(["backupd"]);
+    expect(names(filterRows(mixed, "LAUNCH", "system"))).toEqual(["launchd"]);
+    expect(filterRows(mixed, "chrome", "system")).toEqual([]);
+  });
+});
+
+describe("matchesCategory", () => {
+  it("shows unclassified processes only under all", () => {
+    expect(matchesCategory("unknown", "all")).toBe(true);
+    for (const f of CATEGORY_FILTERS.filter((f) => f !== "all")) expect(matchesCategory("unknown", f)).toBe(false);
+    expect(matchesCategory("service", "system")).toBe(true);
+    expect(matchesCategory("service", "application")).toBe(false);
   });
 });
 
