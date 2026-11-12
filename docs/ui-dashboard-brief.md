@@ -1,5 +1,11 @@
 # Dashboard redesign brief (2026-11-05)
 
+> Since 2026-11-12 the visual language (materials, colors, radii, shadows, panel styles,
+> screen structure) is defined by `docs/design-system.md`. The content rules below (R1–R7:
+> one home per value, no subtitles or "live" badges, sources only in Advanced, one view-mode
+> control, counts and explanations once, no echoing labels) still apply; the visual parts of
+> this brief (flat 6 px panels, no shadows, violet accent) are superseded.
+
 Two goals, from the user:
 
 1. **Monitoring-dashboard look.** The reference is a hardware-monitoring app the user runs
