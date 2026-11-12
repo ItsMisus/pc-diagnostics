@@ -54,7 +54,7 @@ fn mac() -> Mac {
     system.hostname = Some("MBP-SECRET1.local".into());
     let mut inventory = inventory();
     inventory.gpus[0].name = "Apple M5".into();
-    inventory.gpus[0].vendor = GpuVendor::Other;
+    inventory.gpus[0].vendor = GpuVendor::Apple;
     inventory.gpus[0].dedicated_vram_bytes = 0;
     inventory.gpus[0].driver_version = not_supported();
     inventory.volumes = vec![

@@ -28,6 +28,8 @@ pub enum GpuVendor {
     Amd,
     Intel,
     Microsoft,
+    /// Apple (PCI vendor id 0x106B): Apple silicon GPUs and the GPUs Apple names on Intel Macs.
+    Apple,
     Other,
 }
 
@@ -39,6 +41,7 @@ impl GpuVendor {
             0x1002 | 0x1022 => Self::Amd,
             0x8086 => Self::Intel,
             0x1414 => Self::Microsoft,
+            0x106B => Self::Apple,
             _ => Self::Other,
         }
     }
@@ -181,6 +184,7 @@ mod tests {
         assert_eq!(GpuVendor::from_pci_id(0x1002), GpuVendor::Amd);
         assert_eq!(GpuVendor::from_pci_id(0x8086), GpuVendor::Intel);
         assert_eq!(GpuVendor::from_pci_id(0x1414), GpuVendor::Microsoft);
+        assert_eq!(GpuVendor::from_pci_id(0x106B), GpuVendor::Apple);
         assert_eq!(GpuVendor::from_pci_id(0x1234), GpuVendor::Other);
     }
 }

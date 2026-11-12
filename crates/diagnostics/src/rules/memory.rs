@@ -21,6 +21,17 @@ pub const MEM_AVAILABLE_CRITICAL_PERCENT: f64 = 5.0;
 pub const MEM_COMMIT_HIGH_PERCENT: f64 = 90.0;
 /// `\Memory\Pages/sec` at or above this value is "high" paging (≈ 4 MiB/s with 4 KiB pages).
 pub const MEM_PAGES_HIGH_PER_SEC: f64 = 1000.0;
+/// macOS pageins/s at or above this value is "high" paging. Apple Silicon uses 16 KiB VM
+/// pages, so 250 pages/s is the same ≈ 4 MiB/s read back from disk as the Windows threshold.
+pub const MEM_PAGES_HIGH_PER_SEC_MACOS: f64 = 250.0;
+
+/// High-paging threshold in pages/s for `platform` (same byte rate on every OS).
+pub fn pages_high_per_sec(platform: models::app::Platform) -> f64 {
+    match platform {
+        models::app::Platform::Macos => MEM_PAGES_HIGH_PER_SEC_MACOS,
+        _ => MEM_PAGES_HIGH_PER_SEC,
+    }
+}
 /// Processes listed as evidence.
 pub const MEM_TOP_PROCESSES: usize = 3;
 
@@ -84,11 +95,8 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
     let low = Sustained::compute(live, avail_pct, |v| v < MEM_AVAILABLE_LOW_PERCENT);
     let critical = Sustained::compute(live, avail_pct, |v| v < MEM_AVAILABLE_CRITICAL_PERCENT);
     let commit = Sustained::compute(live, commit_pct, |v| v >= MEM_COMMIT_HIGH_PERCENT);
-    let pages = Sustained::compute(
-        live,
-        |s| val(&s.memory.pages_per_sec),
-        |v| v >= MEM_PAGES_HIGH_PER_SEC,
-    );
+    let pages_high = pages_high_per_sec(ctx.platform);
+    let pages = Sustained::compute(live, |s| val(&s.memory.pages_per_sec), |v| v >= pages_high);
 
     if !low.usable() {
         cov.not_evaluated(if live.is_empty() {
@@ -437,7 +445,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                 )
             },
         );
-        let high = fmt::num(lang, MEM_PAGES_HIGH_PER_SEC, 0);
+        let high = fmt::num(lang, pages_high, 0);
         f.evidence = vec![
             ev(
                 lang.pick("Pagine/s medie", "Average pages/s"),
@@ -493,6 +501,24 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
 
     out.coverage.push(cov.finish());
     out
+}
+
+#[cfg(test)]
+mod threshold_tests {
+    use super::*;
+    use models::app::Platform;
+
+    #[test]
+    fn paging_threshold_is_the_same_byte_rate_on_every_os() {
+        // Windows counts 4 KiB pages, Apple Silicon 16 KiB pages: both ≈ 4 MiB/s.
+        let win = pages_high_per_sec(Platform::Windows) * 4096.0;
+        let mac = pages_high_per_sec(Platform::Macos) * 16384.0;
+        assert_eq!(win, mac);
+        assert_eq!(
+            pages_high_per_sec(Platform::Windows),
+            MEM_PAGES_HIGH_PER_SEC
+        );
+    }
 }
 
 #[cfg(test)]

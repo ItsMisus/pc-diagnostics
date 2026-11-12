@@ -117,7 +117,9 @@ Principles:
 
 - Sidebar: icons stay at a fixed x in both states; width animates; labels fade; selection pill
   springs between rows; collapsed items get tooltips with their shortcut.
-- Shortcuts: `Ctrl+B` toggles the sidebar; `Ctrl+1…8` jumps to a section (ignored while typing
-  or while a dialog is open).
+- Shortcuts: `Ctrl+B` (Windows) / `⌘B` (macOS) toggles the sidebar; `Ctrl+1…8` on Windows and
+  `⌘1…7` on macOS (no Drivers section there) jump to the sections in sidebar order (ignored
+  while typing or while a dialog is open). Ctrl is not used on macOS (Ctrl+number switches
+  desktops).
 - Pages cross-fade (`PageTransition`, `mode="wait"`); scroll resets after the old page leaves.
 - The main area reserves its scrollbar gutter so content never shifts when a page starts scrolling.

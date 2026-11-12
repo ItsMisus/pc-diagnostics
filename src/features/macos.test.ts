@@ -83,7 +83,7 @@ describe("Apple silicon GPU", () => {
   });
 
   it("vendor label: Apple id named, a missing id not shown as a number", () => {
-    expect(gpuVendorLabel("other", 0x106b)).toBe("Apple");
+    expect(gpuVendorLabel("apple", 0x106b)).toBe("Apple");
     expect(gpuVendorLabel("other", 0)).toBe("Non riportato");
     expect(gpuVendorLabel("other", 0x1234)).toBe("Altro (0x1234)");
   });

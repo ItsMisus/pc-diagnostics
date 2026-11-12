@@ -1,14 +1,11 @@
 //! Small, safe wrappers over the I/O Kit registry calls the benchmark providers need
-//! (`bench_env`, `gpu_bench`). Read-only: nothing here opens a device or changes a property.
+//! (`bench_env`). Read-only: nothing here opens a device or changes a property.
 
-use objc2_core_foundation::{
-    CFBoolean, CFData, CFDictionary, CFNumber, CFRetained, CFString, CFType,
-};
+use objc2_core_foundation::{CFBoolean, CFDictionary, CFNumber, CFRetained, CFString, CFType};
 use objc2_io_kit::{
-    IOBSDNameMatching, IOIteratorNext, IOObjectConformsTo, IOObjectRelease,
-    IORegistryEntryCreateCFProperty, IORegistryEntryGetParentIterator,
-    IORegistryEntryGetRegistryEntryID, IOServiceGetMatchingService, IOServiceGetMatchingServices,
-    IOServiceMatching, io_iterator_t, io_object_t, kIOReturnSuccess, kIOServicePlane,
+    IOBSDNameMatching, IOIteratorNext, IOObjectRelease, IORegistryEntryCreateCFProperty,
+    IORegistryEntryGetParentIterator, IOServiceGetMatchingService, io_iterator_t, io_object_t,
+    kIOReturnSuccess, kIOServicePlane,
 };
 
 /// `kIOMainPortDefault` is defined as `MACH_PORT_NULL`; passing 0 avoids reading the
@@ -27,33 +24,11 @@ impl IoObject {
         self.0
     }
 
-    /// The registry entry id (global, stable for the life of the entry).
-    pub(crate) fn registry_id(&self) -> Option<u64> {
-        let mut id = 0u64;
-        // SAFETY: `self.0` is a live registry entry; `id` is a valid out pointer.
-        let rc = unsafe { IORegistryEntryGetRegistryEntryID(self.0, &mut id) };
-        (rc == kIOReturnSuccess && id != 0).then_some(id)
-    }
-
-    /// True if the object is an instance of `class` or a subclass.
-    pub(crate) fn conforms_to(&self, class: &std::ffi::CStr) -> bool {
-        // SAFETY: `self.0` is live; `class` is NUL-terminated and outlives the call (I/O Kit
-        // only reads it as a C string despite the `io_name_t` pointer type).
-        unsafe { IOObjectConformsTo(self.0, class.as_ptr().cast_mut().cast()) }
-    }
-
     /// The raw property `key` of this entry (not searched in parents).
     pub(crate) fn property(&self, key: &str) -> Option<CFRetained<CFType>> {
         let key = CFString::from_str(key);
         // SAFETY: `self.0` is live; `key` is a valid CFString for the call; default allocator.
         unsafe { IORegistryEntryCreateCFProperty(self.0, Some(&key), None, 0) }
-    }
-
-    pub(crate) fn string(&self, key: &str) -> Option<String> {
-        let v = self.property(key)?;
-        let s = v.downcast::<CFString>().ok()?.to_string();
-        let s = s.trim();
-        (!s.is_empty()).then(|| s.to_owned())
     }
 
     pub(crate) fn number(&self, key: &str) -> Option<i64> {
@@ -62,22 +37,6 @@ impl IoObject {
 
     pub(crate) fn boolean(&self, key: &str) -> Option<bool> {
         Some(self.property(key)?.downcast::<CFBoolean>().ok()?.as_bool())
-    }
-
-    /// First 4 bytes of a data property as a little-endian u32 (e.g. `vendor-id`).
-    pub(crate) fn data_u32(&self, key: &str) -> Option<u32> {
-        let v = self.property(key)?.downcast::<CFData>().ok()?.to_vec();
-        let b: [u8; 4] = v.get(..4)?.try_into().ok()?;
-        Some(u32::from_le_bytes(b))
-    }
-
-    /// A NUL-terminated string stored as data (e.g. the `model` of an `IOPCIDevice`).
-    pub(crate) fn data_string(&self, key: &str) -> Option<String> {
-        let v = self.property(key)?.downcast::<CFData>().ok()?.to_vec();
-        let end = v.iter().position(|b| *b == 0).unwrap_or(v.len());
-        let s = String::from_utf8_lossy(&v[..end]);
-        let s = s.trim();
-        (!s.is_empty()).then(|| s.to_owned())
     }
 
     /// A string value of the dictionary property `dict_key`.
@@ -140,27 +99,6 @@ pub(crate) fn media_for_bsd_name(bsd: &str) -> Option<IoObject> {
         IOServiceGetMatchingService(MAIN_PORT, Some(CFRetained::<CFDictionary>::from(&matching)))
     };
     IoObject::new(service)
-}
-
-/// Every registered service of `class` (e.g. `IOAccelerator`).
-pub(crate) fn services_of_class(class: &std::ffi::CStr) -> Vec<IoObject> {
-    // SAFETY: `class` is NUL-terminated; the returned dictionary is owned.
-    let Some(matching) = (unsafe { IOServiceMatching(class.as_ptr()) }) else {
-        return Vec::new();
-    };
-    let mut it: io_iterator_t = 0;
-    // SAFETY: the dictionary is consumed by the call; `it` is a valid out pointer.
-    let rc = unsafe {
-        IOServiceGetMatchingServices(
-            MAIN_PORT,
-            Some(CFRetained::<CFDictionary>::from(&matching)),
-            &mut it,
-        )
-    };
-    if rc != kIOReturnSuccess {
-        return Vec::new();
-    }
-    IoObject::new(it).map(|it| drain(&it)).unwrap_or_default()
 }
 
 /// Walks up the service plane from `start` (included) until `f` returns `Some`. Stops with

@@ -37,9 +37,11 @@ use objc2_metal::{MTLCopyAllDevices, MTLDevice};
 
 use super::iokit::{self, IoObject};
 
-/// `GpuInfo::id` / `GpuSample::id` for an accelerator registry entry.
+/// `GpuInfo::id` / `GpuSample::id` for an accelerator registry entry. The same scheme as
+/// the GPU benchmark ([`crate::gpu_bench::registry_gpu_id`]), so inventory, live samples and
+/// benchmark adapters line up.
 pub fn gpu_id(entry_id: u64) -> String {
-    format!("ioreg:{entry_id:016X}")
+    crate::gpu_bench::registry_gpu_id(entry_id)
 }
 
 /// Little-endian `u32` at the start of a registry `OSData` (PCI ids are stored so).

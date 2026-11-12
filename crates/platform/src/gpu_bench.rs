@@ -47,7 +47,8 @@ pub fn registry_gpu_id(entry_id: u64) -> String {
 }
 
 /// Every DXGI adapter with its software/virtual flags (see `GpuInfo`). macOS: every
-/// `IOAccelerator` (no software or virtual adapters are listed there).
+/// `IOAccelerator`, exactly as the hardware inventory lists it (`macos::gpu::inventory`; no
+/// software or virtual adapters are listed there).
 pub fn gpu_adapters() -> Result<Vec<GpuInfo>, AppError> {
     #[cfg(windows)]
     {
@@ -55,7 +56,7 @@ pub fn gpu_adapters() -> Result<Vec<GpuInfo>, AppError> {
     }
     #[cfg(target_os = "macos")]
     {
-        Ok(crate::macos::gpu_bench::accelerators())
+        crate::macos::gpu::inventory()
     }
     #[cfg(not(any(windows, target_os = "macos")))]
     {

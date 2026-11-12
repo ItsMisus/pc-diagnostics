@@ -5,7 +5,6 @@
 pub mod bench_env;
 mod bench_iokit;
 pub mod credentials;
-pub mod gpu_bench;
 pub mod locale;
 pub mod process;
 pub mod remediation;
