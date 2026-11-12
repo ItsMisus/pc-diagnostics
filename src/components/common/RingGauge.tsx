@@ -29,7 +29,8 @@ const SWEEP = 0.75;
 /**
  * Open circular meter for the headline live values of the dashboard (load, temperature,
  * memory). Monochrome (`--meter` on `--gauge-track`); `tone` colours the arc when the value
- * is at a warning level. The number is in a light weight with a smaller unit. Like `UsageBar`, deliberately not animated: samples arrive every second
+ * is at a warning level. Round caps, the number in the display face with a smaller unit.
+ * Like `UsageBar`, deliberately not animated: samples arrive every second
  * and a transition would keep the compositor busy (docs/design-system.md, "Live data never
  * animates"). The value is always written out, so the arc is never the only signal.
  */
@@ -42,7 +43,7 @@ export function RingGauge({
   valueText,
   tone,
   size = 140,
-  stroke = 9,
+  stroke = 8,
   className = "",
 }: RingGaugeProps) {
   const r = (size - stroke) / 2;
@@ -59,7 +60,7 @@ export function RingGauge({
     r,
     fill: "none",
     strokeWidth: stroke,
-    strokeLinecap: "butt" as const,
+    strokeLinecap: "round" as const,
   };
   return (
     <div
@@ -77,9 +78,9 @@ export function RingGauge({
         {available && p > 0 && <circle {...common} stroke={METER_FILL[tone ?? "normal"]} strokeDasharray={`${(arc * p) / 100} ${c}`} />}
       </svg>
       <div aria-hidden="true" className="absolute inset-0 grid place-content-center text-center">
-        <span className={`tabular font-display font-light tracking-[-0.02em] ${big ? "text-[34px] leading-10" : "text-[22px] leading-7"} ${available ? "text-fg" : "text-fg-subtle"}`}>
+        <span className={`tabular font-display font-normal ${big ? "text-4xl" : "text-xl"} ${available ? "text-fg" : "text-fg-subtle"}`}>
           {value}
-          {available && unit && <span className={`ml-0.5 font-normal text-fg-muted ${big ? "text-base" : "text-xs"}`}>{unit}</span>}
+          {available && unit && <span className={`ml-0.5 font-normal tracking-normal text-fg-muted ${big ? "text-md" : "text-xs"}`}>{unit}</span>}
         </span>
       </div>
       {caption && (

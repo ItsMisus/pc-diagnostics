@@ -2,14 +2,15 @@ import type { ReactNode } from "react";
 import { clamp } from "@/components/charts/scale";
 
 /**
- * Local surface classes for the benchmark and history screens. `PANEL` is the `<Card>`
- * surface (flat, hairline, 6 px radius), for sections that need their own heading markup or
- * ARIA attributes; `INSET` is a quieter box nested inside a panel (metric tiles, charts,
- * comparison). `PANEL_TITLE` matches `<Card>`'s bold title.
+ * Local surface classes for the benchmark and history screens, mapped onto the design
+ * system's materials (docs/design-system.md). `PANEL` is the secondary `Panel` surface, for
+ * sections that need their own heading markup or ARIA attributes; `INSET` is a quieter box
+ * nested inside a panel (metric tiles, charts, comparison). `PANEL_TITLE` matches the panel
+ * title.
  */
-export const PANEL = "rounded-md border border-line bg-surface";
+export const PANEL = "surface-secondary";
 export const INSET = "rounded-md border border-line";
-export const PANEL_TITLE = "font-display text-lg leading-6 font-semibold text-fg";
+export const PANEL_TITLE = "font-display text-md font-semibold text-fg";
 
 /**
  * Determinate run progress, monochrome like every other meter. Not animated: progress
@@ -26,7 +27,7 @@ export function RunProgress({ fraction, label, className = "" }: { fraction: num
       aria-valuemax={100}
       aria-valuenow={pct}
       aria-valuetext={`${pct}%`}
-      className={`h-1.5 w-full overflow-hidden rounded-[2px] bg-gauge-track ${className}`}
+      className={`h-1.5 w-full overflow-hidden rounded-full bg-gauge-track ${className}`}
     >
       <div className="h-full origin-left bg-meter" style={{ transform: `scaleX(${f})` }} />
     </div>

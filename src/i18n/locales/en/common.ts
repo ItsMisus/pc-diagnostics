@@ -10,6 +10,8 @@ export default {
   stateConsent: "Consent required",
   stateNotImplemented: "Not implemented yet",
   stateError: "Error",
+  stateUnavailable: "Not available",
+  stateDisconnected: "Connection lost",
   whatYouCanDo: "What you can do:",
   technicalDetails: "Technical details",
   errorCode: "code: {code}",

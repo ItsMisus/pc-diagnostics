@@ -1,9 +1,10 @@
 import { m } from "motion/react";
-import { Fragment, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useId, useRef, type ReactNode } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
 import { Disclosure } from "@/components/common/Disclosure";
 import { Icon, type IconName } from "@/components/common/Icon";
+import { MODAL_BODY_CLASS, MODAL_FOOTER_CLASS, Modal } from "@/components/common/Modal";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useIsSimple } from "@/hooks/useViewMode";
@@ -31,21 +32,17 @@ import {
   stepRiskTone,
 } from "./model";
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
-
 /**
- * The single "Risolvi" dialog (mounted once in App). Native modal `<dialog>`: the rest of
- * the page is inert; Tab is additionally wrapped inside; Esc closes only when nothing
- * would be lost (no request in flight, no step running).
+ * The single "Risolvi" dialog (mounted once in App), on the shared `Modal` (native modal
+ * `<dialog>`: the rest of the window is inert, Tab wraps inside, focus returns to the
+ * trigger). Esc closes only when nothing would be lost (no request in flight, no step
+ * running); the close button is disabled only while a step runs.
  */
 export function FixDialog() {
   const phase = useFixFlow((s) => s.phase);
   const target = useFixFlow((s) => s.target);
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
   const open = phase.kind !== "closed";
-  // Keep the last open phase on screen while the close animation plays (CSS, ~220 ms).
+  // Keep the last open phase on screen while the close animation plays.
   const lastOpen = useRef<{ phase: FixPhase; target: typeof target }>({ phase, target });
   if (open) lastOpen.current = { phase, target };
   const shown = open ? { phase, target } : lastOpen.current;
@@ -53,78 +50,29 @@ export function FixDialog() {
   const stepRunning = phase.kind === "plan" && busy;
   const t = useT("assistant");
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
   const close = () => fixFlowStore.getState().close();
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDialogElement>) => {
-    if (e.key !== "Tab" || !ref.current) return;
-    const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (!first || !last) return;
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      onKeyDown={onKeyDown}
-      onCancel={(e) => {
-        // Esc: the browser would close the dialog by itself; the store decides.
-        e.preventDefault();
-        if (!isFlowBusy(fixFlowStore.getState().phase)) close();
-      }}
-      onClose={() => {
-        const current = fixFlowStore.getState().phase;
-        if (current.kind === "closed") return;
-        // The browser may force-close on a repeated Esc: keep the dialog while something is in flight.
-        if (isFlowBusy(current)) ref.current?.showModal();
-        else close();
-      }}
-      inert={!open}
-      className="m-auto max-h-[85vh] w-[min(44rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-fg shadow-lg"
+    <Modal
+      open={open}
+      onClose={close}
+      dismissible={!busy}
+      closeDisabled={stepRunning}
+      closeHint={t("waitForStep")}
+      title={t("dialogTitle")}
+      description={shown.target?.title}
+      icon="sparkle"
+      size="lg"
+      bare
     >
       {shown.phase.kind !== "closed" && (
-        <div className="flex max-h-[85vh] flex-col">
-          <header className="flex items-start gap-2.5 border-b border-line px-5 py-3.5">
-            <Icon name="sparkle" className="mt-0.5 shrink-0 text-fg-muted" />
-            <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="text-[15px] leading-5 font-semibold">
-                {t("dialogTitle")}
-              </h2>
-              {shown.target && <p className="mt-0.5 truncate text-xs text-fg-muted">{shown.target.title}</p>}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={t("close")}
-              title={stepRunning ? t("waitForStep") : t("close")}
-              onClick={close}
-              disabled={stepRunning}
-              className="-mr-2 w-7 px-0"
-            >
-              <Icon name="close" />
-            </Button>
-          </header>
+        <>
           {/* Each phase renders its own scrolling body and, when it has actions, a footer. */}
           <PhaseBody phase={shown.phase} onClose={close} />
           {shown.phase.kind === "plan" && <PlanFooter plan={shown.phase.plan} />}
-        </div>
+        </>
       )}
-    </dialog>
+    </Modal>
   );
 }
 
@@ -176,7 +124,7 @@ function renderPhase(phase: FixPhase, onClose: () => void, t: Translator<"assist
 /** Scrolling content area of a phase. */
 function Body({ children }: { children: ReactNode }) {
   return (
-    <m.div {...phaseFade} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+    <m.div {...phaseFade} className={MODAL_BODY_CLASS}>
       {children}
     </m.div>
   );
@@ -187,7 +135,7 @@ function Actions({ children }: { children: ReactNode }) {
   return (
     <m.div
       {...phaseFade}
-      className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-surface-2/40 px-5 py-3"
+      className={MODAL_FOOTER_CLASS}
     >
       {children}
     </m.div>
@@ -627,7 +575,7 @@ function PlanFooter({ plan }: { plan: FixPlan }) {
   // Same rule as the header's close button: not while a step is running.
   const stepRunning = useFixFlow((s) => s.phase.kind === "plan" && isFlowBusy(s.phase));
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-line bg-surface-2/40 px-5 py-3">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-line px-6 py-4">
       <div className="min-w-0 flex-1 text-xs">
         <p className="font-medium text-fg">{t("aiDisclaimer")}</p>
         <p className="mt-0.5 text-2xs text-fg-muted tabular">
