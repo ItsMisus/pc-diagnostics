@@ -101,6 +101,11 @@ describe("deviceIdentity", () => {
     expect(deviceIdentity(inventory({ gpuName: "NVIDIA RTX 4070" }), sys()).gpu).toBe("NVIDIA RTX 4070");
   });
 
+  it("prefers the long OS version, which is the marketing name (not Darwin)", () => {
+    const id = deviceIdentity(inventory(), sys({ osName: "Darwin", osVersion: "27.2.1", osLongVersion: "macOS 27.2.1" }));
+    expect(id.os).toBe("macOS 27.2.1");
+  });
+
   it("falls back to the OS name, and omits what is not reported", () => {
     const id = deviceIdentity(inventory({ productName: null, brand: "  Intel(R)   Core(TM) i7 " }), sys({ osName: "Windows 11 Pro", osVersion: null }));
     expect(id.name).toBe("Windows 11 Pro");

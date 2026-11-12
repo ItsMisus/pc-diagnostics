@@ -88,7 +88,9 @@ const clean = (s: string | null | undefined): string | null => {
 export function deviceIdentity(inv: HardwareInventory | null, sys: SystemInfo | null): DeviceIdentity {
   const product = clean(inv?.formFactor.productName);
   const osName = clean(sys?.osName);
-  const osFull = osName ? clean(`${osName} ${sys?.osVersion ?? ""}`) : null;
+  // The long version is the marketing name ("macOS 26.1", "Windows 11 Pro 24H2"); osName alone
+  // is the kernel family on macOS ("Darwin").
+  const osFull = clean(sys?.osLongVersion) ?? (osName ? clean(`${osName} ${sys?.osVersion ?? ""}`) : null);
   const cpu = clean(inv?.cpu.brand);
   const gpuInfo = inv ? primaryGpu(inv.gpus) : null;
   const gpu = clean(gpuInfo?.name);

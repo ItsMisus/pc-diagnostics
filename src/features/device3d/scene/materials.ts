@@ -72,9 +72,13 @@ export function createMaterials(theme: StageTheme): Materials {
       emissiveMap: wallpaper,
       emissiveIntensity: theme === "dark" ? 0.85 : 1,
       metalness: 0,
-      roughness: 0.06,
-      clearcoat: 1,
-      clearcoatRoughness: 0.03,
+      // An anti-reflective display, not a mirror: a mirror-like coat turned the key light card
+      // into a hard white hotspot over the wallpaper. A dimmer, softer coat keeps a gentle sheen.
+      roughness: 0.3,
+      specularIntensity: 0.08,
+      clearcoat: 0.08,
+      clearcoatRoughness: 0.3,
+      envMapIntensity: theme === "dark" ? 0.06 : 0.2,
     }),
     keycap: new MeshStandardMaterial({ color: 0x17181b, metalness: 0.05, roughness: 0.58 }),
     deck: new MeshStandardMaterial({ color: 0x0e0f11, metalness: 0.2, roughness: 0.7 }),
@@ -104,6 +108,7 @@ export function createMaterials(theme: StageTheme): Materials {
       wallpaper = wallpaperTexture(next);
       m.screen.emissiveMap = wallpaper;
       m.screen.emissiveIntensity = next === "dark" ? 0.85 : 1;
+      m.screen.envMapIntensity = next === "dark" ? 0.06 : 0.2;
       m.screen.needsUpdate = true;
       old.dispose();
     },
