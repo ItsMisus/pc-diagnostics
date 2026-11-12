@@ -16,7 +16,9 @@
 //! evidence in the detail: the UI then asks the user instead of guessing.
 //!
 //! Mac Studio maps to `Mini`: it is a compact desktop, and the 3D models are tower /
-//! laptop / mini. Rack-mounted Mac Pro maps to `Other` (it is not a tower).
+//! laptop / mini; so does the 2013 cylinder Mac Pro ("MacPro6,1"). Rack-mounted Mac Pro
+//! maps to `Other` (it is not a tower). "MacPro7,1" is shared by the 2019 tower and rack
+//! models, so without a product name it is `Inconclusive`.
 
 use models::device::{FormFactor, FormFactorBasis, FormFactorInfo};
 use models::metric::{Metric, Source, Unavailability, Unit};
@@ -43,10 +45,27 @@ pub fn from_mac_product_name(name: &str) -> Option<FormFactor> {
     }
 }
 
+/// Model identifiers shared by machines of different form factors: the identifier alone
+/// cannot decide, the product name must. Returns why.
+pub fn mac_model_identifier_ambiguity(id: &str) -> Option<&'static str> {
+    match id.trim() {
+        "MacPro7,1" => Some("MacPro7,1 is used by both the tower and the rack-mount Mac Pro"),
+        _ => None,
+    }
+}
+
 /// Form factor from a macOS model identifier. Only the family-named identifiers of Intel
-/// (and older) Macs are recognized; Apple silicon's generic "MacNN,N" and virtual machines
-/// ("VirtualMac2,1") return `None`.
+/// (and older) Macs are recognized; Apple silicon's generic "MacNN,N", virtual machines
+/// ("VirtualMac2,1") and identifiers shared across form factors (see
+/// `mac_model_identifier_ambiguity`) return `None`. The 2013 cylinder Mac Pro
+/// ("MacPro6,1") is a compact desktop and maps to `Mini`, like Mac Studio.
 pub fn from_mac_model_identifier(id: &str) -> Option<FormFactor> {
+    if mac_model_identifier_ambiguity(id).is_some() {
+        return None;
+    }
+    if id.trim() == "MacPro6,1" {
+        return Some(FormFactor::Mini);
+    }
     let family: String = id
         .trim()
         .chars()
@@ -179,6 +198,22 @@ pub fn mac_primary(
         (None, Some(b)) => Ok((b, FormFactorBasis::ModelIdentifier)),
         (None, None) if product_name.is_none() && model_identifier.is_none() => {
             Err(Unavailability::NotSupported)
+        }
+        (None, None)
+            if model_identifier
+                .and_then(mac_model_identifier_ambiguity)
+                .is_some() =>
+        {
+            Err(Unavailability::Inconclusive(format!(
+                "{}{}",
+                model_identifier
+                    .and_then(mac_model_identifier_ambiguity)
+                    .unwrap_or_default(),
+                product_name.map_or_else(
+                    || " and no product name is available".to_owned(),
+                    |n| format!(" and product name {n:?} is not recognized"),
+                )
+            )))
         }
         (None, None) => Err(Unavailability::Inconclusive(format!(
             "product name {:?} and model identifier {:?} not recognized",
@@ -316,7 +351,10 @@ mod tests {
             ("Macmini8,1", Some(Mini)),
             ("iMac20,1", Some(AllInOne)),
             ("iMacPro1,1", Some(AllInOne)),
-            ("MacPro7,1", Some(Desktop)),
+            ("MacPro5,1", Some(Desktop)),
+            ("MacPro6,1", Some(Mini)),
+            // Tower and rack-mount Mac Pro (2019) share it.
+            ("MacPro7,1", None),
             ("Mac17,3", None),
             ("Mac14,13", None),
             ("VirtualMac2,1", None),
@@ -404,8 +442,25 @@ mod tests {
             Err(Unavailability::Inconclusive(_))
         ));
         assert_eq!(
-            mac_primary(None, Some("MacPro7,1")),
+            mac_primary(None, Some("MacPro5,1")),
             Ok((FormFactor::Desktop, FormFactorBasis::ModelIdentifier))
+        );
+        // Shared by the tower and the rack-mount Mac Pro: the identifier alone never
+        // decides, the product name does.
+        match mac_primary(None, Some("MacPro7,1")) {
+            Err(Unavailability::Inconclusive(d)) => {
+                assert!(d.contains("rack-mount"), "{d}");
+                assert!(d.contains("no product name"), "{d}");
+            }
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(
+            mac_primary(Some("Mac Pro (Rack, 2019)"), Some("MacPro7,1")),
+            Ok((FormFactor::Other, FormFactorBasis::ProductName))
+        );
+        assert_eq!(
+            mac_primary(Some("Mac Pro (2019)"), Some("MacPro7,1")),
+            Ok((FormFactor::Desktop, FormFactorBasis::ProductName))
         );
         assert!(matches!(
             mac_primary(None, Some("Mac17,3")),

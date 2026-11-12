@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { FormFactor } from "@/types/generated/FormFactor";
 import type { FormFactorInfo } from "@/types/generated/FormFactorInfo";
 import type { Metric } from "@/types/generated/Metric";
-import { DEVICE_SHAPES, isDeviceShape, resolveDeviceShape, shapeForFormFactor } from "./formFactor";
+import type { AppError } from "@/types/generated/AppError";
+import type { DeviceShape } from "@/types/generated/DeviceShape";
+import { DEVICE_SHAPES, isDeviceShape, resolveDeviceShape as resolve, shapeForFormFactor } from "./formFactor";
+
+const resolveDeviceShape = (override: DeviceShape | null | "loading", detected: FormFactorInfo | null | undefined, inventoryError: AppError | null = null) =>
+  resolve({ override, detected, inventoryError });
 
 const ok = <T>(value: T): Metric<T> => ({ status: "available", value, unit: "none", source: "ioKit", at: 1 });
 
@@ -46,12 +51,30 @@ describe("resolveDeviceShape", () => {
       basis: "productName",
     });
     const pc = detected(ok<FormFactor>("desktop"), { basis: "chassisType", chassisTypes: [3] });
-    expect(resolveDeviceShape(undefined, pc)).toMatchObject({ origin: "detected", shape: "tower", basis: "chassisType" });
+    expect(resolveDeviceShape(null, pc)).toMatchObject({ origin: "detected", shape: "tower", basis: "chassisType" });
   });
 
   it("is pending while the inventory is not loaded", () => {
     expect(resolveDeviceShape(null, null)).toEqual({ origin: "pending", shape: null });
-    expect(resolveDeviceShape(undefined, undefined)).toEqual({ origin: "pending", shape: null });
+    expect(resolveDeviceShape(null, undefined)).toEqual({ origin: "pending", shape: null });
+  });
+
+  it("is pending while the settings are loading, so a saved choice is not swapped in later", () => {
+    expect(resolveDeviceShape("loading", macBookAir)).toEqual({ origin: "pending", shape: null });
+    const inconclusive = detected({ status: "unavailable", reason: { kind: "notSupported" } });
+    expect(resolveDeviceShape("loading", inconclusive).origin).toBe("pending");
+  });
+
+  it("asks the user when the inventory failed to load", () => {
+    const error: AppError = { code: "internal", message: "boom", detail: null, retriable: true };
+    expect(resolveDeviceShape(null, null, error)).toEqual({
+      origin: "unknown",
+      shape: null,
+      why: { kind: "unavailable", reason: { kind: "failed", detail: error } },
+    });
+    // A saved choice still wins; loading settings still waits.
+    expect(resolveDeviceShape("laptop", null, error)).toEqual({ origin: "override", shape: "laptop" });
+    expect(resolveDeviceShape("loading", null, error).origin).toBe("pending");
   });
 
   it("asks the user when detection is inconclusive or failed", () => {
