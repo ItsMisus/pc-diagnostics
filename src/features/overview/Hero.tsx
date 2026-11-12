@@ -144,9 +144,9 @@ const CHIP_SLOT: Record<ChipId, DeviceIndicator["slot"]> = {
 function StageWithChips({ kind, paused }: { kind: DeviceShape; paused: boolean }) {
   const { data } = useInventoryData();
   const gpuId = useMemo(() => (data ? (primaryGpu(data.gpus)?.id ?? null) : null), [data]);
-  // A failed connection keeps its last sample: no chips then, so no stale value looks live.
+  // A failed or stalled connection keeps its last sample: no chips then, so no stale value looks live.
   const key = useLive((s) =>
-    s.status === "unsupported" || s.status === "permission" || s.status === "error" ? "" : heroChips(s.latest, gpuId).join(","),
+    s.stalled || s.status === "unsupported" || s.status === "permission" || s.status === "error" ? "" : heroChips(s.latest, gpuId).join(","),
   );
   const indicators = useMemo<DeviceIndicator[]>(
     () =>

@@ -50,6 +50,8 @@ export default {
   liveUnsupported: "Monitoring not supported",
   livePermission: "Monitoring not allowed",
   liveUnavailable: "Monitoring unavailable",
+  liveStalled: "Live data interrupted",
+  liveStalledDesc: "No new readings for a few seconds: the values shown may be out of date.",
   waitingFirstSample: "Waiting for the first sample…",
   detectingHardware: "Detecting hardware…",
   inventoryUnsupported: "Inventory not supported",

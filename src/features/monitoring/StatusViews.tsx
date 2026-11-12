@@ -14,9 +14,13 @@ export function LiveConnectionState({ compact = false }: { compact?: boolean }) 
   const status = useLive((s) => s.status);
   const error = useLive((s) => s.error);
   const retry = useLive((s) => s.retry);
+  const stalled = useLive((s) => s.stalled);
   const t = useT("monitoring");
 
-  if (status === "live") return null;
+  if (status === "live") {
+    if (!stalled) return null;
+    return <StateView compact={compact} kind="disconnected" title={t("liveStalled")} description={t("liveStalledDesc")} onRetry={retry} />;
+  }
   if (status === "idle" || status === "connecting") {
     return <StateView compact={compact} kind="loading" title={t("liveConnecting")} />;
   }

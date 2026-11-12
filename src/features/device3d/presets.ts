@@ -42,7 +42,8 @@ export const PRESETS: Record<DeviceKind, DevicePreset> = {
     yawLimit: deg(50),
     elevationRange: [deg(-6), deg(12)],
     fov: 26,
-    padding: 0.1,
+    // Tall model: 0.1 let its base reach the bottom indicator chips.
+    padding: 0.15,
     aimHeight: 0.5,
     shadow: { width: 2.1, depth: 4.3, z: 0 },
     floatAmplitude: 0.035,

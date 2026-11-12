@@ -48,6 +48,8 @@ export default {
   liveUnsupported: "Monitoraggio non supportato",
   livePermission: "Monitoraggio non consentito",
   liveUnavailable: "Monitoraggio non disponibile",
+  liveStalled: "Dati in tempo reale interrotti",
+  liveStalledDesc: "Da qualche secondo non arrivano nuove misure: i valori mostrati potrebbero non essere aggiornati.",
   waitingFirstSample: "In attesa del primo campione…",
   detectingHardware: "Rilevamento dell'hardware…",
   inventoryUnsupported: "Inventario non supportato",
