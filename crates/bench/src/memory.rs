@@ -513,21 +513,69 @@ pub(crate) fn run_latency(ctx: &RunCtx) -> Result<Outcome, RunError> {
         Unit::Nanoseconds,
         false,
     ));
-    out.warnings.push(
-        lang.pick(
-            "Latenza indicativa: accessi dipendenti casuali su 256 MiB con pagine da 4 KiB \
-             (include gli effetti della TLB). Non verifica l'assenza di errori della RAM.",
-            "Indicative latency: random dependent accesses over 256 MiB with 4 KiB pages \
-             (includes TLB effects). It doesn't check the RAM for errors.",
-        )
-        .into(),
-    );
+    out.warnings.push(latency_warning(lang));
     Ok(out)
+}
+
+/// The note on what the latency figure includes. Windows: 4 KiB pages (the buffer is an
+/// ordinary allocation). macOS: the VM page size the OS reports (16 KiB on Apple Silicon).
+#[cfg(not(target_os = "macos"))]
+fn latency_warning(lang: Language) -> String {
+    lang.pick(
+        "Latenza indicativa: accessi dipendenti casuali su 256 MiB con pagine da 4 KiB \
+         (include gli effetti della TLB). Non verifica l'assenza di errori della RAM.",
+        "Indicative latency: random dependent accesses over 256 MiB with 4 KiB pages \
+         (includes TLB effects). It doesn't check the RAM for errors.",
+    )
+    .into()
+}
+
+#[cfg(target_os = "macos")]
+fn latency_warning(lang: Language) -> String {
+    // SAFETY: sysconf only reads a system constant.
+    let page = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    let pages = match page {
+        p if p >= 1024 => lang.pick(
+            format!(" con pagine da {} KiB", p / 1024),
+            format!(" with {} KiB pages", p / 1024),
+        ),
+        _ => String::new(),
+    };
+    lang.pick(
+        format!(
+            "Latenza indicativa: accessi dipendenti casuali su 256 MiB{pages} (include gli \
+             effetti della TLB). Non verifica l'assenza di errori della RAM."
+        ),
+        format!(
+            "Indicative latency: random dependent accesses over 256 MiB{pages} (includes TLB \
+             effects). It doesn't check the RAM for errors."
+        ),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn latency_warning_names_the_page_size() {
+        let en = latency_warning(Language::English);
+        let it = latency_warning(Language::Italian);
+        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+            // Apple Silicon: 16 KiB VM pages.
+            assert!(
+                en.contains("over 256 MiB with 16 KiB pages (includes TLB"),
+                "{en}"
+            );
+            assert!(
+                it.contains("su 256 MiB con pagine da 16 KiB (include"),
+                "{it}"
+            );
+        } else if cfg!(not(target_os = "macos")) {
+            assert!(en.contains("with 4 KiB pages"), "{en}");
+            assert!(it.contains("con pagine da 4 KiB"), "{it}");
+        }
+    }
     use crate::runtime::Hooks;
     use std::sync::Arc;
     use std::sync::atomic::AtomicUsize;

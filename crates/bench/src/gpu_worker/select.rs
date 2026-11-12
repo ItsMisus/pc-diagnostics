@@ -1,19 +1,31 @@
-//! Adapter selection (pure). The parent names the GPU to test by its DXGI identity
-//! (`GpuInfo`: LUID + PCI ids); the worker picks the matching wgpu adapter.
+//! Adapter selection (pure). The parent names the GPU to test by its inventory identity
+//! (`GpuInfo`: id + PCI ids); the worker picks the matching wgpu adapter. The id is the
+//! DXGI LUID on Windows and the I/O Kit registry id on macOS (`MTLDevice.registryID`);
+//! both are called "LUID" below.
 //!
 //! Rules, in order:
 //! 1. Never a software adapter (wgpu `Cpu` type, WARP / Microsoft Basic Render Driver,
 //!    PCI vendor 0x1414), a `VirtualGpu`, or any adapter whose LUID the parent flagged as
 //!    software/virtual (e.g. a Parsec virtual display that copies the real GPU's ids).
-//! 2. A DX12 adapter whose LUID equals the requested one ([`MatchKind::Luid`]).
+//! 2. A DX12 or Metal adapter whose LUID equals the requested one ([`MatchKind::Luid`]).
 //! 3. Otherwise exactly one eligible adapter per backend (DX12 first, then Vulkan) with
 //!    the requested PCI vendor and device id and no conflicting LUID
 //!    ([`MatchKind::PciIds`]). Two identical GPUs on a backend without LUIDs are
-//!    ambiguous: no guess is made.
+//!    ambiguous: no guess is made. Metal reports no PCI ids, so on macOS only rule 2
+//!    applies: the registry id is exact and stable until reboot.
 
 use models::settings::Language;
 
 use super::protocol::{AdapterReport, MatchKind};
+
+/// The GPU APIs the worker uses, as named in user-facing texts.
+#[cfg(not(target_os = "macos"))]
+pub(crate) const COMPUTE_API: &str = "DX12/Vulkan";
+#[cfg(target_os = "macos")]
+pub(crate) const COMPUTE_API: &str = "Metal";
+
+/// Backends whose adapters carry an exact id (`AdapterReport::luid`).
+const ID_BACKENDS: [&str; 2] = ["dx12", "metal"];
 
 /// The GPU to test, as the parent identified it (DXGI).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,7 +46,8 @@ pub(crate) enum NoMatch {
         vendor_id: u32,
         device_id: u32,
     },
-    /// No eligible physical DX12/Vulkan adapter has the requested identity.
+    /// No eligible physical adapter of the worker's backends ([`COMPUTE_API`]) has the
+    /// requested identity.
     NoAdapter {
         vendor_id: u32,
         device_id: u32,
@@ -72,11 +85,11 @@ impl NoMatch {
                     .unwrap_or_default();
                 lang.pick(
                     format!(
-                        "nessun adattatore DX12/Vulkan fisico corrisponde alla GPU richiesta \
+                        "nessun adattatore {COMPUTE_API} fisico corrisponde alla GPU richiesta \
                          (PCI {vendor_id:04X}:{device_id:04X}{luid})"
                     ),
                     format!(
-                        "no physical DX12/Vulkan adapter matches the requested GPU \
+                        "no physical {COMPUTE_API} adapter matches the requested GPU \
                          (PCI {vendor_id:04X}:{device_id:04X}{luid})"
                     ),
                 )
@@ -105,7 +118,7 @@ pub(crate) fn select(
     let eligible = |a: &AdapterReport| is_eligible(a, excluded_luids);
     if let Some(luid) = &target.luid
         && let Some(i) = adapters.iter().position(|a| {
-            a.backend == "dx12"
+            ID_BACKENDS.contains(&a.backend.as_str())
                 && eligible(a)
                 && a.luid
                     .as_ref()
@@ -292,13 +305,51 @@ mod tests {
             device_id: 0x1,
         };
         let e = select(&m, &other, &excl).expect_err("unknown");
+        let api = if cfg!(target_os = "macos") {
+            "Metal"
+        } else {
+            "DX12/Vulkan"
+        };
         assert_eq!(
             e.text(Language::English),
-            "no physical DX12/Vulkan adapter matches the requested GPU (PCI 8086:0001)"
+            format!("no physical {api} adapter matches the requested GPU (PCI 8086:0001)")
         );
         assert_eq!(
             e.text(Language::Italian),
-            "nessun adattatore DX12/Vulkan fisico corrisponde alla GPU richiesta (PCI 8086:0001)"
+            format!(
+                "nessun adattatore {api} fisico corrisponde alla GPU richiesta (PCI 8086:0001)"
+            )
         );
+    }
+
+    /// An Apple Silicon Mac as the worker sees it (Metal: no PCI ids) and as the inventory
+    /// lists it (vendor 0x106B, no device id, registry id).
+    #[test]
+    fn metal_adapter_is_selected_by_registry_id() {
+        let id = "ioreg:00000001000004A1";
+        let m = vec![a("Apple M5", "metal", "integrated", 0, 0, Some(id))];
+        let want = Target {
+            luid: Some(id.into()),
+            vendor_id: 0x106B,
+            device_id: 0,
+        };
+        assert_eq!(select(&m, &want, &[]), Ok((0, MatchKind::Luid)));
+        // Hex case is irrelevant, as for LUIDs.
+        let lower = Target {
+            luid: Some(id.to_lowercase()),
+            ..want.clone()
+        };
+        assert_eq!(select(&m, &lower, &[]), Ok((0, MatchKind::Luid)));
+        // Another registry id (e.g. a different GPU) never falls back to a guess.
+        let other = Target {
+            luid: Some("ioreg:00000001000004B2".into()),
+            ..want.clone()
+        };
+        assert!(matches!(
+            select(&m, &other, &[]),
+            Err(NoMatch::NoAdapter { .. })
+        ));
+        // Excluded by id.
+        assert!(select(&m, &want, &[id.to_owned()]).is_err());
     }
 }

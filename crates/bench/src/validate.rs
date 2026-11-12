@@ -218,14 +218,9 @@ pub(crate) fn resolve(req: &BenchmarkRequest, env: &Env, hooks: &Hooks) -> Resul
             .storage_volume
             .as_deref()
             .ok_or_else(|| invalid("storageVolume is required for storage benchmarks"))?;
-        let vol = platform::bench_env::normalize_drive_mount(raw).ok_or_else(|| {
-            invalid("storageVolume must be a drive root such as C:\\").with_detail(raw.to_owned())
-        })?;
-        if !env
-            .fixed_volumes
-            .iter()
-            .any(|v| v.eq_ignore_ascii_case(&vol))
-        {
+        let vol = platform::bench_env::normalize_drive_mount(raw)
+            .ok_or_else(|| invalid(VOLUME_SHAPE_HINT).with_detail(raw.to_owned()))?;
+        if !env.fixed_volumes.iter().any(|v| same_volume(v, &vol)) {
             return Err(invalid("storageVolume is not a present fixed volume")
                 .with_detail(format!("{vol} not in {:?}", env.fixed_volumes)));
         }
@@ -376,6 +371,40 @@ pub(crate) const ALL_KINDS: [BenchmarkKind; 8] = [
 /// Capability description and the list of what is measured.
 type Texts = (&'static str, &'static [&'static str]);
 
+/// GPU benchmark description; `$api` names the backends the worker uses on this OS.
+macro_rules! gpu_text_it {
+    ($api:literal) => {
+        concat!(
+            "Calcolo in virgola mobile FP32 (catene di FMA) con uno shader compute wgpu (",
+            $api,
+            ") sulla GPU selezionata (predefinita: la GPU principale), in un processo \
+             separato. Il risultato viene verificato con un riferimento calcolato dalla CPU. \
+             Il test si arresta alla soglia termica fornita dal driver; se la soglia o la \
+             temperatura non sono disponibili la durata massima è ridotta a 30 s."
+        )
+    };
+}
+macro_rules! gpu_text_en {
+    ($api:literal) => {
+        concat!(
+            "FP32 floating-point compute (FMA chains) with a wgpu compute shader (",
+            $api,
+            ") on the selected GPU (default: the primary GPU), in a separate process. The \
+             result is verified against a reference computed by the CPU. The test stops at \
+             the thermal threshold provided by the driver; if the threshold or the \
+             temperature is unavailable, the maximum duration is reduced to 30 s."
+        )
+    };
+}
+#[cfg(not(target_os = "macos"))]
+const GPU_TEXT_IT: &str = gpu_text_it!("DX12, in alternativa Vulkan");
+#[cfg(not(target_os = "macos"))]
+const GPU_TEXT_EN: &str = gpu_text_en!("DX12, or Vulkan as a fallback");
+#[cfg(target_os = "macos")]
+const GPU_TEXT_IT: &str = gpu_text_it!("Metal");
+#[cfg(target_os = "macos")]
+const GPU_TEXT_EN: &str = gpu_text_en!("Metal");
+
 fn texts(kind: BenchmarkKind, lang: Language) -> Texts {
     match kind {
         BenchmarkKind::CpuSingleCore => lang.pick::<Texts>(
@@ -516,12 +545,7 @@ fn texts(kind: BenchmarkKind, lang: Language) -> Texts {
         ),
         BenchmarkKind::GpuCompute => lang.pick::<Texts>(
             (
-                "Calcolo in virgola mobile FP32 (catene di FMA) con uno shader compute wgpu \
-                 (DX12, in alternativa Vulkan) sulla GPU selezionata (predefinita: la GPU \
-                 principale), in un processo separato. Il risultato viene verificato con un \
-                 riferimento calcolato dalla CPU. Il test si arresta alla soglia termica \
-                 fornita dal driver; se la soglia o la temperatura non sono disponibili la \
-                 durata massima è ridotta a 30 s.",
+                GPU_TEXT_IT,
                 &[
                     "Throughput FP32 (FLOP/s)",
                     "Variazione tra inizio e fine (%)",
@@ -530,12 +554,7 @@ fn texts(kind: BenchmarkKind, lang: Language) -> Texts {
                 ],
             ),
             (
-                "FP32 floating-point compute (FMA chains) with a wgpu compute shader (DX12, \
-                 or Vulkan as a fallback) on the selected GPU (default: the primary GPU), in a \
-                 separate process. The result is verified against a reference computed by the \
-                 CPU. The test stops at the thermal threshold provided by the driver; if the \
-                 threshold or the temperature is unavailable, the maximum duration is reduced \
-                 to 30 s.",
+                GPU_TEXT_EN,
                 &[
                     "FP32 throughput (FLOP/s)",
                     "Change between start and end (%)",
@@ -588,7 +607,7 @@ pub(crate) fn capability(
             }
             None => Metric::unavailable(Unavailability::NotSupported),
         }
-    } else if cfg!(windows) {
+    } else if cfg!(any(windows, target_os = "macos")) {
         Metric::available(true, Unit::None, Source::Benchmark)
     } else {
         Metric::unavailable(Unavailability::NotSupported)
@@ -625,18 +644,107 @@ fn gpu_target(t: &gpu::TargetEnv, lang: Language) -> BenchmarkGpuTarget {
     }
 }
 
+/// What `storageVolume` must look like (technical message, English only).
+#[cfg(not(target_os = "macos"))]
+const VOLUME_SHAPE_HINT: &str = "storageVolume must be a drive root such as C:\\";
+#[cfg(target_os = "macos")]
+const VOLUME_SHAPE_HINT: &str = "storageVolume must be a volume mount point such as /";
+
+/// Drive letters compare case-insensitively. macOS mount points compare exactly: the
+/// normalized path must be the listed mount point itself, so the plan never carries a
+/// different spelling of it.
+fn same_volume(listed: &str, requested: &str) -> bool {
+    if cfg!(target_os = "macos") {
+        listed == requested
+    } else {
+        listed.eq_ignore_ascii_case(requested)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::gpu_worker;
 
+    /// Fixed volumes of the fake environment, the request's spelling of the first one and
+    /// its normalized form.
+    #[cfg(not(target_os = "macos"))]
+    const VOLUMES: [&str; 2] = ["C:\\", "D:\\"];
+    #[cfg(not(target_os = "macos"))]
+    const REQUESTED_VOLUME: &str = "c:";
+    #[cfg(target_os = "macos")]
+    const VOLUMES: [&str; 2] = ["/", "/Volumes/Work"];
+    #[cfg(target_os = "macos")]
+    const REQUESTED_VOLUME: &str = "/";
+    /// Requests that are not a present fixed volume on this OS.
+    #[cfg(not(target_os = "macos"))]
+    const BAD_VOLUMES: &[&str] = &[
+        "Z:\\",
+        "C:\\Windows",
+        "\\\\server\\share",
+        "\\\\.\\PhysicalDrive0",
+    ];
+    #[cfg(target_os = "macos")]
+    const BAD_VOLUMES: &[&str] = &[
+        "/Volumes/Missing",
+        "/volumes/work",
+        "/System/Volumes/Data",
+        "/Volumes/Work/..",
+        "Volumes/Work",
+        "C:\\",
+        "/dev/disk3",
+    ];
+
     const IT: Language = Language::Italian;
     const EN: Language = Language::English;
+
+    /// The backend name the texts must use on this OS (independent of `COMPUTE_API`).
+    fn test_api() -> &'static str {
+        if cfg!(target_os = "macos") {
+            "Metal"
+        } else {
+            "DX12/Vulkan"
+        }
+    }
+
+    /// The GPU description is byte-for-byte the Windows text there and names Metal on
+    /// macOS.
+    #[test]
+    fn gpu_description_names_the_platform_api() {
+        let (it, _) = texts(BenchmarkKind::GpuCompute, IT);
+        let (en, _) = texts(BenchmarkKind::GpuCompute, EN);
+        if cfg!(target_os = "macos") {
+            assert!(
+                it.contains("wgpu (Metal) sulla GPU") && !it.contains("DX12"),
+                "{it}"
+            );
+            assert!(en.contains("wgpu compute shader (Metal) on the") && !en.contains("DX12"));
+        } else {
+            assert_eq!(
+                it,
+                "Calcolo in virgola mobile FP32 (catene di FMA) con uno shader compute wgpu \
+                 (DX12, in alternativa Vulkan) sulla GPU selezionata (predefinita: la GPU \
+                 principale), in un processo separato. Il risultato viene verificato con un \
+                 riferimento calcolato dalla CPU. Il test si arresta alla soglia termica \
+                 fornita dal driver; se la soglia o la temperatura non sono disponibili la \
+                 durata massima è ridotta a 30 s."
+            );
+            assert_eq!(
+                en,
+                "FP32 floating-point compute (FMA chains) with a wgpu compute shader (DX12, \
+                 or Vulkan as a fallback) on the selected GPU (default: the primary GPU), in a \
+                 separate process. The result is verified against a reference computed by the \
+                 CPU. The test stops at the thermal threshold provided by the driver; if the \
+                 threshold or the temperature is unavailable, the maximum duration is reduced \
+                 to 30 s."
+            );
+        }
+    }
 
     fn env() -> Env {
         Env {
             logical_processors: 8,
-            fixed_volumes: vec!["C:\\".into(), "D:\\".into()],
+            fixed_volumes: VOLUMES.iter().map(|v| (*v).to_owned()).collect(),
             gpu: None,
         }
     }
@@ -662,7 +770,7 @@ mod tests {
 
     fn storage_req(kind: BenchmarkKind) -> BenchmarkRequest {
         BenchmarkRequest {
-            storage_volume: Some("c:".into()),
+            storage_volume: Some(REQUESTED_VOLUME.into()),
             storage_write_consent: true,
             ..req(kind)
         }
@@ -687,7 +795,7 @@ mod tests {
         assert_eq!(p.request.duration_s, None);
         assert_eq!(p.threads, 8);
         let p = resolve(&storage_req(BenchmarkKind::StorageSequential), &env(), &h).expect("ok");
-        assert_eq!(p.request.storage_volume.as_deref(), Some("C:\\"));
+        assert_eq!(p.request.storage_volume.as_deref(), Some(VOLUMES[0]));
         assert_eq!(p.request.storage_file_mib, Some(1024));
     }
 
@@ -781,14 +889,9 @@ mod tests {
                 code(resolve(&no_volume, &env(), &h)),
                 ErrorCode::InvalidInput
             );
-            for bad in [
-                "Z:\\",
-                "C:\\Windows",
-                "\\\\server\\share",
-                "\\\\.\\PhysicalDrive0",
-            ] {
+            for bad in BAD_VOLUMES {
                 let r = BenchmarkRequest {
-                    storage_volume: Some(bad.into()),
+                    storage_volume: Some((*bad).into()),
                     ..storage_req(kind)
                 };
                 assert_eq!(
@@ -817,7 +920,7 @@ mod tests {
         assert!(resolve(&r, &env(), &h).is_ok());
         // Non-storage kinds reject storage fields.
         let r = BenchmarkRequest {
-            storage_volume: Some("C:\\".into()),
+            storage_volume: Some(VOLUMES[0].into()),
             ..req(BenchmarkKind::CpuMultiCore)
         };
         assert_eq!(
@@ -931,7 +1034,7 @@ mod tests {
         assert!(
             e.detail
                 .as_deref()
-                .is_some_and(|d| d.contains("no physical DX12/Vulkan adapter")),
+                .is_some_and(|d| d.contains(&format!("no physical {} adapter", test_api()))),
             "{:?}",
             e.detail
         );
@@ -989,25 +1092,26 @@ mod tests {
             assert_eq!(c.kind, kind);
             assert!(!c.description.is_empty());
             if kind == BenchmarkKind::GpuCompute {
+                let api = test_api();
                 assert_eq!(
                     c.availability,
-                    Metric::unavailable(Unavailability::ProviderMissing(
-                        "adattatore wgpu DX12/Vulkan per X".into()
-                    ))
+                    Metric::unavailable(Unavailability::ProviderMissing(format!(
+                        "adattatore wgpu {api} per X"
+                    )))
                 );
                 assert!(c.description.contains("nessun adattatore"));
                 let en = capability(kind, 24, Some(&unavailable), EN);
                 assert_eq!(
                     en.availability,
-                    Metric::unavailable(Unavailability::ProviderMissing(
-                        "wgpu DX12/Vulkan adapter for X".into()
-                    ))
+                    Metric::unavailable(Unavailability::ProviderMissing(format!(
+                        "wgpu {api} adapter for X"
+                    )))
                 );
-                assert!(en.description.ends_with(
-                    "the maximum duration is reduced to 30 s. GPU X: no physical DX12/Vulkan \
+                assert!(en.description.ends_with(&format!(
+                    "the maximum duration is reduced to 30 s. GPU X: no physical {api} \
                      adapter matches the requested GPU (PCI 10DE:2783)."
-                ));
-            } else if cfg!(windows) {
+                )));
+            } else if cfg!(any(windows, target_os = "macos")) {
                 assert_eq!(c.availability.value(), Some(&true));
             }
             assert_eq!(c.max_bytes_written.is_some(), is_storage(kind));

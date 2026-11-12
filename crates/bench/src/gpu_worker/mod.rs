@@ -14,14 +14,20 @@
 //! ```text
 //! --probe                         list adapters and exit
 //! --duration-ms N --warmup-ms N   timed window and warm-up
-//! --adapter-luid luid:H-L         requested GPU (DXGI LUID, optional)
+//! --adapter-luid ID               requested GPU (`GpuInfo::id`, optional): DXGI LUID
+//!                                 `luid:H-L` on Windows, `ioreg:<16 hex>` on macOS
 //! --vendor-id N --device-id N     requested GPU PCI ids
-//! --exclude-luid luid:H-L         software/virtual adapters (repeatable)
+//! --exclude-luid ID               adapters never to select (repeatable, same format)
 //! --simulate MODE                 test-only fake workloads (no GPU), see `Simulate`
 //! ```
 //!
 //! Exit codes: 0 = done or cancelled, 1 = error reported on stdout, 2 = bad arguments.
 //! Anything else (or an exit without a final message) is an abnormal termination.
+//!
+//! Lifetime: the worker stops on a `cancel` line or EOF on stdin. On Windows the parent
+//! also puts it in a kill-on-close job object. macOS has no equivalent, so the worker
+//! watches its parent itself ([`watch_parent`]): when the parent process is gone it stops,
+//! and if the workload does not end within [`ORPHAN_GRACE`] it exits the process.
 
 mod gpu;
 pub(crate) mod kernel;
@@ -186,18 +192,23 @@ fn num<T: std::str::FromStr>(s: &str) -> Result<T, String> {
     s.parse().map_err(|_| format!("invalid number {s}"))
 }
 
+/// An adapter id in `GpuInfo::id` format: `luid:<8 hex>-<8 hex>` (DXGI) or
+/// `ioreg:<16 hex>` (macOS I/O Kit registry id).
 fn luid(s: &str) -> Result<String, String> {
-    let ok = s.strip_prefix("luid:").is_some_and(|r| {
+    let is_luid = s.strip_prefix("luid:").is_some_and(|r| {
         r.len() == 17
             && r.as_bytes()[8] == b'-'
             && r.bytes()
                 .enumerate()
                 .all(|(i, c)| i == 8 || c.is_ascii_hexdigit())
     });
-    if ok {
+    let is_registry_id = s
+        .strip_prefix("ioreg:")
+        .is_some_and(|r| r.len() == 16 && r.bytes().all(|c| c.is_ascii_hexdigit()));
+    if is_luid || is_registry_id {
         Ok(s.to_owned())
     } else {
-        Err(format!("invalid LUID {s}"))
+        Err(format!("invalid adapter id {s}"))
     }
 }
 
@@ -249,6 +260,41 @@ fn watch_stdin(cancel: Arc<AtomicBool>) {
     }
 }
 
+/// After the parent is gone, the workload gets this long to stop on the cancel flag before
+/// the worker exits the process itself (a batch is ~40 ms; a GPU wait is bounded by the
+/// 10 s poll timeout, which is why this is not shorter than a few batches but much shorter
+/// than that timeout).
+#[cfg(unix)]
+pub(crate) const ORPHAN_GRACE: Duration = Duration::from_secs(2);
+#[cfg(unix)]
+const PARENT_POLL: Duration = Duration::from_millis(100);
+
+/// Parent-death watchdog (Unix; Windows uses the parent's kill-on-close job instead). A
+/// process whose parent exits is re-parented (to launchd on macOS), so a parent id that
+/// differs from the one seen at start means the app is gone, whatever happened to the
+/// stdin pipe. Raises `cancel`, then exits the process after [`ORPHAN_GRACE`] if the
+/// workload has not returned by then (e.g. stuck in a driver call, or a test mode that
+/// ignores cancellation). Detached; it ends with the process.
+#[cfg(unix)]
+fn watch_parent(cancel: Arc<AtomicBool>) {
+    let parent = std::os::unix::process::parent_id();
+    let spawned = std::thread::Builder::new()
+        .name("gpu-worker-parent".into())
+        .spawn(move || {
+            // Parent id 1 at start: already orphaned (the app never runs as launchd).
+            while parent != 1 && std::os::unix::process::parent_id() == parent {
+                std::thread::sleep(PARENT_POLL);
+            }
+            tracing::warn!(parent, "parent process gone: stopping the GPU worker");
+            cancel.store(true, Ordering::Release);
+            std::thread::sleep(ORPHAN_GRACE);
+            std::process::exit(EXIT_ERROR);
+        });
+    if spawned.is_err() {
+        tracing::warn!("could not spawn the parent watchdog");
+    }
+}
+
 /// Worker entry point. `args` excludes the program name and [`WORKER_FLAG`].
 pub fn worker_main(args: Vec<String>) -> i32 {
     let cancel = Arc::new(AtomicBool::new(false));
@@ -266,6 +312,8 @@ pub fn worker_main(args: Vec<String>) -> i32 {
         }
     };
     watch_stdin(Arc::clone(&cancel));
+    #[cfg(unix)]
+    watch_parent(Arc::clone(&cancel));
     if let Some(mode) = parsed.simulate {
         return simulate(mode, &parsed, &cancel, &out);
     }
@@ -424,6 +472,126 @@ pub(crate) mod tests {
         assert!(WorkerArgs::parse(&s(&["--duration-ms", "10", "--adapter-luid", "x"])).is_err());
         assert!(WorkerArgs::parse(&s(&["--duration-ms", "10", "--bogus"])).is_err());
         assert!(WorkerArgs::parse(&s(&["--duration-ms", "10", "--simulate", "nope"])).is_err());
+        // macOS adapter ids: `ioreg:` + 16 hex digits.
+        let ok = s(&[
+            "--duration-ms",
+            "10",
+            "--adapter-luid",
+            "ioreg:00000001000004A1",
+        ]);
+        assert_eq!(
+            WorkerArgs::parse(&ok).map(|a| a.target.luid),
+            Ok(Some("ioreg:00000001000004A1".to_owned()))
+        );
+        for bad in [
+            "ioreg:1234",
+            "ioreg:00000001000004AZ",
+            "ioreg:00000001000004A1F",
+        ] {
+            assert!(
+                WorkerArgs::parse(&s(&["--duration-ms", "10", "--exclude-luid", bad])).is_err(),
+                "{bad}"
+            );
+        }
+    }
+
+    /// Set in the intermediate "app" process of [`orphaned_worker_exits_by_itself`].
+    #[cfg(target_os = "macos")]
+    const ORPHAN_PARENT_ENV: &str = "PCDIAG_GPU_WORKER_TEST_ORPHAN_PARENT";
+
+    #[cfg(target_os = "macos")]
+    fn test_worker(args: &[String]) -> std::process::Command {
+        let mut c = std::process::Command::new(std::env::current_exe().expect("test exe"));
+        c.args([
+            "--exact",
+            "gpu_worker::tests::worker_process_entry",
+            "--nocapture",
+            "--test-threads=1",
+            "--quiet",
+        ])
+        .env(TEST_ARGV_ENV, args.join(&TEST_ARGV_SEP.to_string()))
+        .env_remove(ORPHAN_PARENT_ENV);
+        c
+    }
+
+    /// Intermediate process: starts a worker that ignores cancellation (`hang`) with piped
+    /// stdio, prints its pid once it said hello, and exits without stopping it (an app
+    /// crash). A no-op unless [`ORPHAN_PARENT_ENV`] is set.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn orphan_parent_entry() {
+        if std::env::var_os(ORPHAN_PARENT_ENV).is_none() {
+            return;
+        }
+        let args = WorkerArgs {
+            simulate: Some(Simulate::Hang),
+            duration_ms: 60_000,
+            ..WorkerArgs::probe()
+        };
+        let args = WorkerArgs {
+            probe: false,
+            ..args
+        };
+        let mut child = test_worker(&args.to_args())
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .expect("spawn worker");
+        let out = child.stdout.take().expect("stdout");
+        let mut lines = std::io::BufReader::new(out).lines();
+        let pid = loop {
+            let line = lines.next().expect("hello").expect("read");
+            if let Ok(Some(Msg::Hello { pid })) = protocol::decode(&line) {
+                break pid;
+            }
+        };
+        println!("worker-pid={pid}");
+        let _ = std::io::stdout().flush();
+        // Exit at once; the worker's stdin stays open in no other process, but it ignores
+        // EOF and cancel in this mode, so only the parent watchdog can end it.
+        std::process::exit(0);
+    }
+
+    /// The worker outlives its parent by at most [`ORPHAN_GRACE`] plus one poll, even when
+    /// the workload ignores cancellation (macOS has no kill-on-close job object).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn orphaned_worker_exits_by_itself() {
+        let out = std::process::Command::new(std::env::current_exe().expect("test exe"))
+            .args([
+                "--exact",
+                "gpu_worker::tests::orphan_parent_entry",
+                "--nocapture",
+                "--test-threads=1",
+                "--quiet",
+            ])
+            .env(ORPHAN_PARENT_ENV, "1")
+            .env_remove(TEST_ARGV_ENV)
+            .stderr(std::process::Stdio::null())
+            .output()
+            .expect("intermediate process");
+        let orphaned_at = Instant::now();
+        let text = String::from_utf8_lossy(&out.stdout);
+        let pid: libc::pid_t = text
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("worker-pid="))
+            .and_then(|p| p.parse().ok())
+            .unwrap_or_else(|| panic!("no worker pid in {text:?}"));
+        let alive = || {
+            // SAFETY: signal 0 only checks that the process exists; nothing is sent.
+            unsafe { libc::kill(pid, 0) == 0 }
+        };
+        while alive() {
+            assert!(
+                orphaned_at.elapsed() < ORPHAN_GRACE + Duration::from_secs(3),
+                "orphaned worker {pid} still running"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let gone_after = orphaned_at.elapsed();
+        eprintln!("orphaned worker exited {gone_after:?} after its parent");
+        assert!(gone_after >= ORPHAN_GRACE - Duration::from_millis(300));
     }
 
     #[test]
