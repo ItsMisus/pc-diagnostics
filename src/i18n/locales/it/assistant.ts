@@ -137,4 +137,21 @@ export default {
   manualDone: "Fatto",
   aiDisclaimer: "I suggerimenti sono generati da un'AI: verifica prima di procedere.",
   answeredBy: "Risposta di {model}",
+
+  // Progress (progress.ts)
+  progressAria: "Avanzamento",
+  stage_check: "Verifica",
+  stage_preview: "Anteprima",
+  stage_request: "Proposta",
+  stage_steps: "Passaggi",
+  stageState_done: "completata",
+  stageState_current: "in corso",
+  stageState_blocked: "serve un'azione",
+  stageState_failed: "non riuscita",
+  stageState_upcoming: "da fare",
+  stageOf: "Fase {n} di {total}: {stage}, {state}",
+  stepsProgress_one: "{done} di {count} passaggio completato",
+  stepsProgress_other: "{done} di {count} passaggi completati",
+  stepsFailed_one: "{count} non riuscito",
+  stepsFailed_other: "{count} non riusciti",
 } satisfies Record<string, string>;
