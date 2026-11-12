@@ -1,6 +1,6 @@
 # Contributing to PC Diagnostics
 
-Thanks for helping. PC Diagnostics is an open-source (MIT) Windows app for everyone:
+Thanks for helping. PC Diagnostics is an open-source (MIT) app for Windows and macOS:
 contributions are welcome as issues, pull requests, translations and test reports from
 hardware we have not seen.
 
@@ -19,14 +19,46 @@ These come from the project's design and are checked in review:
 
 ## Setup
 
-Requirements: Windows 11 x64 (Windows 10 untested), Rust stable (MSVC) with Visual Studio Build Tools,
-Node.js 22+.
+Requirements on **Windows**: Windows 11 x64 (Windows 10 untested), Rust stable (MSVC) with
+Visual Studio Build Tools, Node.js 22+.
+
+Requirements on **macOS**: an Apple Silicon Mac with macOS 13.3 or later, and:
+
+```sh
+xcode-select --install          # Xcode Command Line Tools (clang, linker, codesign); full Xcode not needed
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust stable (or your package manager)
+# Node.js 22+ from nodejs.org, nvm, fnm or Homebrew
+```
+
+Then, on either system:
 
 ```sh
 npm install
 npm run tauri dev   # run the app
 npm run check       # everything CI runs: fmt, clippy, cargo test, typecheck, vitest, build
+npx tauri build     # release bundle: NSIS installer on Windows, .app + .dmg on macOS
 ```
+
+On macOS, `scripts/macos/check-bundle.sh` checks the built bundle (signature, Info.plist,
+architecture, minimum macOS version, disk image). CI runs `npm run check` on both
+`windows-latest` and `macos-latest` (Apple Silicon).
+
+### Platform code
+
+- All OS access lives in `crates/platform`: Windows providers in `src/windows/`, macOS
+  providers in `src/macos/`. Other crates do not call OS APIs directly.
+- Gate code with `#[cfg(windows)]`, `#[cfg(target_os = "macos")]` and
+  `#[cfg(not(any(windows, target_os = "macos")))]` for the remaining fallback. A change on
+  one system must keep the other compiling; if you cannot build on the other system, say
+  so in the PR and CI will check it.
+- If macOS has no value with the same meaning as a Windows field, leave the field
+  unavailable with the reason (for example `NotSupported`) and explain it in a doc comment.
+  Don't fill a Windows-specific field with a macOS value that means something else.
+- Native APIs only (sysctl, Mach, I/O Kit, libproc on macOS). No admin rights, privileged
+  helpers or kernel extensions, and no shelling out to tools such as `powermetrics`,
+  `system_profiler` or `ioreg` to collect data.
+- Unsafe code needs a `// SAFETY:` comment on every block (the workspace denies
+  `unsafe_op_in_unsafe_fn`).
 
 If you change a type in `crates/models`, run `npm run gen:types` and commit the files in
 `src/types/generated`.
@@ -37,11 +69,12 @@ If you change a type in `crates/models`, run `npm run gen:types` and commit the 
 - `npm run check` must pass.
 - New user-facing text must not contain jargon in the simple view; see `docs/diagnostics-rules.md`.
 - Hardware reports are valuable: if a sensor shows "n/d" on your machine but you know the
-  value exists, open an issue with your CPU/GPU model, Windows version and the reason shown.
+  value exists, open an issue with your CPU/GPU model (or Mac model), Windows or macOS
+  version and the reason shown.
 
 ## Translations
 
-The app ships in Italian and English. "System" in Settings follows the Windows display
+The app ships in Italian and English. "System" in Settings follows the system display
 language (Italian for Italian, English for everything else).
 
 - **Interface texts** live in `src/i18n/locales/<lang>/<namespace>.ts`, one namespace per

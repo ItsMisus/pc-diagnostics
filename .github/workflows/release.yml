@@ -1,7 +1,9 @@
 name: Release
 
-# Builds the Windows installer when a version tag is pushed (for example `v0.2.0`) and
-# attaches it to a draft GitHub release. A maintainer reviews the draft and publishes it.
+# Builds the Windows installer and the macOS disk image when a version tag is pushed (for
+# example `v0.2.0`) and attaches them to a draft GitHub release. A maintainer reviews the
+# draft and publishes it. The Windows job creates the draft; the macOS image is built in
+# parallel and added to that draft once both builds have finished.
 on:
   push:
     tags: ["v*"]
@@ -56,3 +58,73 @@ jobs:
           sha256sum "$installer" > "$installer.sha256"
           gh release create "$GITHUB_REF_NAME" "$installer" "$installer.sha256" \
             --draft --title "PC Diagnostics $GITHUB_REF_NAME" --generate-notes
+
+  macos:
+    # Apple Silicon runner: the image is for arm64 Macs (`_aarch64.dmg`).
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches the app version
+        run: |
+          app="v$(node -p "require('./src-tauri/tauri.conf.json').version")"
+          if [ "$app" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the version in tauri.conf.json ($app)"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Checks
+        run: npm run check
+
+      # Ad-hoc signed ("-", src-tauri/tauri.macos.conf.json), not notarized: there is no
+      # Apple Developer ID on the runner. See README "macOS: opening an unsigned app".
+      # With CI set, Tauri skips the Finder layout step of the DMG script (no GUI session).
+      - name: Build app and disk image
+        run: npx tauri build
+
+      - name: Disk image and SHA-256
+        run: |
+          cd target/release/bundle/dmg
+          dmg=$(ls *.dmg)
+          shasum -a 256 "$dmg" > "$dmg.sha256"
+          cat "$dmg.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: |
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/dmg/*.dmg.sha256
+          if-no-files-found: error
+
+  macos-release-asset:
+    # Runs after the Windows job has created the draft release.
+    needs: [installer, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: dmg
+
+      - name: Add the disk image to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$GITHUB_REF_NAME" dmg/*.dmg dmg/*.dmg.sha256 --clobber
