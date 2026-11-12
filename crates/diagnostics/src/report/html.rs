@@ -10,7 +10,7 @@ use models::app::Platform;
 use models::benchmark_run::{BenchmarkResult, PowerSource};
 use models::diagnostics::Finding;
 use models::drivers::DeviceHealth;
-use models::hardware::{DiskHealthStatus, MediaKind};
+use models::hardware::{DiskHealthStatus, GpuVendor, MediaKind};
 use models::settings::Language;
 
 use super::{
@@ -324,7 +324,14 @@ pub fn render(doc: &ExportDocument, platform: Platform) -> String {
                     };
                     h.push_str(&tr(&[
                         escape(&g.name),
-                        escape(&fmt::bytes_u64(lang, g.dedicated_vram_bytes)),
+                        escape(&if g.vendor == GpuVendor::Apple
+                            && !g.dedicated_vram_bytes.is_available()
+                        {
+                            lang.pick("nessuna (memoria unificata)", "none (unified memory)")
+                                .to_owned()
+                        } else {
+                            metric_text(lang, &g.dedicated_vram_bytes, |b| fmt::bytes(lang, *b))
+                        }),
                         escape(&metric_text(lang, &g.driver_version, |v| v.clone())),
                         escape(note),
                     ]));

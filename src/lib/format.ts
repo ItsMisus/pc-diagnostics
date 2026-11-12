@@ -166,6 +166,7 @@ const SOURCE_LABELS: Record<Exclude<Source, "d3dkmt">, string> = {
   benchmark: "Benchmark",
   kernel: "Kernel (NtQuerySystemInformation)",
   ioKit: "I/O Kit",
+  metal: "Metal",
   mach: "Mach (host_statistics64)",
 };
 

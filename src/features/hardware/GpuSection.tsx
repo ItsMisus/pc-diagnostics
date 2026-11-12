@@ -44,9 +44,9 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
   const items: DefinitionItem[] = [
     { label: t("manufacturer"), value: gpuVendorLabel(gpu.vendor, gpu.vendorId, tm) },
     // Apple silicon: no VRAM at all (unified memory), said in words instead of "0 B".
-    { label: t("dedicatedVram"), value: unified ? t("unifiedMemory") : formatBytes(gpu.dedicatedVramBytes) },
-    // With unified memory a zero here is no reading, not a size: shown only when reported.
-    ...(unified && gpu.sharedMemoryBytes === 0 ? [] : [{ label: t("sharedMemory"), value: formatBytes(gpu.sharedMemoryBytes) }]),
+    unified ? { label: t("dedicatedVram"), value: t("unifiedMemory") } : metricItem(t("dedicatedVram"), gpu.dedicatedVramBytes, formatBytes),
+    // With unified memory a missing budget says nothing useful: shown only when reported.
+    ...(unified && gpu.sharedMemoryBytes.status === "unavailable" ? [] : [metricItem(t("sharedMemory"), gpu.sharedMemoryBytes, formatBytes)]),
     metricItem(t("driverVersion"), gpu.driverVersion, text),
   ];
   // Which providers measure this adapter: technical, like sources (Advanced view only).

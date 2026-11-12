@@ -17,8 +17,7 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
   clippy `-D warnings` clean (2026-11-12).
 - What works, measured values and what is still open: `docs/roadmap.md` "macOS port".
   Main open items: Windows compile check of the port (no Windows target here),
-  GpuInfo VRAM/device id as "unavailable", per-process
-  `private_bytes` on macOS, NVMe SMART health, Developer ID signing/notarization.
+  NVMe SMART health, Developer ID signing/notarization.
 - Build the app: `npx tauri build` (`.app` + `.dmg`, ad-hoc signed, `src-tauri/tauri.macos.conf.json`).
   Data: `~/Library/Application Support/com.pcdiagnostics.desktop/`.
 

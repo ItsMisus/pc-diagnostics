@@ -58,7 +58,9 @@ fn mac() -> Mac {
     let mut inventory = inventory();
     inventory.gpus[0].name = "Apple M5".into();
     inventory.gpus[0].vendor = GpuVendor::Apple;
-    inventory.gpus[0].dedicated_vram_bytes = 0;
+    inventory.gpus[0].dedicated_vram_bytes = not_supported();
+    inventory.gpus[0].device_id = not_supported();
+    inventory.gpus[0].shared_memory_bytes = avail(12.0 * GIB, Unit::Bytes, Source::Metal);
     inventory.gpus[0].driver_version = not_supported();
     inventory.volumes = vec![
         volume("/", 460.0, 4.0),

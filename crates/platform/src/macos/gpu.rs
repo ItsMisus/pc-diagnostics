@@ -9,14 +9,15 @@
 //! - `name`: accelerator `model` (e.g. "Apple M5").
 //! - `vendor_id` / `device_id`: the PCI ids. Apple Silicon GPUs are not PCI devices:
 //!   the accelerator carries `vendor-id` (0x106B, Apple) but there is no device id, so
-//!   `device_id` is 0 there (the model field is not optional; see the integrator notes).
-//!   Discrete/Intel GPUs on Intel Macs read both from the parent `IOPCIDevice`.
+//!   `device_id` is `NotSupported` there. Discrete/Intel GPUs on Intel Macs read both
+//!   from the parent `IOPCIDevice`.
 //! - `dedicated_vram_bytes`: Apple Silicon GPUs have no memory of their own (unified
-//!   memory: CPU and GPU share the same RAM), so there is no dedicated VRAM and the
-//!   value is 0. PCI GPUs report `VRAM,totalMB` when the driver publishes it.
+//!   memory: CPU and GPU share the same RAM), so it is `NotSupported`. PCI GPUs report
+//!   `VRAM,totalMB` when the driver publishes it; when it does not, `NotSupported` too.
 //! - `shared_memory_bytes`: Metal's `recommendedMaxWorkingSetSize` for the same GPU
 //!   (matched by `registryID`), the system-memory budget the OS lets the GPU use; the
-//!   same meaning as DXGI `SharedSystemMemory`. 0 when Metal does not report the GPU.
+//!   same meaning as DXGI `SharedSystemMemory`. `NotSupported` when Metal does not
+//!   report the GPU or reports it with dedicated memory (then the budget is the VRAM).
 //! - `driver_version`: `IOSourceVersion` of the accelerator's kernel driver bundle
 //!   (e.g. `com.apple.AGXG17G` 362.5.1).
 //!
@@ -110,7 +111,9 @@ pub fn inventory() -> Result<Vec<GpuInfo>, AppError> {
             let device_id = pci
                 .and_then(|p| p.data("device-id"))
                 .and_then(|d| data_u32(&d))
-                .unwrap_or(0);
+                .map_or(Metric::unavailable(Unavailability::NotSupported), |id| {
+                    Metric::available(id, Unit::None, Source::IoKit)
+                });
             let name = s
                 .string("model")
                 .or_else(|| pci.and_then(|p| p.string("model")))
@@ -121,13 +124,16 @@ pub fn inventory() -> Result<Vec<GpuInfo>, AppError> {
             let vram_mb = s
                 .number("VRAM,totalMB")
                 .or_else(|| pci.and_then(|p| p.number("VRAM,totalMB")));
-            let dedicated_vram_bytes = match (unified, vram_mb) {
-                (false, Some(mb)) => u64::try_from(mb).unwrap_or(0).saturating_mul(1 << 20),
-                _ => 0,
+            let dedicated_vram_bytes = match (unified, vram_mb.and_then(vram_mb_to_bytes)) {
+                (false, Some(b)) => Metric::available(b, Unit::Bytes, Source::IoKit),
+                _ => Metric::unavailable(Unavailability::NotSupported),
             };
+            #[allow(clippy::cast_precision_loss)] // exact below 2^53 bytes
             let shared_memory_bytes = match m {
-                Some((_, ws, true)) => *ws,
-                _ => 0,
+                Some((_, ws, true)) if *ws > 0 => {
+                    Metric::available(*ws as f64, Unit::Bytes, Source::Metal)
+                }
+                _ => Metric::unavailable(Unavailability::NotSupported),
             };
             let driver_version = match s.string("IOSourceVersion") {
                 Some(v) if !v.trim().is_empty() => {
@@ -155,6 +161,12 @@ pub fn inventory() -> Result<Vec<GpuInfo>, AppError> {
             }
         })
         .collect())
+}
+
+/// `VRAM,totalMB` (MiB) to bytes. A missing or non-positive value is not a size.
+#[allow(clippy::cast_precision_loss)] // MiB counts are far below 2^43
+fn vram_mb_to_bytes(mb: i64) -> Option<f64> {
+    (mb > 0).then_some(mb as f64 * 1_048_576.0)
 }
 
 fn lossy_c(bytes: &[u8]) -> String {
@@ -241,6 +253,9 @@ mod tests {
         assert_eq!(data_u32(&[0x6b, 0x10, 0, 0]), Some(0x106B));
         assert_eq!(data_u32(&[0x6b, 0x10]), None);
         assert_eq!(lossy_c(b"AMD Radeon Pro 5500M\0\0"), "AMD Radeon Pro 5500M");
+        assert_eq!(vram_mb_to_bytes(8192), Some(8.0 * 1024.0 * 1024.0 * 1024.0));
+        assert_eq!(vram_mb_to_bytes(0), None);
+        assert_eq!(vram_mb_to_bytes(-1), None);
     }
 
     #[test]
@@ -257,8 +272,21 @@ mod tests {
         if cfg!(target_arch = "aarch64") {
             let g = &inv[0];
             assert_eq!(g.vendor_id, 0x106B, "Apple");
-            assert_eq!(g.dedicated_vram_bytes, 0, "unified memory");
-            assert!(g.shared_memory_bytes > 0, "Metal working-set budget");
+            assert_eq!(
+                g.dedicated_vram_bytes,
+                Metric::unavailable(Unavailability::NotSupported),
+                "unified memory"
+            );
+            assert_eq!(
+                g.device_id,
+                Metric::unavailable(Unavailability::NotSupported),
+                "not a PCI device"
+            );
+            let budget = *g
+                .shared_memory_bytes
+                .value()
+                .expect("Metal working-set budget");
+            assert!(budget > 1e9, "{budget}");
             assert!(g.telemetry_sources.contains(&Source::IoKit));
             let u = samples[0].usage_percent.value().expect("utilization");
             assert!((0.0..=100.0).contains(u));

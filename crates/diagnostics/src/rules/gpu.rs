@@ -1,11 +1,10 @@
 //! GPU rules (live telemetry). GPU driver problems are evaluated in `drivers`.
 
-use models::Source;
-use models::app::Platform;
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, FindingKind, Severity};
-use models::hardware::GpuInfo;
+use models::hardware::{GpuInfo, GpuVendor};
 use models::monitor::GpuSample;
+use models::{Metric, Source, Unavailability};
 
 use super::{
     Cov, Ctx, Outcome, by_os, count_of, ev, finding, no_samples, simple, strings, window_notes,
@@ -166,9 +165,22 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
             out.findings.push(f);
         }
 
-        match info.map(|g| g.dedicated_vram_bytes).filter(|v| *v > 0) {
-            // Apple Silicon GPUs ("Apple M…") have no dedicated memory at all.
-            None if ctx.platform != Platform::Windows && name.starts_with("Apple ") => {
+        let vram_total = info
+            .and_then(|g| g.dedicated_vram_bytes.value().copied())
+            .filter(|v| v.is_finite() && *v > 0.0);
+        let unified = info.is_some_and(|g| {
+            g.vendor == GpuVendor::Apple
+                && matches!(
+                    g.dedicated_vram_bytes,
+                    Metric::Unavailable {
+                        reason: Unavailability::NotSupported
+                    }
+                )
+        });
+        match vram_total {
+            // Apple silicon GPUs have no dedicated memory at all (the provider reports it
+            // as not supported, not as 0).
+            None if unified => {
                 cov.partial(lang.pick(
                     format!("memoria video dedicata non presente per {name} (le GPU Apple usano la memoria unificata, condivisa con il processore): uso VRAM non valutato"),
                     format!("no dedicated video memory for {name} (Apple GPUs use unified memory, shared with the processor): VRAM usage not evaluated"),
@@ -181,7 +193,6 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                 ),
             )),
             Some(total) => {
-                let total = total as f64;
                 let vram = Sustained::compute(
                     live,
                     |s| {
@@ -288,7 +299,8 @@ mod tests {
     use crate::testdata::*;
     use models::component::ComponentKind;
     use models::diagnostics::{CoverageStatus, DiagnosticReport};
-    use models::{Source, Unit};
+    use models::hardware::GpuVendor;
+    use models::{Metric, Source, Unavailability, Unit};
 
     fn has(r: &DiagnosticReport, id: &str) -> bool {
         r.findings.iter().any(|f| f.rule_id == id)
@@ -345,6 +357,32 @@ mod tests {
         let (status, note) = gpu_cov(&r);
         assert_eq!(status, CoverageStatus::Partial);
         assert!(note.contains("VRAM"));
+    }
+
+    #[test]
+    fn vram_size_not_reported_is_never_evaluated() {
+        let s = live(60, |_, s| {
+            s.gpus[0].dedicated_used_bytes = avail(7.9 * GIB, Unit::Bytes, Source::Pdh);
+        });
+        // A read failure on a discrete GPU: "unknown", not "unified memory".
+        let mut inv = inventory();
+        inv.gpus[0].dedicated_vram_bytes = missing();
+        let mut inp = input(&s);
+        inp.inventory = Some(&inv);
+        let r = evaluate(&inp);
+        assert!(!has(&r, "gpu.vram.high"));
+        let note = gpu_cov(&r).1;
+        assert!(note.contains("totale non nota"), "{note}");
+        // Apple silicon: not supported because there is no dedicated memory at all.
+        let mut inv = inventory();
+        inv.gpus[0].vendor = GpuVendor::Apple;
+        inv.gpus[0].dedicated_vram_bytes = Metric::unavailable(Unavailability::NotSupported);
+        let mut inp = input(&s);
+        inp.inventory = Some(&inv);
+        let r = evaluate(&inp);
+        assert!(!has(&r, "gpu.vram.high"));
+        let note = gpu_cov(&r).1;
+        assert!(note.contains("memoria unificata"), "{note}");
     }
 
     #[test]

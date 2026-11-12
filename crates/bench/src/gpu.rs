@@ -729,11 +729,15 @@ pub(crate) fn decide(
         .iter()
         .enumerate()
         .map(|(i, g)| {
+            // 0 = no PCI device id (Apple silicon). wgpu reports 0 for those adapters too,
+            // so the PCI-id fallback in `select` still compares like with like; the LUID /
+            // registry id match comes first anyway.
+            let device_id = g.device_id.value().copied().unwrap_or(0);
             let target = GpuTarget {
                 id: g.id.clone(),
                 name: g.name.clone(),
                 vendor_id: g.vendor_id,
-                device_id: g.device_id,
+                device_id,
             };
             let th = thermal(g);
             let exclude_luids: Vec<String> = gpus
@@ -747,7 +751,7 @@ pub(crate) fn decide(
                     let want = Target {
                         luid: Some(g.id.clone()),
                         vendor_id: g.vendor_id,
-                        device_id: g.device_id,
+                        device_id,
                     };
                     match select::select(adapters, &want, &exclude_luids) {
                         Ok((k, matched_by)) => Ok(Box::new(GpuReady {
@@ -1299,7 +1303,7 @@ mod tests {
 
     const IT: Language = Language::Italian;
     const EN: Language = Language::English;
-    use models::metric::Metric;
+    use models::metric::{Metric, Source};
 
     fn info(id: &str, name: &str, vendor: u32, device: u32, sw: bool, virt: bool) -> GpuInfo {
         GpuInfo {
@@ -1307,9 +1311,9 @@ mod tests {
             name: name.into(),
             vendor: models::hardware::GpuVendor::from_pci_id(vendor),
             vendor_id: vendor,
-            device_id: device,
-            dedicated_vram_bytes: 0,
-            shared_memory_bytes: 0,
+            device_id: Metric::available(device, Unit::None, Source::Dxgi),
+            dedicated_vram_bytes: Metric::available(0.0, Unit::Bytes, Source::Dxgi),
+            shared_memory_bytes: Metric::available(0.0, Unit::Bytes, Source::Dxgi),
             is_software: sw,
             is_virtual: virt,
             driver_version: Metric::unavailable(Unavailability::NotSupported),

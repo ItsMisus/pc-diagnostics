@@ -163,9 +163,9 @@ pub fn inventory() -> HardwareInventory {
             name: "Test GPU 8GB".into(),
             vendor: GpuVendor::Nvidia,
             vendor_id: 0x10DE,
-            device_id: 1,
-            dedicated_vram_bytes: (8.0 * GIB) as u64,
-            shared_memory_bytes: (8.0 * GIB) as u64,
+            device_id: Metric::available(1, Unit::None, Source::Dxgi),
+            dedicated_vram_bytes: avail(8.0 * GIB, Unit::Bytes, Source::Dxgi),
+            shared_memory_bytes: avail(8.0 * GIB, Unit::Bytes, Source::Dxgi),
             is_software: false,
             is_virtual: false,
             driver_version: Metric::Available {

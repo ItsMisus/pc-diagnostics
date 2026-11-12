@@ -68,9 +68,9 @@ pub fn gpu_inventory() -> Result<Vec<GpuInfo>, models::AppError> {
                 name: a.name,
                 vendor: GpuVendor::from_pci_id(a.vendor_id),
                 vendor_id: a.vendor_id,
-                device_id: a.device_id,
-                dedicated_vram_bytes: a.dedicated_vram_bytes,
-                shared_memory_bytes: a.shared_memory_bytes,
+                device_id: Metric::available(a.device_id, Unit::None, Source::Dxgi),
+                dedicated_vram_bytes: dxgi_bytes(a.dedicated_vram_bytes),
+                shared_memory_bytes: dxgi_bytes(a.shared_memory_bytes),
                 is_software: a.is_software,
                 is_virtual: a.kmt.is_indirect_display(),
                 driver_version: a.driver_version,
@@ -78,4 +78,11 @@ pub fn gpu_inventory() -> Result<Vec<GpuInfo>, models::AppError> {
             }
         })
         .collect())
+}
+
+/// A DXGI memory size. DXGI always reports both sizes; 0 is a real value (e.g. the
+/// software rasterizer has no memory of its own).
+#[allow(clippy::cast_precision_loss)] // exact below 2^53 bytes
+fn dxgi_bytes(v: u64) -> Metric<f64> {
+    Metric::available(v as f64, Unit::Bytes, Source::Dxgi)
 }

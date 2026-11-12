@@ -76,14 +76,19 @@ export function showsDiskStatus(disks: Metric<readonly Pick<PhysicalDiskInfo, "h
 export const APPLE_VENDOR_ID = 0x106b;
 
 /**
- * True for an Apple silicon GPU reported without dedicated memory. Those GPUs have no VRAM:
- * they share the unified memory with the CPU, so "0 dedicated" is the architecture, not a
- * missing reading. Recognised by the Apple vendor id or by the chip name ("Apple M5"), since
- * the inventory has no vendor value for Apple yet.
+ * True for an Apple silicon GPU. Those GPUs have no VRAM: they share the unified memory with
+ * the CPU, and the backend reports their dedicated memory as not supported (not as 0).
  */
-export function hasUnifiedMemory(gpu: Pick<GpuInfo, "vendorId" | "name" | "dedicatedVramBytes">): boolean {
-  const apple = gpu.vendorId === APPLE_VENDOR_ID || /^Apple M\d/.test(gpu.name.trim());
-  return apple && gpu.dedicatedVramBytes === 0;
+export function hasUnifiedMemory(gpu: Pick<GpuInfo, "vendor" | "vendorId" | "dedicatedVramBytes">): boolean {
+  const apple = gpu.vendor === "apple" || gpu.vendorId === APPLE_VENDOR_ID;
+  const v = gpu.dedicatedVramBytes;
+  return apple && v.status === "unavailable" && v.reason.kind === "notSupported";
+}
+
+/** Dedicated VRAM in bytes, or null when the GPU reports none (or no size). */
+export function dedicatedVram(gpu: Pick<GpuInfo, "dedicatedVramBytes">): number | null {
+  const v = gpu.dedicatedVramBytes;
+  return v.status === "available" && Number.isFinite(v.value) && v.value > 0 ? v.value : null;
 }
 
 export function healthTone(status: DiskHealthStatus): Tone {

@@ -49,6 +49,8 @@ pub enum Source {
     IoKit,
     /// macOS Mach kernel statistics (`host_statistics64`, `sysctl`).
     Mach,
+    /// Apple Metal device properties (e.g. `MTLDevice.recommendedMaxWorkingSetSize`).
+    Metal,
 }
 
 /// Why a value is missing. There is no "unknown": every gap has an explanation.

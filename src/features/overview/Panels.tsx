@@ -15,7 +15,7 @@ import { DiskHealth } from "@/features/monitoring/DiskHealth";
 import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
-import { hasUnifiedMemory, isFrequencyLimited, primaryGpu, showsDiskStatus, volumeDisplayName } from "@/features/monitoring/selection";
+import { dedicatedVram, hasUnifiedMemory, isFrequencyLimited, primaryGpu, showsDiskStatus, volumeDisplayName } from "@/features/monitoring/selection";
 import { useIsMac, usePlatform } from "@/lib/platform";
 import { valueOf } from "@/features/monitoring/series";
 import { InventoryState, WaitingForSample } from "@/features/monitoring/StatusViews";
@@ -189,7 +189,7 @@ export const GpuPanel = memo(function GpuPanel() {
           {...(data.gpus.length > 0 ? { description: t("onlySoftwareAdapters") } : {})}
         />
       ) : (
-        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={gpu.dedicatedVramBytes} unifiedMemory={hasUnifiedMemory(gpu)} />
+        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={dedicatedVram(gpu)} unifiedMemory={hasUnifiedMemory(gpu)} />
       )}
     </Card>
   );
@@ -203,7 +203,8 @@ function GpuBody({
 }: {
   id: string;
   name: string;
-  dedicatedVramBytes: number;
+  /** Null: no dedicated VRAM, or its size is not reported. */
+  dedicatedVramBytes: number | null;
   unifiedMemory: boolean;
 }) {
   const tm = useT("monitoring");
@@ -234,7 +235,7 @@ function GpuReadings({
   unifiedMemory,
 }: {
   gpu: GpuSample;
-  dedicatedVramBytes: number;
+  dedicatedVramBytes: number | null;
   /** Apple silicon: no VRAM exists, the GPU uses the RAM shown in the RAM panel. */
   unifiedMemory: boolean;
 }) {
@@ -252,9 +253,9 @@ function GpuReadings({
         }
       : undefined;
   const vramText = (v: number) =>
-    dedicatedVramBytes > 0 ? t("ofTotal", { used: formatBytes(v), total: formatBytes(dedicatedVramBytes) }) : formatBytes(v);
+    dedicatedVramBytes !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(dedicatedVramBytes) }) : formatBytes(v);
   const vramBar: Bar | undefined =
-    dedicatedVramBytes > 0
+    dedicatedVramBytes !== null
       ? {
           percent: ratio(valueOf(gpu.dedicatedUsedBytes), dedicatedVramBytes),
           label: t("meterAria", { label: "VRAM", component: "GPU" }),

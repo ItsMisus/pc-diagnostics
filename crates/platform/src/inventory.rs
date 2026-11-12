@@ -241,7 +241,7 @@ mod tests {
             assert!((2000.0..=6000.0).contains(&m), "{m} MHz");
             let g = &inv.gpus[0];
             assert_eq!(g.vendor_id, 0x106B);
-            assert_eq!(g.dedicated_vram_bytes, 0, "unified memory");
+            assert!(!g.dedicated_vram_bytes.is_available(), "unified memory");
             assert!(g.name.starts_with("Apple"), "{}", g.name);
         }
     }

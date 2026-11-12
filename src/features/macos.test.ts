@@ -12,7 +12,7 @@ import { coverageSummary, platformCoverage } from "./diagnostics/model";
 import { simpleSummary } from "./diagnostics/simple";
 import { coverage } from "./diagnostics/testing/fixtures";
 import { gpuVendorLabel } from "./monitoring/labels";
-import { hasUnifiedMemory, isSystemMount, showsDiskStatus, systemVolume } from "./monitoring/selection";
+import { dedicatedVram, hasUnifiedMemory, isSystemMount, showsDiskStatus, systemVolume } from "./monitoring/selection";
 import { gpuInfo, volume } from "./monitoring/testing/fixtures";
 
 /**
@@ -82,14 +82,30 @@ describe("process memory labels", () => {
 });
 
 describe("Apple silicon GPU", () => {
-  const apple = { ...gpuInfo("gpu0"), name: "Apple M5", vendor: "other" as const, vendorId: 0 };
+  const notSupported = { status: "unavailable", reason: { kind: "notSupported" } } as const;
+  const apple = {
+    ...gpuInfo("gpu0"),
+    name: "Apple M5",
+    vendor: "apple" as const,
+    vendorId: 0x106b,
+    deviceId: notSupported,
+    dedicatedVramBytes: notSupported,
+  };
+  const reported = (bytes: number) => ({ status: "available", value: bytes, unit: "bytes", source: "ioKit", at: 0 }) as const;
 
-  it("has unified memory instead of a VRAM size", () => {
+  it("has unified memory: the backend reports no dedicated VRAM (not 0)", () => {
     expect(hasUnifiedMemory(apple)).toBe(true);
-    expect(hasUnifiedMemory({ ...apple, name: "AMD Radeon Pro 5500M", vendorId: 0x1002 })).toBe(false);
-    // A reported dedicated size always wins over the inference.
-    expect(hasUnifiedMemory({ ...apple, dedicatedVramBytes: 8 * GIB })).toBe(false);
-    expect(hasUnifiedMemory({ ...apple, name: "GPU", vendorId: 0x106b })).toBe(true);
+    expect(dedicatedVram(apple)).toBeNull();
+    // A discrete GPU in a Mac (Intel Macs) reports its VRAM.
+    expect(hasUnifiedMemory({ ...apple, vendor: "amd", vendorId: 0x1002, dedicatedVramBytes: reported(8 * GIB) })).toBe(false);
+    // A reported dedicated size always wins.
+    expect(hasUnifiedMemory({ ...apple, dedicatedVramBytes: reported(8 * GIB) })).toBe(false);
+    expect(dedicatedVram({ dedicatedVramBytes: reported(8 * GIB) })).toBe(8 * GIB);
+    // A failed read is not "unified memory".
+    const failed = { status: "unavailable", reason: { kind: "failed", detail: { code: "platform", message: "x", detail: null, retriable: false } } } as const;
+    expect(hasUnifiedMemory({ ...apple, dedicatedVramBytes: failed })).toBe(false);
+    // Windows' software rasterizer: a real 0, no dedicated VRAM to show.
+    expect(dedicatedVram({ dedicatedVramBytes: reported(0) })).toBeNull();
   });
 
   it("vendor label: Apple id named, a missing id not shown as a number", () => {

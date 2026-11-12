@@ -7,6 +7,7 @@ import { stateKindForError } from "@/lib/errors";
 import { formatBytes, formatMts } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
+import { dedicatedVram } from "@/features/monitoring/selection";
 import type { HardwareInventory } from "@/types/generated/HardwareInventory";
 import type { BenchComponent } from "./model";
 
@@ -91,10 +92,13 @@ function items(
     case "gpu": {
       const real = inv.gpus.filter((g) => !g.isSoftware && !g.isVirtual);
       if (real.length === 0) return [{ label: "GPU", value: t("noHardwareGpu") }];
-      return real.map((g, i) => ({
-        label: real.length > 1 ? t("gpuN", { n: i + 1 }) : "GPU",
-        value: `${g.name}${g.dedicatedVramBytes > 0 ? ` · ${t("vramDedicated", { size: formatBytes(g.dedicatedVramBytes) })}` : ""}`,
-      }));
+      return real.map((g, i) => {
+        const vram = dedicatedVram(g);
+        return {
+          label: real.length > 1 ? t("gpuN", { n: i + 1 }) : "GPU",
+          value: `${g.name}${vram !== null ? ` · ${t("vramDedicated", { size: formatBytes(vram) })}` : ""}`,
+        };
+      });
     }
     case "memory": {
       const list: DefinitionItem[] = [{ label: t("total"), value: formatBytes(inv.memory.totalBytes) }];
