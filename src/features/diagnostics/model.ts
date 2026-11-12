@@ -7,6 +7,7 @@ import type { Finding } from "@/types/generated/Finding";
 import type { Platform } from "@/types/generated/Platform";
 import type { FindingKind } from "@/types/generated/FindingKind";
 import type { Severity } from "@/types/generated/Severity";
+import type { SectionId } from "@/app/sections";
 import { translatorFor } from "@/i18n";
 
 /**
@@ -151,4 +152,69 @@ export function coverageSentence(s: CoverageSummary): string {
 /** "Nessun problema rilevato dalle regole disponibili", in the current language. */
 export function noFindingsCopy(): string {
   return dt()("noFindings");
+}
+
+// ---------------------------------------------------------------------------
+// Overall state, cause and suggested actions
+
+/**
+ * What the finding says about the cause, from its epistemic kind:
+ * - `confirmed`: an authoritative signal confirms it (e.g. a device problem code).
+ * - `possible`: a plausible explanation consistent with the evidence, not proven.
+ * - `undetermined`: a measured fact; the rule makes no claim about the cause.
+ */
+export type CauseStatus = "confirmed" | "possible" | "undetermined";
+
+export function causeStatus(k: FindingKind): CauseStatus {
+  switch (k) {
+    case "confirmed":
+      return "confirmed";
+    case "hypothesis":
+      return "possible";
+    case "observation":
+      return "undetermined";
+  }
+}
+
+export function causeLabel(s: CauseStatus): string {
+  return dt()(`cause_${s}`);
+}
+
+export interface OverallState {
+  /** Most severe level present, `null` without findings. */
+  worst: Severity | null;
+  /** `ok` only when nothing asks for attention (no critical, no warning). */
+  tone: Tone;
+  counts: Record<Severity, number>;
+  total: number;
+}
+
+/** The report's overall state, derived only from its findings (there is no health score). */
+export function overallState(findings: readonly Finding[]): OverallState {
+  const counts = severityCounts(findings);
+  const worst = SEVERITY_ORDER.find((s) => counts[s] > 0) ?? null;
+  const tone: Tone = counts.critical > 0 ? "bad" : counts.warning > 0 ? "warn" : "ok";
+  return { worst, tone, counts, total: findings.length };
+}
+
+/** The summary headline: the most severe level and its count, or "Nessun problema rilevato". */
+export function overallHeadline(s: OverallState): string {
+  const t = dt();
+  if (s.counts.critical > 0) return t.plural("overallCritical", s.counts.critical);
+  if (s.counts.warning > 0) return t.plural("overallWarning", s.counts.warning);
+  return t("noFindingsHeadline");
+}
+
+/**
+ * The app section where the user can act on a finding, when it exists on `platform`:
+ * processes for load and memory rules, the device list for driver problems (Windows only),
+ * the run history for benchmark comparisons. `null` when no section helps.
+ */
+export function relatedSection(ruleId: string, platform: Platform): SectionId | null {
+  const [area, topic] = ruleId.split(".");
+  if (area === "drivers" || (area === "gpu" && topic === "driver")) return platform === "windows" ? "drivers" : null;
+  if (topic === "benchmark") return "history";
+  if (area === "processes" || area === "memory" || (area === "cpu" && (topic === "process" || topic === "utilization")))
+    return "processes";
+  return null;
 }

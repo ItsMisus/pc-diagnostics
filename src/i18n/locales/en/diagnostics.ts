@@ -59,6 +59,26 @@ export default {
   meaning: "What it means",
   whatYouCanDo: "What you can do",
   showTechnical: "Show technical details",
+  cause: "Cause",
+  cause_confirmed: "Confirmed cause",
+  cause_possible: "Possible cause",
+  cause_undetermined: "Cause not determined",
+  evidenceBasis_one: "Based on {count} measurement",
+  evidenceBasis_other: "Based on {count} measurements",
+  suggestedActions: "Suggested actions",
+  openSection: "Open {section}",
+  openSectionAria: "Open {section}: {label}",
+  ruleId: "Rule {id}",
+
+  // Summary
+  outcomeEyebrow: "Outcome",
+  noFindingsHeadline: "No problems found",
+  overallCritical_one: "{count} critical problem",
+  overallCritical_other: "{count} critical problems",
+  overallWarning_one: "{count} warning to check",
+  overallWarning_other: "{count} warnings to check",
+  countsAria: "Findings by severity",
+  runAt: "Diagnostics from {date}",
 
   // Overview "System Insights" card
   insightsTitle: "System Insights",
