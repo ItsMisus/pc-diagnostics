@@ -11,8 +11,9 @@ interface SearchFieldProps {
 }
 
 /**
- * Search input with a leading magnifier. Border, focus ring and the clear button come from
- * the global native input styles; the icon brightens while the field has focus.
+ * Capsule search input with a leading magnifier. Border, focus ring and the clear button come
+ * from the global native input styles; the icon brightens while the field has focus. Esc
+ * clears a non-empty field (and only then, so Esc still closes an enclosing dialog).
  */
 export function SearchField({ label, value, onChange, placeholder, className = "" }: SearchFieldProps) {
   return (
@@ -21,14 +22,21 @@ export function SearchField({ label, value, onChange, placeholder, className = "
       <Icon
         name="search"
         size={14}
-        className="pointer-events-none absolute left-2.5 text-fg-subtle transition-colors duration-150 group-focus-within:text-fg-muted"
+        className="pointer-events-none absolute left-3 text-fg-subtle transition-colors duration-150 group-focus-within:text-fg-muted"
       />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && value !== "") {
+            e.preventDefault();
+            e.stopPropagation();
+            onChange("");
+          }
+        }}
         placeholder={placeholder}
-        className="h-8 w-full min-w-0 pr-2 pl-8"
+        className="h-8 w-full min-w-0 rounded-full pr-3 pl-8"
       />
     </label>
   );

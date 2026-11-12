@@ -7,6 +7,8 @@ export default {
   stateConsent: "Consenso richiesto",
   stateNotImplemented: "Non ancora implementato",
   stateError: "Errore",
+  stateUnavailable: "Dato non disponibile",
+  stateDisconnected: "Connessione persa",
   whatYouCanDo: "Cosa puoi fare:",
   technicalDetails: "Dettagli tecnici",
   errorCode: "codice: {code}",

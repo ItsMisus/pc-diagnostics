@@ -9,21 +9,41 @@ import { Icon, type IconName } from "./Icon";
 import { type Translator, useT } from "@/i18n";
 
 /**
- * Uniform non-data states. Every screen renders one of these instead of an empty box.
- * `notImplemented` is distinct from `unsupported`: the first is our gap, the second the
- * machine's.
+ * Uniform non-data states. Every screen renders one of these instead of an empty box or a
+ * made-up value:
+ * - `loading`: first load in progress (for content-shaped placeholders use `Skeleton`).
+ * - `empty`: the source answered, there is nothing (no runs yet, no problems found).
+ * - `unavailable`: a value or block the system did not provide right now (give the reason,
+ *   usually from `Metric::Unavailable` via `useUnavailabilityText`).
+ * - `unsupported`: this machine or OS has no such sensor/feature (the machine's limit).
+ * - `notImplemented`: our gap, not the machine's.
+ * - `disconnected`: a live connection dropped (monitoring stream); usually with `onRetry`.
+ * - `permission` / `consent`: blocked by OS permissions / by a user choice (settings).
+ * - `error`: a command failed; pass the `AppError` for the friendly text and details.
  */
-export type StateKind = "loading" | "empty" | "unsupported" | "permission" | "consent" | "notImplemented" | "error";
+export type StateKind =
+  | "loading"
+  | "empty"
+  | "unavailable"
+  | "unsupported"
+  | "disconnected"
+  | "permission"
+  | "consent"
+  | "notImplemented"
+  | "error";
 
-const ICONS: Record<StateKind, IconName> = {
-  loading: "refresh",
+const ICONS: Record<Exclude<StateKind, "loading">, IconName> = {
   empty: "info",
-  unsupported: "info",
+  unavailable: "info",
+  unsupported: "minus",
+  disconnected: "network",
   permission: "lock",
   consent: "lock",
   notImplemented: "info",
-  error: "alert",
+  error: "error",
 };
+
+export type StateLayout = "inline" | "block" | "hero";
 
 interface StateViewProps {
   kind: StateKind;
@@ -31,32 +51,85 @@ interface StateViewProps {
   description?: ReactNode;
   error?: AppError;
   onRetry?: () => void;
+  /** Extra action(s) next to Retry, e.g. a primary "Esegui diagnosi" button for `empty`. */
+  action?: ReactNode;
+  /** Shorthand for `layout="inline"` (one row, no vertical padding). */
   compact?: boolean;
+  /**
+   * `inline`: a row inside a panel. `block` (default): a left-aligned block with padding.
+   * `hero`: centered with a glyph, for a whole page or a large empty panel.
+   */
+  layout?: StateLayout;
 }
 
 /**
  * In the "Semplice" view an error gets a friendly sentence and a "Cosa puoi fare" hint per
  * `ErrorCode`; message, detail and code stay in "Dettagli tecnici". "Avanzata" is unchanged.
  */
-export function StateView({ kind, title, description, error, onRetry, compact = false }: StateViewProps) {
+export function StateView({ kind, title, description, error, onRetry, action, compact = false, layout }: StateViewProps) {
   const simple = useIsSimple();
   const t = useT("common");
   const plain = simple && error ? simpleError(error.code) : null;
   const resolvedTitle = title ?? (error ? (plain ? plain.title : errorTitle(error.code)) : defaultTitle(kind, t));
   const resolvedDescription = description ?? plain?.explanation;
+  const mode: StateLayout = layout ?? (compact ? "inline" : "block");
+  const isError = kind === "error";
+  const showRetry = onRetry && (isError ? error?.retriable !== false : true);
+  const glyph =
+    kind === "loading" ? (
+      <Spinner size={mode === "hero" ? 20 : 16} />
+    ) : (
+      <Icon name={ICONS[kind]} size={mode === "hero" ? 20 : 16} className={isError ? "text-bad" : kind === "disconnected" ? "text-warn" : "text-fg-subtle"} />
+    );
+
+  const details = error && (
+    <Disclosure summary={t("technicalDetails")} className="text-xs text-fg-subtle">
+      <div className="surface-inset px-3 py-2 font-mono text-2xs text-fg-muted">
+        <p>{error.message}</p>
+        {error.detail && <p className="mt-1 break-all">{error.detail}</p>}
+        {simple && <p className="mt-1">{t("errorCode", { code: error.code })}</p>}
+      </div>
+    </Disclosure>
+  );
+  const actions = (showRetry || action) && (
+    <div className="flex flex-wrap items-center gap-2">
+      {showRetry && (
+        <Button variant="secondary" size="sm" icon="refresh" onClick={onRetry}>
+          {t("retry")}
+        </Button>
+      )}
+      {action}
+    </div>
+  );
+
+  if (mode === "hero") {
+    return (
+      <div role={isError ? "alert" : "status"} aria-busy={kind === "loading"} className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+        <span aria-hidden="true" className="satin grid size-11 place-items-center rounded-full">
+          {glyph}
+        </span>
+        <p className="text-md font-semibold text-fg">{resolvedTitle}</p>
+        {resolvedDescription && <div className="max-w-md text-sm text-fg-muted">{resolvedDescription}</div>}
+        {plain && (
+          <p className="max-w-md text-sm text-fg-muted">
+            <span className="font-medium text-fg">{t("whatYouCanDo")}</span> {plain.action}
+          </p>
+        )}
+        {actions}
+        {details}
+      </div>
+    );
+  }
+
   return (
     <div
-      role={kind === "error" ? "alert" : "status"}
+      role={isError ? "alert" : "status"}
       aria-busy={kind === "loading"}
-      className={`flex flex-col items-start gap-2 ${compact ? "py-1" : "py-6"}`}
+      className={`flex flex-col items-start gap-2 ${mode === "inline" ? "py-1" : "py-6"}`}
     >
       <div className="flex items-center gap-2 text-sm">
-        {kind === "loading" ? (
-          <Spinner />
-        ) : (
-          <Icon name={ICONS[kind]} className={kind === "error" ? "text-bad" : "text-fg-subtle"} />
-        )}
-        <span className={kind === "error" ? "text-fg" : "text-fg-muted"}>{resolvedTitle}</span>
+        {glyph}
+        <span className={isError ? "font-medium text-fg" : "text-fg-muted"}>{resolvedTitle}</span>
       </div>
       {resolvedDescription && <div className="max-w-prose text-sm text-fg-subtle">{resolvedDescription}</div>}
       {plain && (
@@ -64,21 +137,8 @@ export function StateView({ kind, title, description, error, onRetry, compact = 
           <span className="font-medium text-fg">{t("whatYouCanDo")}</span> {plain.action}
         </p>
       )}
-      {error && (
-        <Disclosure summary={t("technicalDetails")} className="text-xs text-fg-subtle">
-          <div className="rounded-md border border-line bg-surface-2/60 px-2.5 py-2 font-mono text-2xs">
-            <p>{error.message}</p>
-            {error.detail && <p className="mt-1 break-all">{error.detail}</p>}
-            {simple && <p className="mt-1">{t("errorCode", { code: error.code })}</p>}
-          </div>
-        </Disclosure>
-      )}
-      {onRetry && (kind === "error" ? error?.retriable !== false : true) && (
-        <Button variant="secondary" size="sm" onClick={onRetry} className="mt-1">
-          <Icon name="refresh" />
-          {t("retry")}
-        </Button>
-      )}
+      {details}
+      {actions && <div className="mt-1">{actions}</div>}
     </div>
   );
 }
@@ -106,8 +166,12 @@ function defaultTitle(kind: StateKind, t: Translator<"common">): string {
       return t("stateLoading");
     case "empty":
       return t("stateEmpty");
+    case "unavailable":
+      return t("stateUnavailable");
     case "unsupported":
       return t("stateUnsupported");
+    case "disconnected":
+      return t("stateDisconnected");
     case "permission":
       return t("statePermission");
     case "consent":

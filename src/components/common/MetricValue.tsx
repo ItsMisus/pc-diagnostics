@@ -26,7 +26,10 @@ export function MetricValue<T>({ metric, format, className = "" }: MetricValuePr
   const { text, tooltip } = reasonTexts(metric.reason, simple);
   return (
     <Tooltip content={tooltip} side="top-end" multiline>
-      <span tabIndex={0} className={`cursor-help rounded-sm text-fg-subtle ${className}`}>
+      <span
+        tabIndex={0}
+        className={`cursor-help rounded-xs text-fg-subtle underline decoration-fg-subtle/50 decoration-dotted underline-offset-[3px] ${className}`}
+      >
         {t("notAvailable")}
         <span className="sr-only"> — {text}</span>
       </span>
