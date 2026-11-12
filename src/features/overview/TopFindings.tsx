@@ -14,6 +14,7 @@ import { coverageSentence, coverageSummary, noFindingsCopy, platformCoverage, se
 import { simpleFindingText, simpleNotAGuarantee, simpleNothingFound, simpleSeverityLabel } from "@/features/diagnostics/simple";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
+import { stateKindForError } from "@/lib/errors";
 import { usePlatform } from "@/lib/platform";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
 
@@ -23,7 +24,8 @@ const TOP = 3;
 /**
  * The top findings of the latest diagnosis: severity badge with glyph, one-line headline, the
  * kind marker and "Risolvi" where offered, and a link to Diagnostics. Counts and the time of
- * the run are said once, in the hero's overall state; load errors (with Retry) too.
+ * the run are said once, in the hero's overall state. A load error is stated here too (with
+ * Retry), because this panel has nothing else to show.
  */
 export function TopFindings({ className = "" }: { className?: string }) {
   const t = useT("overview");
@@ -32,6 +34,8 @@ export function TopFindings({ className = "" }: { className?: string }) {
   useEffect(() => ensureLoaded(), [ensureLoaded]);
   const status = useDiag((s) => s.status);
   const report = useDiag((s) => s.report);
+  const error = useDiag((s) => s.error);
+  const reload = useDiag((s) => s.reload);
   const setSection = useAppStore((s) => s.setSection);
 
   return (
@@ -48,8 +52,8 @@ export function TopFindings({ className = "" }: { className?: string }) {
     >
       {report ? (
         <FindingList report={report} />
-      ) : status === "error" ? (
-        <StateView compact kind="unavailable" title={td("insightsUnavailable")} />
+      ) : status === "error" && error ? (
+        <StateView compact kind={stateKindForError(error)} title={td("insightsUnavailable")} error={error} onRetry={reload} />
       ) : status === "ready" ? (
         <StateView compact kind="empty" title={td("neverRun")} description={t("findingsNeverRun")} />
       ) : (

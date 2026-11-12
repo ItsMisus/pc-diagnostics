@@ -144,7 +144,10 @@ const CHIP_SLOT: Record<ChipId, DeviceIndicator["slot"]> = {
 function StageWithChips({ kind, paused }: { kind: DeviceShape; paused: boolean }) {
   const { data } = useInventoryData();
   const gpuId = useMemo(() => (data ? (primaryGpu(data.gpus)?.id ?? null) : null), [data]);
-  const key = useLive((s) => heroChips(s.latest, gpuId).join(","));
+  // A failed connection keeps its last sample: no chips then, so no stale value looks live.
+  const key = useLive((s) =>
+    s.status === "unsupported" || s.status === "permission" || s.status === "error" ? "" : heroChips(s.latest, gpuId).join(","),
+  );
   const indicators = useMemo<DeviceIndicator[]>(
     () =>
       key
@@ -361,6 +364,7 @@ function OverallStatus() {
   const running = useDiag((s) => s.running);
   const runError = useDiag((s) => s.runError);
   const reload = useDiag((s) => s.reload);
+  const run = useDiag((s) => s.run);
   const hasReport = state.kind === "clear" || state.kind === "findings";
 
   let body;
@@ -419,6 +423,7 @@ function OverallStatus() {
           kind={stateKindForError(runError)}
           title={hasReport ? td("runFailedKeptPrevious") : td("runFailed")}
           error={runError}
+          onRetry={() => void run()}
         />
       )}
     </div>

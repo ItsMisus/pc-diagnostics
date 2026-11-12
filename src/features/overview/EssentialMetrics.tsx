@@ -6,6 +6,7 @@ import { Readout } from "@/components/common/Readout";
 import { Skeleton } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import { UsageBar } from "@/components/common/UsageBar";
+import { SectionHeading } from "@/components/layout/SectionHeading";
 import { useInventoryData, useSeries } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
 import { primaryGpu, systemVolume, volumeDisplayName } from "@/features/monitoring/selection";
@@ -27,10 +28,8 @@ import { LevelLabel, splitUnit, toneOf, useLevelText } from "./parts";
 export function EssentialMetrics({ headingId }: { headingId: string }) {
   const t = useT("overview");
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-3">
-      <h2 id={headingId} className="font-display text-lg font-semibold text-fg">
-        {t("essentialsTitle")}
-      </h2>
+    <section aria-labelledby={headingId} className="flex flex-col gap-4">
+      <SectionHeading id={headingId}>{t("essentialsTitle")}</SectionHeading>
       <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @4xl:grid-cols-4">
         <CpuTile />
         <MemoryTile />
@@ -64,10 +63,18 @@ function TileSkeleton() {
   );
 }
 
-/** A 0–100 value as a readout ("42 %"), or "n/d" with its reason. */
+/**
+ * A 0–100 value as a readout ("42 %"), or "n/d" with its reason. `metric` is the reading the
+ * percent comes from; when the percent cannot be computed, `metric` must be an unavailable
+ * one (its reason is shown), never an available value of another unit.
+ */
 function PercentReadout({ metric, percent, level }: { metric: Metric<number>; percent: number | null; level?: Level }) {
   if (percent === null || metric.status === "unavailable") {
-    return <Readout size="md" value={<MetricValue metric={metric} format={(v) => formatPercent(v)} />} />;
+    if (metric.status === "available") {
+      // Nothing to state a reason with (e.g. a zero total): plain "n/d", never the raw value.
+      return <NotAvailable />;
+    }
+    return <Readout size="md" value={<MetricValue<number> metric={metric} format={(v) => formatPercent(v)} />} />;
   }
   const [value, unit] = splitUnit(formatPercent(percent));
   return (
@@ -76,6 +83,11 @@ function PercentReadout({ metric, percent, level }: { metric: Metric<number>; pe
       <LevelLabel level={level} />
     </span>
   );
+}
+
+function NotAvailable() {
+  const tc = useT("common");
+  return <Readout size="md" value={<span className="text-fg-subtle">{tc("notAvailable")}</span>} />;
 }
 
 /** The last minute of a percent series, next to the written value. */
@@ -133,7 +145,7 @@ const MemoryTile = memo(function MemoryTile() {
   const level = memoryLevel(valueOf(mem.availableBytes), total);
   return (
     <Tile icon="memory" label={t("memoryUsed")}>
-      <PercentReadout metric={mem.usedBytes} percent={percent} level={level} />
+      <PercentReadout metric={mem.usedBytes.status === "unavailable" ? mem.usedBytes : mem.totalBytes} percent={percent} level={level} />
       <Footer>{used !== null && total !== null ? t("ofTotal", { used: formatBytes(used), total: formatBytes(total) }) : null}</Footer>
       <Spark pick={memoryUsedPercent} label={t("memoryUsed")} />
     </Tile>
@@ -209,7 +221,9 @@ const StorageTile = memo(function StorageTile() {
           <Footer>{t("freeOf", { total: formatStorageBytes(volume.totalBytes) })}</Footer>
           {/* Same height as a sparkline, so the tiles line up. */}
           <div className="flex h-8 flex-col justify-end gap-1.5">
-            <p className="truncate text-2xs text-fg-subtle">{volumeDisplayName(volume)}</p>
+            <p className="truncate text-2xs text-fg-subtle" title={volumeDisplayName(volume)}>
+              {volumeDisplayName(volume)}
+            </p>
             <UsageBar percent={percent} label={tm("usedSpaceOn", { mount: volume.mountPoint })} valueText={valueText} tone={toneOf(level)} />
           </div>
         </>

@@ -430,7 +430,8 @@ export const StoragePanel = memo(function StoragePanel() {
     );
   }
   return (
-    <Card level={3}
+    <Card
+      level={3}
       title={t("storageTitle")}
       className={PANEL}
       aside={<span className="text-2xs text-fg-subtle tabular">{t("detectedAt", { time: formatTime(data.collectedAt) })}</span>}

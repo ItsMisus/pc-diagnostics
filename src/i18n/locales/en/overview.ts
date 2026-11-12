@@ -106,7 +106,6 @@ export default {
   chipRam: "RAM",
   chipGpu: "GPU",
   chipTemp: "CPU temp.",
-  chipAria: "{label}: {value}",
 
   // Essential metrics.
   essentialsTitle: "Resources",
