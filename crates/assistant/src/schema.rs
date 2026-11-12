@@ -5,8 +5,14 @@
 //! `enum`, `const`, `anyOf`, `$ref`/`$defs`; no numeric/length bounds, no recursion.
 //! Field names match the `models::assistant` serde names, so an action object
 //! deserializes straight into `RemediationAction`.
+//!
+//! The schema follows the platform: on macOS only the actions and Settings pages the app
+//! can run there ([`action_kinds`], [`settings_pages`]) are allowed, so the model cannot
+//! even produce a Windows-only action. Windows (and every other platform) keeps the full
+//! lists.
 
-use serde_json::{Value, json};
+use models::app::Platform;
+use serde_json::{Map, Value, json};
 
 /// Serde names of `models::assistant::SettingsPage`, in declaration order.
 pub const SETTINGS_PAGES: [&str; 12] = [
@@ -35,6 +41,38 @@ pub const ACTION_KINDS: [&str; 7] = [
     "runSystemFileCheck",
 ];
 
+/// Actions the app can run on macOS (see `platform::remediation`).
+pub const MACOS_ACTION_KINDS: [&str; 2] = ["openSettingsPage", "cleanTempFiles"];
+
+/// Settings pages with a macOS System Settings pane (see
+/// `platform::macos::remediation::settings_url`).
+pub const MACOS_SETTINGS_PAGES: [&str; 8] = [
+    "windowsUpdate",
+    "storageSense",
+    "display",
+    "sound",
+    "bluetooth",
+    "network",
+    "startupApps",
+    "privacy",
+];
+
+/// Action kinds offered to the model on `platform`, in [`ACTION_KINDS`] order.
+pub fn action_kinds(platform: Platform) -> &'static [&'static str] {
+    match platform {
+        Platform::Macos => &MACOS_ACTION_KINDS,
+        Platform::Windows | Platform::Linux | Platform::Other => &ACTION_KINDS,
+    }
+}
+
+/// Settings pages offered to the model on `platform`, in [`SETTINGS_PAGES`] order.
+pub fn settings_pages(platform: Platform) -> &'static [&'static str] {
+    match platform {
+        Platform::Macos => &MACOS_SETTINGS_PAGES,
+        Platform::Windows | Platform::Linux | Platform::Other => &SETTINGS_PAGES,
+    }
+}
+
 fn obj(props: Value) -> Value {
     let required: Vec<Value> = props
         .as_object()
@@ -52,31 +90,67 @@ fn kind(tag: &str) -> Value {
     json!({ "type": "string", "const": tag })
 }
 
-/// The schema sent with every request.
+/// The schema sent with every request, for the platform this binary runs on.
 pub fn fix_plan_schema() -> Value {
+    fix_plan_schema_for(Platform::current())
+}
+
+/// The schema for `platform`: only [`action_kinds`] and [`settings_pages`] of it.
+pub fn fix_plan_schema_for(platform: Platform) -> Value {
     let level = json!({ "type": "string", "enum": ["low", "medium", "high"] });
-    let defs = json!({
-        "openSettingsPage": obj(json!({
-            "kind": kind("openSettingsPage"),
-            "page": { "type": "string", "enum": SETTINGS_PAGES },
-        })),
-        "openDeviceManager": obj(json!({ "kind": kind("openDeviceManager") })),
-        "openDiskCleanup": obj(json!({
-            "kind": kind("openDiskCleanup"),
-            "drive": { "type": "string" },
-        })),
-        "emptyRecycleBin": obj(json!({ "kind": kind("emptyRecycleBin") })),
-        "cleanTempFiles": obj(json!({
-            "kind": kind("cleanTempFiles"),
-            "olderThanDays": { "type": "integer" },
-        })),
-        "closeProgram": obj(json!({
-            "kind": kind("closeProgram"),
-            "pid": { "type": "integer" },
-            "name": { "type": "string" },
-        })),
-        "runSystemFileCheck": obj(json!({ "kind": kind("runSystemFileCheck") })),
-        "step": obj(json!({
+    let kinds = action_kinds(platform);
+    let action_defs = [
+        (
+            "openSettingsPage",
+            obj(json!({
+                "kind": kind("openSettingsPage"),
+                "page": { "type": "string", "enum": settings_pages(platform) },
+            })),
+        ),
+        (
+            "openDeviceManager",
+            obj(json!({ "kind": kind("openDeviceManager") })),
+        ),
+        (
+            "openDiskCleanup",
+            obj(json!({
+                "kind": kind("openDiskCleanup"),
+                "drive": { "type": "string" },
+            })),
+        ),
+        (
+            "emptyRecycleBin",
+            obj(json!({ "kind": kind("emptyRecycleBin") })),
+        ),
+        (
+            "cleanTempFiles",
+            obj(json!({
+                "kind": kind("cleanTempFiles"),
+                "olderThanDays": { "type": "integer" },
+            })),
+        ),
+        (
+            "closeProgram",
+            obj(json!({
+                "kind": kind("closeProgram"),
+                "pid": { "type": "integer" },
+                "name": { "type": "string" },
+            })),
+        ),
+        (
+            "runSystemFileCheck",
+            obj(json!({ "kind": kind("runSystemFileCheck") })),
+        ),
+    ];
+    let mut defs = Map::new();
+    for (name, def) in action_defs {
+        if kinds.contains(&name) {
+            defs.insert(name.into(), def);
+        }
+    }
+    defs.insert(
+        "step".into(),
+        obj(json!({
             "id": { "type": "string" },
             "title": { "type": "string" },
             "explanation": { "type": "string" },
@@ -84,7 +158,7 @@ pub fn fix_plan_schema() -> Value {
             "requiresAdmin": { "type": "boolean" },
             "reversible": { "type": "boolean" },
             "action": {
-                "anyOf": ACTION_KINDS
+                "anyOf": kinds
                     .iter()
                     .map(|k| json!({ "$ref": format!("#/$defs/{k}") }))
                     .chain(std::iter::once(json!({ "type": "null" })))
@@ -92,7 +166,8 @@ pub fn fix_plan_schema() -> Value {
             },
             "manualInstructions": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
         })),
-    });
+    );
+    let defs = Value::Object(defs);
     let mut root = obj(json!({
         "summary": { "type": "string" },
         "confidence": level,
@@ -191,24 +266,58 @@ mod tests {
 
     #[test]
     fn schema_satisfies_structured_output_constraints() {
-        let s = fix_plan_schema();
-        let defs = s["$defs"].as_object().expect("$defs").clone();
-        walk(&s, "#", None, &defs);
-        for (name, d) in &defs {
-            walk(d, &format!("#/$defs/{name}"), Some(name), &defs);
+        for platform in [Platform::Windows, Platform::Macos, Platform::current()] {
+            let s = fix_plan_schema_for(platform);
+            let defs = s["$defs"].as_object().expect("$defs").clone();
+            walk(&s, "#", None, &defs);
+            for (name, d) in &defs {
+                walk(d, &format!("#/$defs/{name}"), Some(name), &defs);
+            }
+            let text = s.to_string();
+            for banned in [
+                "minimum",
+                "maximum",
+                "minLength",
+                "maxLength",
+                "minItems",
+                "maxItems",
+                "pattern",
+                "format",
+            ] {
+                assert!(!text.contains(&format!("\"{banned}\"")), "{banned}");
+            }
         }
-        let text = s.to_string();
-        for banned in [
-            "minimum",
-            "maximum",
-            "minLength",
-            "maxLength",
-            "minItems",
-            "maxItems",
-            "pattern",
-            "format",
+        assert_eq!(fix_plan_schema(), fix_plan_schema_for(Platform::current()));
+    }
+
+    #[test]
+    fn macos_schema_allows_only_macos_actions_and_pages() {
+        let s = fix_plan_schema_for(Platform::Macos);
+        let defs = s["$defs"].as_object().expect("$defs");
+        let mut names: Vec<&str> = defs.keys().map(String::as_str).collect();
+        names.sort_unstable();
+        assert_eq!(names, ["cleanTempFiles", "openSettingsPage", "step"]);
+        let refs: Vec<&str> = defs["step"]["properties"]["action"]["anyOf"]
+            .as_array()
+            .expect("anyOf")
+            .iter()
+            .filter_map(|v| v["$ref"].as_str())
+            .collect();
+        assert_eq!(refs, ["#/$defs/openSettingsPage", "#/$defs/cleanTempFiles"]);
+        assert_eq!(
+            defs["openSettingsPage"]["properties"]["page"]["enum"],
+            json!(MACOS_SETTINGS_PAGES)
+        );
+        // Subsets of the full lists, in the same order.
+        for (sub, all) in [
+            (&MACOS_ACTION_KINDS[..], &ACTION_KINDS[..]),
+            (&MACOS_SETTINGS_PAGES[..], &SETTINGS_PAGES[..]),
         ] {
-            assert!(!text.contains(&format!("\"{banned}\"")), "{banned}");
+            let positions: Vec<usize> = sub
+                .iter()
+                .map(|x| all.iter().position(|y| y == x).expect("subset"))
+                .collect();
+            assert!(positions.windows(2).all(|w| w[0] < w[1]), "{sub:?}");
         }
     }
 
@@ -223,7 +332,8 @@ mod tests {
             json!({"kind": "closeProgram", "pid": 42, "name": "app.exe"}),
             json!({"kind": "runSystemFileCheck"}),
         ];
-        let defs = fix_plan_schema()["$defs"].clone();
+        // The Windows schema has every action.
+        let defs = fix_plan_schema_for(Platform::Windows)["$defs"].clone();
         for (k, sample) in ACTION_KINDS.iter().zip(samples) {
             let props = defs[k]["properties"].as_object().expect("props");
             let mut a: Vec<&String> = props.keys().collect();
