@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
-import { Card } from "@/components/common/Card";
+import { Panel } from "@/components/common/Panel";
 import { Icon } from "@/components/common/Icon";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
@@ -22,21 +22,21 @@ export function UpdateCheckPanel() {
   const running = check.status === "running";
 
   return (
-    <Card title={t("updatesTitle")}>
+    <Panel title={t("updatesTitle")} icon="globe">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <p id="update-check-desc" className="max-w-prose text-[13px] text-fg-muted">
+        <p id="update-check-desc" className="min-w-[min(100%,16rem)] max-w-prose flex-1 text-sm text-fg-muted">
           {t("updatesDescription")}
         </p>
         {/* One primary action per view: while online checks are off, it is the consent
             button below (the only one that unblocks the search); this one stays secondary. */}
         <Button
           variant={allowed ? "primary" : "secondary"}
+          icon="refresh"
           onClick={run}
-          disabled={!allowed || running || refreshing}
-          aria-busy={running}
+          disabled={!allowed || refreshing}
+          loading={running}
           aria-describedby={allowed ? "update-check-desc" : "update-check-consent"}
         >
-          <Icon name="refresh" />
           {running ? t("checking") : t("checkButton")}
         </Button>
       </div>
@@ -47,7 +47,7 @@ export function UpdateCheckPanel() {
         <CheckError error={check.error} onRetry={run} />
       )}
       {info && <LastCheck info={info} />}
-    </Card>
+    </Panel>
   );
 }
 
@@ -72,7 +72,7 @@ function ConsentNotice() {
   return (
     <div
       id="update-check-consent"
-      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3 text-[13px]"
+      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line pt-3 text-sm"
     >
       <Icon name="lock" className="shrink-0 text-fg-subtle" />
       <p className="min-w-0 flex-1">
@@ -98,7 +98,7 @@ function Running({ startedAt }: { startedAt: number }) {
     return () => clearInterval(id);
   }, []);
   return (
-    <div role="status" className="mt-3 flex items-start gap-2 text-[13px] text-fg-muted">
+    <div role="status" className="mt-3 flex items-start gap-2 text-sm text-fg-muted">
       <Spinner className="mt-0.5" />
       <p>
         {t("runningNote")}{" "}

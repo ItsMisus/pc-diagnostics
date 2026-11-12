@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/common/Button";
-import { Card } from "@/components/common/Card";
+import { Panel } from "@/components/common/Panel";
 import { Icon } from "@/components/common/Icon";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { toast } from "@/components/common/Toast";
@@ -12,7 +12,7 @@ import { commands } from "@/services/commands";
 import { toAppError } from "@/services/ipc";
 import type { AppError } from "@/types/generated/AppError";
 import type { AssistantStatus } from "@/types/generated/AssistantStatus";
-import { ROW_FRAME, ROW_LABEL, Row, Toggle } from "./controls";
+import { ROW_FRAME, ROW_LABEL, Row, SettingsGroup, Toggle } from "./controls";
 
 type StatusState = { status: "loading" } | { status: "ready"; data: AssistantStatus } | { status: "error"; error: AppError };
 
@@ -48,6 +48,7 @@ export function AssistantCard({ enabled, model, onEnabledChange, onModelChange }
   const keyId = useId();
   const keyHintId = useId();
   const modelGroupId = useId();
+  const enableHintId = useId();
   const t = useT("settings");
 
   useEffect(() => {
@@ -109,120 +110,128 @@ export function AssistantCard({ enabled, model, onEnabledChange, onModelChange }
   const keyConfigured = status?.keyConfigured ?? false;
 
   return (
-    <div ref={rootRef} tabIndex={-1} aria-label={t("assistantTitle")} className="rounded-xl outline-none">
-      <Card title={t("assistantTitle")}>
-        <div className="max-w-prose text-sm">
-          <p>
-            {t.rich("assistantIntro", { cost: <strong className="font-medium">{t("assistantIntroCost")}</strong> })}
-          </p>
-          <ul className="mt-2.5 flex list-disc flex-col gap-1 pl-4 text-[13px] text-fg-muted marker:text-fg-subtle">
-            <li>{t("assistantPointConsent")}</li>
-            <li>{t("assistantPointData")}</li>
-            <li>{t("assistantPointConfirm")}</li>
-            <li>{t("assistantPointKey")}</li>
-          </ul>
-        </div>
-
-        <div className="mt-4 border-t border-line pt-3.5">
-          <Row label={t("assistantEnable")} hint={t("offByDefault")}>
-            <Toggle label={t("assistantEnable")} checked={enabled} onChange={onEnabledChange} />
-          </Row>
-
-          <div className={ROW_FRAME}>
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <label htmlFor={keyId} className={ROW_LABEL}>
-                {t("apiKey")}
-              </label>
-              <span className="inline-flex min-h-5 items-center gap-1.5 text-xs text-fg-muted" aria-live="polite">
-                {state.status === "loading" ? (
-                  <>
-                    <Spinner size={12} />
-                    {t("keyChecking")}
-                  </>
-                ) : state.status === "error" ? (
-                  t("keyStatusUnavailable")
-                ) : keyConfigured ? (
-                  <>
-                    <Icon name="check" size={14} strokeWidth={2} className="text-ok" />
-                    {t("keySaved")}
-                  </>
-                ) : (
-                  t("noKey")
-                )}
-              </span>
-            </div>
-            <form onSubmit={(e) => void saveKey(e)} className="mt-2.5 flex flex-wrap items-center gap-2">
-              <input
-                id={keyId}
-                type="password"
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={keyConfigured ? t("keyReplacePlaceholder") : "sk-ant-…"}
-                aria-describedby={keyHintId}
-                className="h-8 min-w-[min(100%,14rem)] flex-1 px-2.5 font-mono placeholder:font-sans"
-              />
-              <Button type="submit" variant="primary" disabled={keyBusy || keyInput.trim() === ""} aria-busy={keyBusy}>
-                <Icon name="key" />
-                {t("saveKey")}
-              </Button>
-              {keyConfigured && (
-                <Button onClick={() => void clearKey()} disabled={keyBusy}>
-                  {t("removeKey")}
-                </Button>
-              )}
-            </form>
-            <p id={keyHintId} className={`mt-1.5 ${HINT}`}>
-              {t("keyHint")}
+    // Focus target for "Apri Settings" in the Risolvi dialog (programmatic focus only).
+    <div ref={rootRef} tabIndex={-1} aria-label={t("assistantTitle")} className="scroll-mt-20 rounded-xl outline-none">
+      <SettingsGroup title={t("assistantTitle")}>
+        <Panel as="div">
+          <div className="max-w-prose text-sm text-fg">
+            <p>
+              {t.rich("assistantIntro", { cost: <strong className="font-medium">{t("assistantIntroCost")}</strong> })}
             </p>
-            {keyError && (
-              <div className="mt-2">
-                <StateView compact kind={stateKindForError(keyError)} title={t("keyNotSaved")} error={keyError} />
-              </div>
-            )}
-            {state.status === "error" && (
-              <div className="mt-2">
-                <StateView
-                  compact
-                  kind={stateKindForError(state.error)}
-                  title={t("assistantStatusUnavailable")}
-                  error={state.error}
-                  onRetry={() => setNonce((n) => n + 1)}
-                />
-              </div>
-            )}
+            <ul className="mt-2.5 flex list-disc flex-col gap-1 pl-4 text-sm text-fg-muted marker:text-fg-subtle">
+              <li>{t("assistantPointConsent")}</li>
+              <li>{t("assistantPointData")}</li>
+              <li>{t("assistantPointConfirm")}</li>
+              <li>{t("assistantPointKey")}</li>
+            </ul>
           </div>
 
-          <fieldset className={`min-w-0 ${ROW_FRAME}`} aria-describedby={modelGroupId}>
-            <legend className={`float-left ${ROW_LABEL}`}>{t("model")}</legend>
-            <p id={modelGroupId} className={`clear-left mt-0.5 ${HINT}`}>
-              {t("modelHint")}
-            </p>
-            <div className="mt-2.5 -mx-2.5 flex flex-col gap-1">
-              {models.map((m) => (
-                <label
-                  key={m}
-                  className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-transparent px-2.5 py-2 transition-colors duration-150 hover:bg-surface-2 has-checked:border-line has-checked:bg-surface-2/60"
-                >
-                  <input
-                    type="radio"
-                    name={`${modelGroupId}-model`}
-                    value={m}
-                    checked={m === model}
-                    onChange={() => onModelChange(m)}
-                    className={RADIO}
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-[13px] leading-5 text-fg">{modelOptionLabel(m)}</span>
-                    {modelHint(m) && <span className={`block ${HINT}`}>{modelHint(m)}</span>}
-                  </span>
+          <div className="mt-4 border-t border-line pt-3.5">
+            <Row label={t("assistantEnable")} hint={t("offByDefault")} hintId={enableHintId}>
+              <Toggle label={t("assistantEnable")} checked={enabled} onChange={onEnabledChange} describedBy={enableHintId} />
+            </Row>
+
+            <div className={ROW_FRAME}>
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <label htmlFor={keyId} className={ROW_LABEL}>
+                  {t("apiKey")}
                 </label>
-              ))}
+                <span className="inline-flex min-h-5 items-center gap-1.5 text-xs text-fg-muted" aria-live="polite">
+                  {state.status === "loading" ? (
+                    <>
+                      <Spinner size={12} />
+                      {t("keyChecking")}
+                    </>
+                  ) : state.status === "error" ? (
+                    t("keyStatusUnavailable")
+                  ) : keyConfigured ? (
+                    <>
+                      <Icon name="success" size={14} className="text-ok" />
+                      {t("keySaved")}
+                    </>
+                  ) : (
+                    t("noKey")
+                  )}
+                </span>
+              </div>
+              <form onSubmit={(e) => void saveKey(e)} className="mt-2.5 flex flex-wrap items-center gap-2">
+                <input
+                  id={keyId}
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={keyConfigured ? t("keyReplacePlaceholder") : "sk-ant-…"}
+                  aria-describedby={keyHintId}
+                  className="h-8 min-w-[min(100%,14rem)] flex-1 rounded-full px-3.5 font-mono placeholder:font-sans"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  icon="key"
+                  loading={keyBusy}
+                  disabled={keyInput.trim() === ""}
+                >
+                  {t("saveKey")}
+                </Button>
+                {keyConfigured && (
+                  <Button variant="danger" onClick={() => void clearKey()} disabled={keyBusy}>
+                    {t("removeKey")}
+                  </Button>
+                )}
+              </form>
+              <p id={keyHintId} className={`mt-1.5 ${HINT}`}>
+                {t("keyHint")}
+              </p>
+              {keyError && (
+                <div className="mt-2">
+                  <StateView compact kind={stateKindForError(keyError)} title={t("keyNotSaved")} error={keyError} />
+                </div>
+              )}
+              {state.status === "error" && (
+                <div className="mt-2">
+                  <StateView
+                    compact
+                    kind={stateKindForError(state.error)}
+                    title={t("assistantStatusUnavailable")}
+                    error={state.error}
+                    onRetry={() => setNonce((n) => n + 1)}
+                  />
+                </div>
+              )}
             </div>
-          </fieldset>
-        </div>
-      </Card>
+
+            <fieldset className={`min-w-0 ${ROW_FRAME}`} aria-describedby={modelGroupId}>
+              <legend className={`float-left ${ROW_LABEL}`}>{t("model")}</legend>
+              <p id={modelGroupId} className={`clear-left mt-0.5 ${HINT}`}>
+                {t("modelHint")}
+              </p>
+              <div className="mt-2.5 -mx-2.5 flex flex-col gap-1">
+                {models.map((m) => (
+                  <label
+                    key={m}
+                    className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-transparent px-2.5 py-2 transition-colors duration-150 hover:bg-surface-2 has-checked:border-line has-checked:bg-surface-2/60"
+                  >
+                    <input
+                      type="radio"
+                      name={`${modelGroupId}-model`}
+                      value={m}
+                      checked={m === model}
+                      onChange={() => onModelChange(m)}
+                      className={RADIO}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm leading-5 text-fg">{modelOptionLabel(m)}</span>
+                      {modelHint(m) && <span className={`block ${HINT}`}>{modelHint(m)}</span>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        </Panel>
+      </SettingsGroup>
     </div>
   );
 }
