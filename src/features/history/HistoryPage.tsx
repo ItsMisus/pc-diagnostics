@@ -22,6 +22,7 @@ import { toAppError } from "@/services/ipc";
 import type { AppError } from "@/types/generated/AppError";
 import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 import {
+  activeKind,
   compareCandidates,
   DEFAULT_SORT,
   filterHistory,
@@ -86,11 +87,12 @@ export function HistoryPage() {
   };
 
   const all = state.data;
-  const rows = useMemo(
-    () => (all ? sortHistory(filterHistory(all, kind, outcome), sort) : []),
-    [all, kind, outcome, sort],
-  );
   const kinds = useMemo(() => (all ? kindsInHistory(all) : []), [all]);
+  const kindValue = activeKind(kind, kinds);
+  const rows = useMemo(
+    () => (all ? sortHistory(filterHistory(all, kindValue, outcome), sort) : []),
+    [all, kindValue, outcome, sort],
+  );
   const shown = useMemo(() => all?.find((r) => r.runId === shownId) ?? null, [all, shownId]);
   const loading = state.status === "loading";
   const reload = () => setNonce((n) => n + 1);
@@ -139,7 +141,7 @@ export function HistoryPage() {
           >
             <HistoryFilters
               kinds={kinds}
-              kind={kind}
+              kind={kindValue}
               onKind={setKind}
               outcome={outcome}
               onOutcome={setOutcome}
@@ -148,7 +150,7 @@ export function HistoryPage() {
               <div className="px-5 pb-5">
                 <StateView
                   kind="empty"
-                  title={kind !== "all" && outcome === "all" ? t("noRunsOfKind") : t("noRunsMatch")}
+                  title={kindValue !== "all" && outcome === "all" ? t("noRunsOfKind") : t("noRunsMatch")}
                   description={t("noRunsMatchDesc")}
                   action={
                     <Button

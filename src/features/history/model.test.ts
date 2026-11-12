@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { result } from "@/features/benchmarks/testing/fixtures";
-import { compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, matchesOutcome, nextSort, sortHistory } from "./model";
+import { activeKind, compareCandidates, DEFAULT_SORT, filterHistory, kindsInHistory, matchesOutcome, nextSort, sortHistory } from "./model";
 
 const runs = [
   result("a", { startedAt: 100 }),
@@ -28,6 +28,13 @@ describe("history", () => {
 
   it("lists the kinds present", () => {
     expect(kindsInHistory(runs)).toEqual(["cpuSingleCore", "memoryLatency"]);
+  });
+
+  it("falls back to all kinds when the filtered kind is gone", () => {
+    const kinds = kindsInHistory(runs);
+    expect(activeKind("memoryLatency", kinds)).toBe("memoryLatency");
+    expect(activeKind("all", kinds)).toBe("all");
+    expect(activeKind("memoryLatency", ["cpuSingleCore"])).toBe("all");
   });
 
   it("offers only other completed runs of the same kind for comparison", () => {

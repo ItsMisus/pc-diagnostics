@@ -31,6 +31,15 @@ export function kindsInHistory(results: readonly BenchmarkResult[]): BenchmarkKi
   return seen;
 }
 
+/**
+ * The kind filter actually in force: a kind that no longer appears after a reload (e.g. its
+ * runs fell past the limit) falls back to "all", so the select never shows a value it has no
+ * option for while the list silently stays empty.
+ */
+export function activeKind(filter: KindFilter, kinds: readonly BenchmarkKind[]): KindFilter {
+  return filter === "all" || kinds.includes(filter) ? filter : "all";
+}
+
 export type HistorySortKey = "date" | "duration";
 export interface HistorySort {
   key: HistorySortKey;
