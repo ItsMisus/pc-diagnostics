@@ -3,16 +3,17 @@ import { useEffect, useRef } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
+import { ProgressBar } from "@/components/common/ProgressBar";
 import { StateView } from "@/components/common/StateView";
 import { toast } from "@/components/common/Toast";
 import { Tooltip } from "@/components/common/Tooltip";
 import { translatorFor, useT } from "@/i18n";
-import { formatElapsed, formatUnitValue } from "@/lib/format";
+import { formatElapsed, formatPercent, formatUnitValue } from "@/lib/format";
 import { duration, ease } from "@/lib/motion";
 import type { BenchmarkProgress } from "@/types/generated/BenchmarkProgress";
 import { useBench } from "./benchStore";
-import { componentOfKind, headlineMetric, kindLabel, stateLabel } from "./model";
-import { RunProgress } from "./ui";
+import { componentOfKind, headlineMetric, isRunOnScreen, kindLabel, stateLabel } from "./model";
+import { COMPONENT_ICON } from "./ui";
 import { useBenchView } from "./viewStore";
 
 /**
@@ -23,33 +24,38 @@ import { useBenchView } from "./viewStore";
 const stripMotion = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0, transition: { duration: duration.component, ease: ease.out } },
-  exit: { opacity: 0, transition: { duration: 0.1, ease: ease.in } },
+  exit: { opacity: 0, y: 4, transition: { duration: duration.instant, ease: ease.in } },
 } as const;
 
 /**
- * Global "benchmark running" strip, a glass capsule floating at the bottom of the main area on
- * every page (AppShell positions it): the one place
- * for a run's progress and its Stop action (the benchmark screen shows only the interim
- * readings). Monochrome; the only control is Stop. It is the only shell component subscribed
- * to the progress slice, so progress events re-render it (and the interim readings) but not
- * the rest of the app.
+ * Global "benchmark running" capsule, glass floating at the bottom of the main area on every
+ * page (AppShell positions it): the run's phase, progress, elapsed time and Stop, wherever
+ * the user is. On the running component's own screen it steps aside while the test panel's
+ * run block (same progress and Stop) is visible, and comes back once that block scrolls out
+ * of view, so Stop is always one click away. It is the only shell component
+ * subscribed to the progress slice, so progress events re-render it (and the run block) but
+ * not the rest of the app.
  */
 export function RunningBar() {
   const t = useT("benchmarks");
   const run = useBench((s) => s.activeRun);
+  const section = useAppStore((s) => s.section);
+  const openComponent = useBenchView((s) => s.component);
+  const runInView = useBenchView((s) => s.runInView);
+  const visible = run !== null && !(runInView && isRunOnScreen(run, section, openComponent));
   useCompletionToast();
 
   return (
     <AnimatePresence initial={false}>
-      {run && (
+      {visible && (
         <m.div
           key="running-bar"
           role="region"
           aria-label={t("runningRegion")}
           {...stripMotion}
-          className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-6"
+          className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4 sm:px-6"
         >
-          {/* While exiting, AnimatePresence keeps rendering the last `run` it was given. */}
+          {/* While exiting, AnimatePresence keeps rendering the last children it was given. */}
           <Strip run={run} />
         </m.div>
       )}
@@ -67,42 +73,47 @@ function Strip({ run }: { run: BenchmarkProgress }) {
 
   const isCancelling = cancelling || run.state === "cancelling";
   const label = kindLabel(run.kind, t);
-  const pct = Math.round(Math.min(1, Math.max(0, run.fraction)) * 100);
+  const fraction = Math.min(1, Math.max(0, Number.isFinite(run.fraction) ? run.fraction : 0));
+  const component = componentOfKind(run.kind);
 
   return (
-    <div className="glass pointer-events-auto w-[min(46rem,100%)] rounded-2xl">
-      <div className="flex h-12 items-center gap-3 pr-2 pl-3">
+    <div className={`glass pointer-events-auto w-[min(44rem,100%)] ${cancelError ? "rounded-2xl" : "rounded-full"}`}>
+      <div className="flex h-13 items-center gap-3 pr-2 pl-2">
         <Tooltip content={t("openScreen")} side="top" className="min-w-0 shrink">
           <button
             type="button"
             onClick={() => {
-              openComponent(componentOfKind(run.kind));
+              openComponent(component);
               setSection("benchmarks");
             }}
-            className="flex min-w-0 items-center gap-2 rounded-full px-2 py-1 text-left text-sm transition-colors duration-150 hover:bg-control"
+            className="flex min-w-0 items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-left text-sm transition-colors duration-150 hover:bg-control"
           >
-            <span className="truncate">
+            <span aria-hidden="true" className="satin grid size-8 shrink-0 place-items-center rounded-full text-accent-text">
+              <Icon name={COMPONENT_ICON[component]} size={16} />
+            </span>
+            <span className="min-w-0 truncate">
               <span className="font-semibold text-fg">{label}</span>
               <span className="text-fg-muted">
                 {" "}
                 · {isCancelling ? stateLabel("cancelling", t) : run.phase || stateLabel(run.state, t)}
               </span>
+              <span className="sr-only">. {t("openScreen")}</span>
             </span>
           </button>
         </Tooltip>
-        <RunProgress fraction={run.fraction} label={t("progressAria", { kind: label })} className="min-w-20 flex-1" />
-        <span className="min-w-30 shrink-0 text-right text-xs text-fg-muted tabular" aria-live="off">
-          <span className="font-medium text-fg">{pct}%</span> · {formatElapsed(run.elapsedMs)}
+        <ProgressBar fraction={fraction} tone="accent" label={t("progressAria", { kind: label })} className="min-w-16 flex-1" />
+        <span className="shrink-0 text-right text-xs whitespace-nowrap text-fg-muted tabular" aria-live="off">
+          <span className="font-medium text-fg">{formatPercent(fraction * 100)}</span> · {formatElapsed(run.elapsedMs)}
         </span>
         <Button
-          variant="secondary"
+          variant="danger"
           size="sm"
+          icon="stop"
           onClick={() => void cancel()}
           disabled={isCancelling}
-          aria-busy={isCancelling}
+          loading={isCancelling}
           className="shrink-0"
         >
-          <Icon name="stop" size={14} />
           {isCancelling ? t("stopping") : t("stop")}
         </Button>
       </div>
