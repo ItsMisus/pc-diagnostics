@@ -139,7 +139,6 @@ export default {
   removable: "rimovibile",
 
   // Live progress and running bar.
-  runAria: "Esecuzione {kind}",
   progressAria: "Avanzamento {kind}",
   interimTitle: "Valori intermedi",
   stopping: "Interruzione…",
@@ -169,7 +168,20 @@ export default {
   notUsable: "non utilizzabile",
   notUsableForTest: "Non utilizzabile per il test",
   busyTitle: "Un altro benchmark è già in corso",
-  busyDesc: "Si esegue un solo test pesante alla volta. Attendi il termine o interrompilo dalla barra in alto.",
+  busyDesc: "Si esegue un solo test pesante alla volta. Attendi il termine o interrompilo dalla barra in basso.",
   rejectedTitle: "Parametri rifiutati dal backend",
   startFailed: "Avvio non riuscito",
+
+  // Redesigned page (selection, run, result).
+  componentsHeading: "Componenti",
+  chooseHint: "Scegli un componente per configurare e avviare un test. Nessun test parte da solo.",
+  detectedTitle: "Rilevato",
+  elapsed: "{time} trascorsi",
+  otherMeasures: "Altre misure",
+  chartsTitle: "Andamento",
+  eventsLost: "Aggiornamenti dei benchmark non ricevuti",
+  eventsLostDesc:
+    "Il collegamento con il motore dei test si è interrotto: avanzamento e risultati potrebbero non comparire. Riprova a collegarti.",
+  liveTitle: "Esecuzione",
+  unsupportedShort: "Non supportato",
 } satisfies Record<string, string>;
