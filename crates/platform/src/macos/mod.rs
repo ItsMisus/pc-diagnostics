@@ -10,6 +10,7 @@ pub mod process;
 pub mod remediation;
 
 pub mod cpu;
+pub mod device;
 pub mod gpu;
 pub mod iokit;
 pub mod live;

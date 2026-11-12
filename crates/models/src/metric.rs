@@ -68,6 +68,10 @@ pub enum Unavailability {
     NotImplemented,
     /// The provider exists but the read failed.
     Failed(AppError),
+    /// The sources were read but do not settle the value: they disagree, or none of them
+    /// is decisive. Detail (English, technical) says what was seen, e.g. "chassis type 3
+    /// (desktop) but an internal battery is present".
+    Inconclusive(String),
 }
 
 /// A measured value or an explained absence. Never a fabricated placeholder.

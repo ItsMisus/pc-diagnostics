@@ -187,6 +187,24 @@ pub fn inventory() -> HardwareInventory {
             at: T0,
         },
         volumes: vec![volume("C:\\", 500.0, 200.0)],
+        form_factor: models::device::FormFactorInfo {
+            form_factor: Metric::Available {
+                value: models::device::FormFactor::Desktop,
+                unit: Unit::None,
+                source: Source::Wmi,
+                at: T0,
+            },
+            basis: Some(models::device::FormFactorBasis::ChassisType),
+            internal_battery: Metric::Available {
+                value: false,
+                unit: Unit::None,
+                source: Source::PowerApi,
+                at: T0,
+            },
+            product_name: None,
+            model_identifier: None,
+            chassis_types: vec![3],
+        },
     }
 }
 

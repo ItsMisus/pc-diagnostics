@@ -560,6 +560,10 @@ pub fn unavailability_label(lang: Language, r: &Unavailability) -> String {
             format!("lettura non riuscita: {}", e.message),
             format!("read failed: {}", e.message),
         ),
+        Unavailability::Inconclusive(d) => lang.pick(
+            format!("non determinabile: {d}"),
+            format!("inconclusive: {d}"),
+        ),
     }
 }
 

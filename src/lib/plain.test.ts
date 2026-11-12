@@ -30,6 +30,7 @@ const REASONS: Record<Unavailability["kind"], Unavailability> = {
     kind: "failed",
     detail: { code: "platform", message: "PDH query failed HRESULT 0x800007D0", detail: null, retriable: true },
   },
+  inconclusive: { kind: "inconclusive", detail: "the chassis type indicates desktop but an internal battery is present" },
 };
 
 describe("unavailabilitySimpleText", () => {
@@ -39,6 +40,9 @@ describe("unavailabilitySimpleText", () => {
     expect(unavailabilitySimpleText(REASONS.permissionDenied)).toBe("Serve avviare l'app come amministratore");
     expect(unavailabilitySimpleText(REASONS.notImplemented)).toBe("Non ancora supportato dall'app");
     expect(unavailabilitySimpleText(REASONS.failed)).toBe("Lettura non riuscita, riprova più tardi");
+    expect(unavailabilitySimpleText(REASONS.inconclusive)).toBe(
+      "Le informazioni del sistema non bastano per stabilirlo",
+    );
   });
 
   it("never leaks the technical detail into the visible text", () => {

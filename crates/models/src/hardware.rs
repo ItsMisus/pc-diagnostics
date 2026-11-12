@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::device::FormFactorInfo;
 use crate::metric::{Metric, Source};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -175,6 +176,9 @@ pub struct HardwareInventory {
     pub memory: MemoryInfo,
     pub physical_disks: Metric<Vec<PhysicalDiskInfo>>,
     pub volumes: Vec<VolumeInfo>,
+    /// Tower / laptop / mini PC ..., with the evidence used (see `FormFactorInfo`).
+    /// Collected with the rest of the inventory, never per tick.
+    pub form_factor: FormFactorInfo,
 }
 
 #[cfg(test)]

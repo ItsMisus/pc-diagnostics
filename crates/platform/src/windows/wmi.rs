@@ -1,4 +1,5 @@
-//! WMI inventory queries: RAM modules and physical disks.
+//! WMI inventory queries: RAM modules, physical disks and the system enclosure (chassis
+//! type, for the form factor).
 //!
 //! WMI is COM. All queries run on a dedicated short-lived thread, so the caller's COM
 //! apartment (e.g. a Tauri/WebView STA thread) is never touched. The `wmi` crate joins
@@ -132,39 +133,75 @@ pub(crate) fn physical_disks_blocking() -> Metric<Vec<PhysicalDiskInfo>> {
     Metric::available(disks, Unit::None, Source::Wmi)
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct Win32SystemEnclosure {
+    chassis_types: Option<Vec<u16>>,
+}
+
+/// SMBIOS chassis type codes of every `Win32_SystemEnclosure` (normally one), readable
+/// without admin. Mapped by `crate::form_factor::from_chassis_types`.
+fn chassis_types_blocking() -> Result<Vec<u16>, Unavailability> {
+    let con = WMIConnection::new().map_err(|e| wmi_reason("connect ROOT\\CIMV2", &e))?;
+    let rows: Vec<Win32SystemEnclosure> = con
+        .raw_query("SELECT ChassisTypes FROM Win32_SystemEnclosure")
+        .map_err(|e| wmi_reason("Win32_SystemEnclosure", &e))?;
+    Ok(rows
+        .into_iter()
+        .flat_map(|r| r.chassis_types.unwrap_or_default())
+        .collect())
+}
+
 pub struct WmiInventory {
     pub modules: Metric<Vec<MemoryModule>>,
     pub physical_disks: Metric<Vec<PhysicalDiskInfo>>,
+    pub chassis_types: Result<Vec<u16>, Unavailability>,
 }
 
-/// Runs both WMI queries on a dedicated thread and waits (bounded) for the result.
-pub fn collect() -> WmiInventory {
+/// Runs `f` on a dedicated thread and waits (bounded) for its result; `failed` builds the
+/// result when the thread cannot start or times out.
+fn on_wmi_thread<T: Send + 'static>(
+    f: impl FnOnce() -> T + Send + 'static,
+    failed: impl FnOnce(Unavailability) -> T,
+) -> T {
     let (tx, rx) = mpsc::channel();
     let spawned = std::thread::Builder::new()
         .name("wmi-inventory".into())
         .spawn(move || {
-            let inv = WmiInventory {
-                modules: memory_modules_blocking(),
-                physical_disks: physical_disks_blocking(),
-            };
-            let _ = tx.send(inv);
+            let _ = tx.send(f());
         });
-    let failed = |message: &str| {
-        let r = Unavailability::Failed(AppError::new(ErrorCode::Platform, message));
-        WmiInventory {
-            modules: Metric::unavailable(r.clone()),
-            physical_disks: Metric::unavailable(r),
-        }
-    };
+    let reason =
+        |message: &str| Unavailability::Failed(AppError::new(ErrorCode::Platform, message));
     if let Err(e) = spawned {
         tracing::error!(error = %e, "could not spawn WMI thread");
-        return failed("could not spawn WMI worker thread");
+        return failed(reason("could not spawn WMI worker thread"));
     }
     match rx.recv_timeout(WMI_TIMEOUT) {
-        Ok(inv) => inv,
+        Ok(v) => v,
         Err(_) => {
             tracing::error!("WMI inventory timed out");
-            failed("WMI inventory query timed out")
+            failed(reason("WMI inventory query timed out"))
         }
     }
+}
+
+/// Runs the inventory WMI queries on a dedicated thread and waits (bounded) for the result.
+pub fn collect() -> WmiInventory {
+    on_wmi_thread(
+        || WmiInventory {
+            modules: memory_modules_blocking(),
+            physical_disks: physical_disks_blocking(),
+            chassis_types: chassis_types_blocking(),
+        },
+        |r| WmiInventory {
+            modules: Metric::unavailable(r.clone()),
+            physical_disks: Metric::unavailable(r.clone()),
+            chassis_types: Err(r),
+        },
+    )
+}
+
+/// The chassis query alone (for `crate::form_factor::detect`).
+pub fn chassis_types() -> Result<Vec<u16>, Unavailability> {
+    on_wmi_thread(chassis_types_blocking, Err)
 }

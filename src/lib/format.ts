@@ -233,6 +233,8 @@ export function unavailabilityText(reason: Unavailability): string {
       return t("reason_notImplemented");
     case "failed":
       return t("reason_failed", { message: reason.detail.message });
+    case "inconclusive":
+      return t("reason_inconclusive", { detail: reason.detail });
   }
 }
 
