@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Button } from "@/components/common/Button";
 import { ProgressBar } from "@/components/common/ProgressBar";
 import { StateView } from "@/components/common/StateView";
@@ -7,6 +7,7 @@ import { formatElapsed, formatPercent } from "@/lib/format";
 import { useBench } from "./benchStore";
 import { componentOfKind, kindLabel, stateLabel, type BenchComponent } from "./model";
 import { MetricsGrid } from "./ResultView";
+import { useBenchView } from "./viewStore";
 
 /**
  * The run in progress, if it belongs to `component`: live phase, progress, elapsed time, the
@@ -23,6 +24,7 @@ export function LiveProgress({ component }: { component: BenchComponent }) {
   const cancel = useBench((s) => s.cancelRun);
   const titleId = useId();
   const interimId = useId();
+  const controlsRef = useReportInView(run !== null);
   if (!run) return null;
 
   const isCancelling = cancelling || run.state === "cancelling";
@@ -32,7 +34,7 @@ export function LiveProgress({ component }: { component: BenchComponent }) {
 
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3">
+      <div ref={controlsRef} className="flex flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
           <div className="flex min-w-0 flex-col gap-0.5">
             <h3 id={titleId} className="eyebrow">
@@ -79,4 +81,28 @@ export function LiveProgress({ component }: { component: BenchComponent }) {
       </section>
     </section>
   );
+}
+
+/**
+ * Tells the view store whether the run block is visible in the scroll area (excluding the
+ * sticky 64 px toolbar and the 96 px reserved for the floating strip), so the strip only steps
+ * aside while progress and Stop are actually on screen. Without IntersectionObserver the
+ * block counts as not visible and the strip stays: Stop is never out of reach.
+ */
+function useReportInView(active: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const setRunInView = useBenchView((s) => s.setRunInView);
+  useEffect(() => {
+    const el = ref.current;
+    if (!active || !el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setRunInView(entry?.isIntersecting ?? false), {
+      rootMargin: "-64px 0px -96px 0px",
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      setRunInView(false);
+    };
+  }, [active, setRunInView]);
+  return ref;
 }

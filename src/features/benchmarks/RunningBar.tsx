@@ -30,8 +30,9 @@ const stripMotion = {
 /**
  * Global "benchmark running" capsule, glass floating at the bottom of the main area on every
  * page (AppShell positions it): the run's phase, progress, elapsed time and Stop, wherever
- * the user is. On the running component's own screen it steps aside, because the test panel
- * shows the same progress and Stop (one place at a time). It is the only shell component
+ * the user is. On the running component's own screen it steps aside while the test panel's
+ * run block (same progress and Stop) is visible, and comes back once that block scrolls out
+ * of view, so Stop is always one click away. It is the only shell component
  * subscribed to the progress slice, so progress events re-render it (and the run block) but
  * not the rest of the app.
  */
@@ -40,7 +41,8 @@ export function RunningBar() {
   const run = useBench((s) => s.activeRun);
   const section = useAppStore((s) => s.section);
   const openComponent = useBenchView((s) => s.component);
-  const visible = run !== null && !isRunOnScreen(run, section, openComponent);
+  const runInView = useBenchView((s) => s.runInView);
+  const visible = run !== null && !(runInView && isRunOnScreen(run, section, openComponent));
   useCompletionToast();
 
   return (

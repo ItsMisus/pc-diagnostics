@@ -376,7 +376,8 @@ function LatestResult({ kind }: { kind: BenchmarkKind }) {
     <AnimatePresence initial={false}>
       {visible && (
         <m.div key={visible.runId} {...panelIn}>
-          <Panel variant="primary" title={t("result")} eyebrow={kindLabel(visible.kind, t)} aside={<ResultMeta result={visible} />}>
+          {/* Secondary: the test panel above stays the screen's one focal (primary) panel. */}
+          <Panel title={t("result")} eyebrow={kindLabel(visible.kind, t)} aside={<ResultMeta result={visible} />}>
             <ResultView
               result={visible}
               meta={false}

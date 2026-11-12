@@ -105,7 +105,7 @@ function ComparisonTable({ data }: { data: BenchmarkComparison }) {
             <Icon name="alert" className="mt-0.5 shrink-0 text-warn" />
             <span>{summary.kind === "comparable" ? t("caveatsComparable") : t("caveatsReasons")}</span>
           </p>
-          <ul className="mt-1 list-disc pl-10text-fg-muted marker:text-warn">
+          <ul className="mt-1 list-disc pl-10 text-fg-muted marker:text-warn">
             {summary.caveats.map((c) => (
               <li key={c} className="break-words">
                 {c}
