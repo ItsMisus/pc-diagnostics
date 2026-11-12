@@ -25,12 +25,13 @@ const bytes = (v: number) => formatBytes(v);
 export function AppOverheadCard() {
   const [state, retry] = usePolling(fetchOverview, POLL_MS);
   const t = useT("settings");
+  const tc = useT("common");
 
   return (
     <Panel title={t("overhead")} icon="gauge" level={3}>
       {state.status === "loading" && (
         <div role="status" aria-busy="true">
-          <span className="sr-only">{t("overhead")}</span>
+          <span className="sr-only">{tc("stateLoading")}</span>
           <SkeletonLines lines={4} />
         </div>
       )}

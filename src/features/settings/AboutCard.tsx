@@ -9,12 +9,13 @@ import { commands } from "@/services/commands";
 export function AboutCard() {
   const [state, reload] = useAsync(commands.getAppInfo);
   const t = useT("settings");
+  const tc = useT("common");
   return (
     // The group heading ("Informazioni") names this panel.
     <Panel as="div">
       {state.status === "loading" && (
         <div role="status" aria-busy="true">
-          <span className="sr-only">{t("about")}</span>
+          <span className="sr-only">{tc("stateLoading")}</span>
           <SkeletonLines lines={4} />
         </div>
       )}

@@ -172,21 +172,21 @@ function RefreshButton({ disabled }: { disabled: boolean }) {
   const refreshing = useDrivers((s) => s.refreshing);
   const checking = useDrivers((s) => s.check.status === "running");
   const refresh = useDrivers((s) => s.refresh);
-  // Disabled buttons get no hover: the tooltip sits on a wrapper. The reason is also the
-  // button's description, so it is not tooltip-only for screen readers.
+  // Blocked only by the running update check: the button stays focusable (aria-disabled, not
+  // disabled) so the reason opens from the keyboard too, and is also its description.
+  const blocked = checking && !disabled && !refreshing;
   return (
-    <Tooltip content={t("refreshBlocked")} side="bottom-end" enabled={checking}>
-      <span className="inline-flex">
-        <Button
-          icon="refresh"
-          onClick={refresh}
-          disabled={disabled || refreshing || checking}
-          loading={refreshing}
-          {...(checking ? { "aria-description": t("refreshBlocked") } : {})}
-        >
-          {refreshing ? t("refreshing") : t("refresh")}
-        </Button>
-      </span>
+    <Tooltip content={t("refreshBlocked")} side="bottom-end" enabled={blocked}>
+      <Button
+        icon="refresh"
+        onClick={blocked ? undefined : refresh}
+        disabled={disabled || refreshing || (checking && !blocked)}
+        loading={refreshing}
+        className={blocked ? "cursor-not-allowed opacity-45" : ""}
+        {...(blocked ? { "aria-disabled": true, "aria-description": t("refreshBlocked") } : {})}
+      >
+        {refreshing ? t("refreshing") : t("refresh")}
+      </Button>
     </Tooltip>
   );
 }

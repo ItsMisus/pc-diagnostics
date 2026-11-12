@@ -65,7 +65,7 @@ export function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        {...(settings.status === "ready" ? { actions: <SaveStatus saving={settings.saving} /> } : {})}
+        {...(settings.status === "ready" ? { actions: <SaveStatus saving={settings.saving} failed={settings.saveError !== null} /> } : {})}
       />
       {settings.status === "loading" && <SettingsSkeleton />}
       {settings.status === "error" && (
@@ -179,13 +179,26 @@ export function SettingsPage() {
   );
 }
 
-/** Quiet toolbar status: a spinner while a change is being written, otherwise a reminder that saving is automatic. */
-function SaveStatus({ saving }: { saving: boolean }) {
+/**
+ * Quiet toolbar status: a spinner while a change is being written, "not saved" (glyph +
+ * words; the details are inline at the top of the page) after a failed save, otherwise a
+ * reminder that saving is automatic. The toolbar is sticky, so a failure is seen from any row.
+ */
+function SaveStatus({ saving, failed }: { saving: boolean; failed: boolean }) {
   const t = useT("settings");
   return (
-    <p className="flex min-h-5 items-center gap-1.5 text-xs text-fg-subtle" aria-live="polite">
-      {saving ? <Spinner size={12} /> : <Icon name="check" size={12} />}
-      {saving ? t("saving") : t("saved")}
+    <p
+      className={`flex min-h-5 items-center gap-1.5 text-xs ${failed && !saving ? "text-bad" : "text-fg-subtle"}`}
+      aria-live="polite"
+    >
+      {saving ? (
+        <Spinner size={12} />
+      ) : failed ? (
+        <Icon name="error" size={12} className="shrink-0" />
+      ) : (
+        <Icon name="check" size={12} className="shrink-0" />
+      )}
+      {saving ? t("saving") : failed ? t("saveFailed") : t("saved")}
     </p>
   );
 }

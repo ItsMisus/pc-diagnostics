@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/common/Button";
 import type { IconName } from "@/components/common/Icon";
 import { useUnavailabilityText } from "@/components/common/MetricValue";
@@ -35,7 +35,6 @@ export function DeviceShapeRow() {
   const reloadInventory = useInventory((s) => s.reload);
   const reasonText = useUnavailabilityText();
   const simple = useIsSimple();
-  const hintId = useId();
 
   const info = data?.formFactor;
   const detection = useMemo(() => detectionResult(info, inventoryError), [info, inventoryError]);
@@ -83,7 +82,6 @@ export function DeviceShapeRow() {
   return (
     <Row
       label={t("deviceModel")}
-      hintId={hintId}
       hint={
         <>
           <span className="block">{t("deviceModelHint")}</span>
