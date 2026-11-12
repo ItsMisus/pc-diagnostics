@@ -15,6 +15,9 @@ sysinfo = { version = "0.40", default-features = false, features = ["system", "d
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
 security-framework = "3"
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFBase", "CFData", "CFDictionary", "CFNumber", "CFString"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc"] }
+objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice"] }
 
 [target.'cfg(windows)'.dependencies]
 serde.workspace = true

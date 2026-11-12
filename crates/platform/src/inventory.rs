@@ -1,5 +1,11 @@
 //! Hardware inventory. Slow (WMI, DXGI, NVML init): call on demand and cache the result;
 //! never call it from a per-second loop.
+//!
+//! macOS: CPU from `sysinfo` plus the rated maximum from `macos::cpu`; GPUs from the
+//! I/O Kit accelerators (`macos::gpu`); physical disks from the I/O Kit block storage
+//! drivers (`macos::storage`); volumes from `sysinfo` without the boot container's
+//! system-managed mounts (see [`volumes`]). Memory modules are not exposed (see
+//! [`collect_inventory`]).
 
 use models::hardware::{CpuInfo, GpuInfo, HardwareInventory, MediaKind, MemoryInfo, VolumeInfo};
 use models::metric::{Metric, Unavailability};
@@ -33,7 +39,23 @@ pub fn collect_inventory() -> HardwareInventory {
             (Metric::unavailable(r.clone()), Metric::unavailable(r))
         }
     };
-    #[cfg(not(windows))]
+    // macOS has no public API for per-module memory facts (size, speed, part number per
+    // DIMM): only `system_profiler` prints them, and on Apple Silicon the memory is in the
+    // SoC package, not in modules. So the list stays unavailable rather than empty.
+    #[cfg(target_os = "macos")]
+    let (modules, physical_disks) = (
+        Metric::unavailable(Unavailability::NotSupported),
+        match crate::macos::storage::physical_disks() {
+            Ok(d) => {
+                Metric::available(d, models::metric::Unit::None, models::metric::Source::IoKit)
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "physical disk inventory failed");
+                Metric::unavailable(Unavailability::Failed(e))
+            }
+        },
+    );
+    #[cfg(not(any(windows, target_os = "macos")))]
     let (modules, physical_disks) = (
         Metric::unavailable(Unavailability::NotSupported),
         Metric::unavailable(Unavailability::NotSupported),
@@ -73,7 +95,11 @@ fn cpu_info() -> CpuInfo {
     let logical = if os_logical > 0 { os_logical } else { logical };
     #[cfg(windows)]
     let max_mhz = crate::windows::cpu_max_mhz();
-    #[cfg(not(windows))]
+    // Rated maximum (Intel: `hw.cpufrequency_max`; Apple Silicon: the performance
+    // cluster's top DVFS state), the same value the live sample reports.
+    #[cfg(target_os = "macos")]
+    let max_mhz = crate::macos::cpu::max_mhz();
+    #[cfg(not(any(windows, target_os = "macos")))]
     let max_mhz = Metric::unavailable(Unavailability::NotSupported);
     CpuInfo {
         vendor,
@@ -95,9 +121,31 @@ fn gpu_info() -> Vec<GpuInfo> {
             Vec::new()
         })
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::gpu::inventory().unwrap_or_else(|e| {
+            tracing::error!(error = %e, "GPU inventory failed");
+            Vec::new()
+        })
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         Vec::new()
+    }
+}
+
+/// Whether a mount point is listed as a volume.
+///
+/// macOS: the boot disk is one APFS container mounted as the read-only system snapshot
+/// at `/` plus system-managed volumes under `/System/Volumes/` (`Data` holds the user's
+/// files; `VM`, `Preboot`, `Update`, … are internal). They all share the container's
+/// space, so `/` alone (shown by Finder as "Macintosh HD") already reports it; listing
+/// `/System/Volumes/Data` too would show the same space twice.
+fn is_listed_volume(mount_point: &str) -> bool {
+    if cfg!(target_os = "macos") {
+        !mount_point.starts_with("/System/Volumes/")
+    } else {
+        true
     }
 }
 
@@ -111,6 +159,7 @@ fn volumes() -> Vec<VolumeInfo> {
     };
     disks
         .iter()
+        .filter(|d| is_listed_volume(&d.mount_point().to_string_lossy()))
         .map(|d| VolumeInfo {
             mount_point: d.mount_point().to_string_lossy().into_owned(),
             label: non_empty(Some(d.name().to_string_lossy().into_owned())),
@@ -149,6 +198,51 @@ mod tests {
         }
         for v in &inv.volumes {
             assert!(v.available_bytes <= v.total_bytes);
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn volume_filter_drops_boot_container_system_mounts() {
+        assert!(is_listed_volume("/"));
+        assert!(is_listed_volume("/Volumes/USB"));
+        assert!(!is_listed_volume("/System/Volumes/Data"));
+        assert!(!is_listed_volume("/System/Volumes/VM"));
+    }
+
+    // This Mac: the GPU, the boot disk and "/" must be real; what macOS does not expose
+    // must stay unavailable.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn host_macos_inventory_is_plausible() {
+        let inv = collect_inventory();
+        assert!(!inv.gpus.is_empty(), "every Mac has a GPU");
+        assert!(inv.gpus.iter().all(|g| g.id.starts_with("ioreg:")));
+        assert!(
+            !inv.memory.modules.is_available(),
+            "no public per-module API"
+        );
+        let disks = inv.physical_disks.value().expect("I/O Kit disks");
+        assert!(disks.iter().any(|d| d.id == "disk0" && d.size_bytes > 0));
+        let root = inv
+            .volumes
+            .iter()
+            .find(|v| v.mount_point == "/")
+            .expect("/ listed");
+        assert!(root.total_bytes > 10_000_000_000 && !root.removable);
+        assert!(
+            inv.volumes
+                .iter()
+                .all(|v| !v.mount_point.starts_with("/System/Volumes/"))
+        );
+        if cfg!(target_arch = "aarch64") {
+            assert_eq!(inv.cpu.vendor.as_deref(), Some("Apple"));
+            let m = *inv.cpu.max_mhz.value().expect("rated max MHz");
+            assert!((2000.0..=6000.0).contains(&m), "{m} MHz");
+            let g = &inv.gpus[0];
+            assert_eq!(g.vendor_id, 0x106B);
+            assert_eq!(g.dedicated_vram_bytes, 0, "unified memory");
+            assert!(g.name.starts_with("Apple"), "{}", g.name);
         }
     }
 }

@@ -7,6 +7,13 @@
 //!
 //! Cost: one Toolhelp snapshot (no handles) plus a `sysinfo` refresh restricted to our
 //! own pids, so it is cheap enough to run every few seconds on the sampler thread.
+//!
+//! macOS: the interface is a `WKWebView`, whose WebContent, Networking and GPU processes
+//! are XPC services started by `launchd` (parent pid 1), not children of the app. Telling
+//! ours apart from Safari's or another app's needs private API (the process
+//! "responsibility" SPI or `WKWebView` private properties), so "webview" is reported as
+//! `NotSupported` there and only the core process is measured. No process-tree snapshot
+//! is taken on macOS.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
@@ -120,13 +127,18 @@ impl OverheadTracker {
             }
         };
 
-        let candidates = match process_parents(sys) {
+        // `None`: the interface processes cannot be attributed on this OS (module docs).
+        #[cfg(target_os = "macos")]
+        let tree: Option<Vec<u32>> = None;
+        #[cfg(not(target_os = "macos"))]
+        let tree = Some(match process_parents(sys) {
             Ok(parents) => descendants(self_pid.as_u32(), &parents, |_, _| true),
             Err(e) => {
                 tracing::warn!(error = %e, "process tree snapshot failed");
                 Vec::new()
             }
-        };
+        });
+        let candidates = tree.as_deref().unwrap_or_default();
         // Refresh our pids plus last window's pids (so exited ones are dropped from `sys`).
         let mut refresh: Vec<Pid> = candidates.iter().map(|p| Pid::from_u32(*p)).collect();
         refresh.push(self_pid);
@@ -203,7 +215,10 @@ impl OverheadTracker {
             }
         };
         let core = usage(&[self_pid]);
-        let webview = usage(&webview);
+        let webview = match tree {
+            Some(_) => usage(&webview),
+            None => empty_usage(Unavailability::NotSupported),
+        };
         self.prev_cpu_ms = next_prev;
         self.prev_at = Some(now);
         self.latest = AppOverhead {
@@ -225,7 +240,11 @@ impl Default for OverheadTracker {
 pub fn pending_overhead() -> AppOverhead {
     AppOverhead {
         core: empty_usage(no_window_yet()),
-        webview: empty_usage(no_window_yet()),
+        webview: empty_usage(if cfg!(target_os = "macos") {
+            Unavailability::NotSupported
+        } else {
+            no_window_yet()
+        }),
         window_ms: 0,
     }
 }
@@ -243,7 +262,7 @@ fn process_parents(_sys: &mut System) -> Result<Vec<(u32, u32)>, AppError> {
     crate::windows::toolhelp::process_parents()
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn process_parents(sys: &mut System) -> Result<Vec<(u32, u32)>, AppError> {
     sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::nothing());
     Ok(sys
@@ -296,6 +315,43 @@ mod tests {
         assert!(d.is_empty(), "vetoed link prunes the subtree");
     }
 
+    // macOS: children are not reported as the interface (module docs); the core process
+    // is still measured and the webview part carries its reason.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn host_macos_webview_is_not_attributed() {
+        let mut child = std::process::Command::new("sleep")
+            .arg("3")
+            .spawn()
+            .expect("spawn child");
+        let mut t = OverheadTracker::new();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let o = t.measure().clone();
+        let _ = child.kill();
+        let _ = child.wait();
+        assert_eq!(o.webview.process_count, 0);
+        for m in [&o.webview.cpu_percent, &o.webview.working_set_bytes] {
+            assert!(
+                matches!(
+                    m,
+                    Metric::Unavailable {
+                        reason: Unavailability::NotSupported
+                    }
+                ),
+                "{m:?}"
+            );
+        }
+        assert!(matches!(
+            pending_overhead().webview.cpu_percent,
+            Metric::Unavailable {
+                reason: Unavailability::NotSupported
+            }
+        ));
+        assert_eq!(o.core.process_count, 1);
+        assert!(o.core.working_set_bytes.value().is_some_and(|v| *v > 0.0));
+    }
+
+    #[cfg(not(target_os = "macos"))]
     #[test]
     fn host_overhead_counts_child_processes() {
         let mut child = if cfg!(windows) {
