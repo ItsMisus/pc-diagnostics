@@ -15,7 +15,7 @@ export default {
   usedSpaceOn: "Spazio occupato su {mount}",
   percentUsed: "{percent} occupato",
   windowsHealth: "Stato Windows",
-  "windowsHealth@macos": "Stato macOS",
+  "windowsHealth@macos": "Stato dei dischi",
   diskFallback: "Disco {id}",
   noVolumes: "Nessun volume rilevato",
   noHardwareGpu: "Nessuna GPU hardware rilevata",

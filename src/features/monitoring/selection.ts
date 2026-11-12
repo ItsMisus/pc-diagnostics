@@ -3,6 +3,8 @@ import { type Translator, translatorFor } from "@/i18n";
 import type { DiskHealthStatus } from "@/types/generated/DiskHealthStatus";
 import type { GpuInfo } from "@/types/generated/GpuInfo";
 import type { Metric } from "@/types/generated/Metric";
+import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
+import type { Platform } from "@/types/generated/Platform";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 
 const isPhysical = (g: GpuInfo) => !g.isSoftware && !g.isVirtual;
@@ -56,6 +58,18 @@ export function systemVolume(volumes: readonly VolumeInfo[]): VolumeInfo | null 
     largest(volumes.filter((v) => !v.removable)) ??
     largest(volumes)
   );
+}
+
+/**
+ * Whether the Overview shows the disk status block on `platform`. On Windows always: the
+ * Windows Storage health summary exists there, and when it cannot be read the reason is
+ * worth stating. Elsewhere the block is a Windows concept with no counterpart, so it is shown
+ * only when the OS actually reported a status for at least one disk; a block made only of
+ * "not available" rows (e.g. on macOS) would say nothing.
+ */
+export function showsDiskStatus(disks: Metric<readonly Pick<PhysicalDiskInfo, "health">[]>, platform: Platform): boolean {
+  if (platform === "windows") return true;
+  return disks.status === "available" && disks.value.some((d) => d.health.status === "available");
 }
 
 /** PCI vendor id of Apple. */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { setLang } from "@/i18n";
+import { setLang, tr } from "@/i18n";
 import { setPlatform } from "@/lib/platform";
 import type { FixPlan } from "@/types/generated/FixPlan";
 import type { FixStep } from "@/types/generated/FixStep";
@@ -12,7 +12,7 @@ import { coverageSummary, platformCoverage } from "./diagnostics/model";
 import { simpleSummary } from "./diagnostics/simple";
 import { coverage } from "./diagnostics/testing/fixtures";
 import { gpuVendorLabel } from "./monitoring/labels";
-import { hasUnifiedMemory, isSystemMount, systemVolume } from "./monitoring/selection";
+import { hasUnifiedMemory, isSystemMount, showsDiskStatus, systemVolume } from "./monitoring/selection";
 import { gpuInfo, volume } from "./monitoring/testing/fixtures";
 
 /**
@@ -43,6 +43,31 @@ describe("volumes as mount points", () => {
     expect(defaultVolume([benchVolume("/Volumes/USB", { removable: true }), benchVolume("/")])).toBe("/");
     // Without /, the first fixed volume, never a removable one first.
     expect(defaultVolume([benchVolume("/Volumes/USB", { removable: true }), benchVolume("/Volumes/Dati")])).toBe("/Volumes/Dati");
+  });
+});
+
+describe("Overview disk status block", () => {
+  const notSupported = { status: "unavailable", reason: { kind: "notSupported" } } as const;
+  const healthy = { status: "available", value: "healthy", unit: "none", source: "ioKit", at: 0 } as const;
+
+  it("is always shown on Windows, even when the status cannot be read", () => {
+    expect(showsDiskStatus(notSupported, "windows")).toBe(true);
+    expect(showsDiskStatus({ ...healthy, value: [] }, "windows")).toBe(true);
+  });
+
+  it("is hidden on macOS unless the OS reports a status for some disk", () => {
+    expect(showsDiskStatus(notSupported, "macos")).toBe(false);
+    expect(showsDiskStatus({ ...healthy, value: [] }, "macos")).toBe(false);
+    expect(showsDiskStatus({ ...healthy, value: [{ health: notSupported }] }, "macos")).toBe(false);
+    expect(showsDiskStatus({ ...healthy, value: [{ health: notSupported }, { health: healthy }] }, "macos")).toBe(true);
+  });
+
+  it("is titled for the disks on macOS, keeps the Windows title on Windows", () => {
+    expect(tr("monitoring", "windowsHealth")).toBe("Stato Windows");
+    setPlatform("macos");
+    expect(tr("monitoring", "windowsHealth")).toBe("Stato dei dischi");
+    setLang("en");
+    expect(tr("monitoring", "windowsHealth")).toBe("Disk status");
   });
 });
 

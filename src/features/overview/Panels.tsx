@@ -15,7 +15,8 @@ import { DiskHealth } from "@/features/monitoring/DiskHealth";
 import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
-import { hasUnifiedMemory, isFrequencyLimited, primaryGpu, volumeDisplayName } from "@/features/monitoring/selection";
+import { hasUnifiedMemory, isFrequencyLimited, primaryGpu, showsDiskStatus, volumeDisplayName } from "@/features/monitoring/selection";
+import { usePlatform } from "@/lib/platform";
 import { valueOf } from "@/features/monitoring/series";
 import { InventoryState, WaitingForSample } from "@/features/monitoring/StatusViews";
 import type { CpuSample } from "@/types/generated/CpuSample";
@@ -399,6 +400,7 @@ export const StoragePanel = memo(function StoragePanel() {
   useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
+  const platform = usePlatform();
   const { status, data } = useInventoryData();
   if (status !== "ready" || !data) {
     return (
@@ -422,15 +424,19 @@ export const StoragePanel = memo(function StoragePanel() {
           ))}
         </div>
       )}
-      <div className="mt-4 mb-2 flex items-center gap-1.5">
-        <h3 className="eyebrow">{tm("windowsHealth")}</h3>
-        <Tooltip content={t("healthNote")} side="top">
-          <span tabIndex={0} aria-label={t("healthNote")} className="inline-flex rounded text-fg-subtle">
-            <Icon name="info" size={12} />
-          </span>
-        </Tooltip>
-      </div>
-      <DiskHealthList disks={data.physicalDisks} />
+      {showsDiskStatus(data.physicalDisks, platform) && (
+        <>
+          <div className="mt-4 mb-2 flex items-center gap-1.5">
+            <h3 className="eyebrow">{tm("windowsHealth")}</h3>
+            <Tooltip content={t("healthNote")} side="top">
+              <span tabIndex={0} aria-label={t("healthNote")} className="inline-flex rounded text-fg-subtle">
+                <Icon name="info" size={12} />
+              </span>
+            </Tooltip>
+          </div>
+          <DiskHealthList disks={data.physicalDisks} />
+        </>
+      )}
     </Card>
   );
 });
