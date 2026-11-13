@@ -24,6 +24,7 @@ pub fn run() {
         .init();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Per-user local data dir (%APPDATA%\<identifier>): no admin rights needed.
             let dir = app.path().app_data_dir()?;
@@ -85,6 +86,21 @@ pub fn run() {
                 control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
             );
             let _ = &store;
+
+            // Gaming: library, game profiles and game mode. The orchestrator passes the
+            // Performance, Cooling and Lighting domains here (empty until they are wired).
+            let gaming = Arc::new(control::gaming::GamingController::new(
+                Arc::clone(&store),
+                Vec::new(),
+                Box::new(control::gaming::SystemProcessLister::new()),
+            ));
+            let handle = app.handle().clone();
+            gaming.start_watcher(move |event| {
+                if let Err(e) = handle.emit(models::control::gaming::GAMING_SESSION_EVENT, event) {
+                    tracing::warn!(error = %e, "failed to emit gaming session event");
+                }
+            });
+            app.manage(gaming);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -116,6 +132,15 @@ pub fn run() {
             commands::assistant::preview_fix,
             commands::assistant::request_fix,
             commands::assistant::execute_fix_step,
+            commands::gaming::get_gaming_state,
+            commands::gaming::get_game_art,
+            commands::gaming::launch_game,
+            commands::gaming::add_manual_game,
+            commands::gaming::remove_manual_game,
+            commands::gaming::set_game_hidden,
+            commands::gaming::set_game_profile,
+            commands::gaming::set_game_mode,
+            commands::gaming::stop_game_session,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -126,6 +151,10 @@ pub fn run() {
             let state = handle.state::<AppState>();
             state.bench().shutdown();
             state.shutdown_samplers();
+            // Gaming: stop the watcher and clear any game override.
+            if let Some(gaming) = handle.try_state::<Arc<control::gaming::GamingController>>() {
+                gaming.shutdown();
+            }
             tracing::info!("samplers stopped");
         }
     });
