@@ -75,6 +75,17 @@ export default {
   benchmarkRunning: "Benchmark in corso",
   quickActions: "Azioni rapide",
 
+  // Hero: the air around the 3D model.
+  airflowTitle_fans: "Flusso d'aria",
+  airflowTitle_passive: "Flusso d'aria: raffreddamento passivo",
+  airflowTitle_unknown: "Flusso d'aria non mostrato",
+  airflowIntake: "Aria fresca in entrata",
+  airflowExhaust: "Aria calda in uscita",
+  airflowHeat: "Calore che lascia la scocca",
+  airflowNote_fans: "Le ventole aspirano aria fresca e spingono fuori quella calda. Il percorso è quello tipico di questo tipo di computer, non una misura.",
+  airflowNote_passive: "Non ci sono ventole: nessuna aria entra o esce. Il calore passa alla scocca e sale con l'aria intorno.",
+  airflowNote_unknown: "Il sistema non dice come è raffreddato questo computer, quindi il flusso d'aria non viene disegnato.",
+
   // Hero: device model shown by the 3D stage.
   shapeTitle: "Modello del dispositivo",
   shape_tower: "PC fisso",

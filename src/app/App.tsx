@@ -16,6 +16,10 @@ import { useAppStore } from "./store";
 // main bundle. The other pages are split out to keep startup parsing small, and preloaded
 // once the app is idle so that switching sections never waits on a chunk.
 const pageLoaders = {
+  performance: () => import("@/features/performance/PerformancePage").then((m) => ({ default: m.PerformancePage })),
+  cooling: () => import("@/features/cooling/CoolingPage").then((m) => ({ default: m.CoolingPage })),
+  lighting: () => import("@/features/lighting/LightingPage").then((m) => ({ default: m.LightingPage })),
+  gaming: () => import("@/features/gaming/GamingPage").then((m) => ({ default: m.GamingPage })),
   hardware: () => import("@/features/hardware/HardwarePage").then((m) => ({ default: m.HardwarePage })),
   benchmarks: () => import("@/features/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })),
   processes: () => import("@/features/processes/ProcessesPage").then((m) => ({ default: m.ProcessesPage })),
@@ -23,6 +27,10 @@ const pageLoaders = {
   history: () => import("@/features/history/HistoryPage").then((m) => ({ default: m.HistoryPage })),
   settings: () => import("@/features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
 };
+const PerformancePage = lazy(pageLoaders.performance);
+const CoolingPage = lazy(pageLoaders.cooling);
+const LightingPage = lazy(pageLoaders.lighting);
+const GamingPage = lazy(pageLoaders.gaming);
 const HardwarePage = lazy(pageLoaders.hardware);
 const BenchmarksPage = lazy(pageLoaders.benchmarks);
 const ProcessesPage = lazy(pageLoaders.processes);
@@ -54,6 +62,14 @@ function Page({ id }: { id: SectionId }): ReactNode {
   switch (id) {
     case "overview":
       return <OverviewPage />;
+    case "performance":
+      return <PerformancePage />;
+    case "cooling":
+      return <CoolingPage />;
+    case "lighting":
+      return <LightingPage />;
+    case "gaming":
+      return <GamingPage />;
     case "hardware":
       return <HardwarePage />;
     case "benchmarks":

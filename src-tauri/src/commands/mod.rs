@@ -4,9 +4,13 @@
 pub mod app;
 pub mod assistant;
 pub mod bench;
+pub mod cooling;
 pub mod diagnostics;
 pub mod drivers;
+pub mod gaming;
+pub mod lighting;
 pub mod monitor;
+pub mod performance;
 pub mod processes;
 pub mod settings;
 pub mod system;

@@ -11,6 +11,7 @@ pub mod assistant;
 pub mod benchmark;
 pub mod benchmark_run;
 pub mod component;
+pub mod control;
 pub mod device;
 pub mod diagnostics;
 pub mod drivers;

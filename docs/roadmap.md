@@ -183,6 +183,40 @@ for a macOS value with a different meaning.
 | Intel Macs (x86_64) / universal binary | not done | Not built or tested; would need `--target universal-apple-darwin` and an Intel test machine |
 | UI redesign (Liquid Glass) | done | Branch `feat/ui-redesign`: new tokens (pearl light / graphite dark, sparing azure accent), glass shell, every page redone, procedural 3D device on the Overview (tower / laptop / mini, lazy, WebGL fallback), form factor detected in the backend with a saved manual choice. Checked visually on the M5 in both themes; not yet seen on Windows |
 
+## Control centers (2026-11-13, branch `feat/control-centers`)
+
+Four sections that change settings on request (design and rules: `docs/control-centers.md`).
+
+- **Performance**: Silent / Balanced / High performance plus custom profiles, per power
+  source, restore of the original settings. macOS: power mode read only (needs root; button to
+  System Settings > Battery), keep-awake assertions real (verified on the M5 Air with
+  `pmset -g assertions`). Windows: power mode overlay, processor min/max, boost, display and
+  sleep timeouts per source, keep-awake: compiled only.
+- **Cooling**: detects fans / passive cooling, Auto / Silent / Balanced / custom profiles,
+  curve editor, 3D fan, tower heatsink, AIO radiator, passive chassis. macOS: SMC read only
+  (the M5 Air reports 0 fans, verified). Windows: "System cooling policy" per source (the only
+  writable control; Cooling owns it, Performance does not touch it), fans read through
+  `Win32_Fan`: compiled only. Fan curves are stored but cannot act on fans anywhere: shown as
+  unsupported.
+- **Lighting**: LampArray devices (HID usage page 0x59; Windows `Windows.Devices.Lights`),
+  Mac keyboard backlight (CoreBrightness, brightness only, verified round trip), seven
+  effects, picker, profiles, multi-device sync, restore. Vendor RGB protocols are listed as
+  recognised but not controllable. LampArray on macOS is tested only against Microsoft's
+  reference descriptor (no device here).
+- **Gaming**: Steam / Epic / macOS game apps / GOG (Windows, read only) / manual entries,
+  local covers, search, sort, launch through the launcher URL, game mode (detects the running
+  game), per-game profile linking Performance, Cooling and Lighting (`ProfileDomain`),
+  restore when the game ends. Library verified on this Mac (Geometry Dash, Minecraft
+  Launcher, Roblox); no game was launched by the tests.
+- Checks on 2026-11-13 after merging the four centers: `npm run check` (Rust fmt, clippy,
+  tests; web typecheck, 526 tests, build) and the Windows clippy for models, platform and
+  control: all pass. Visual QA in the running app (dark and light) of the four pages.
+
+Open: Windows run of the four centers (only CI compiles/tests them), a LampArray device test
+on macOS, re-applying a lighting profile left active at startup, Gaming art for Epic/GOG,
+size and last-played for macOS game apps, reduced-motion pass of the new pages on a Mac with
+the system setting on.
+
 ## Out of scope for v1 (by design)
 
 Driver installation/update/removal, process kill/suspend, registry changes, BIOS,

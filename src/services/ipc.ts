@@ -31,7 +31,40 @@ export type CommandName =
   | "clear_assistant_api_key"
   | "preview_fix"
   | "request_fix"
-  | "execute_fix_step";
+  | "execute_fix_step"
+  // Performance center
+  | "get_performance_state"
+  | "apply_performance_profile"
+  | "save_performance_profile"
+  | "delete_performance_profile"
+  | "restore_performance_original"
+  | "open_power_settings"
+  // Cooling center
+  | "get_cooling_state"
+  | "apply_cooling_profile"
+  | "save_cooling_profile"
+  | "delete_cooling_profile"
+  | "restore_cooling"
+  // Lighting center
+  | "lighting_get_state"
+  | "lighting_refresh"
+  | "lighting_apply_profile"
+  | "lighting_apply_setup"
+  | "lighting_preview_setup"
+  | "lighting_set_brightness"
+  | "lighting_save_profile"
+  | "lighting_delete_profile"
+  | "lighting_restore"
+  // Gaming center
+  | "get_gaming_state"
+  | "get_game_art"
+  | "launch_game"
+  | "add_manual_game"
+  | "remove_manual_game"
+  | "set_game_hidden"
+  | "set_game_profile"
+  | "set_game_mode"
+  | "stop_game_session";
 
 /** Keyed by the union so the compiler fails when a new `ErrorCode` is not listed. */
 const ERROR_CODE_SET: Record<ErrorCode, true> = {
@@ -64,8 +97,17 @@ export function isAppError(value: unknown): value is AppError {
 export function toAppError(raw: unknown): AppError {
   if (isAppError(raw)) return { ...raw, detail: raw.detail ?? null };
   const detail =
-    raw instanceof Error ? raw.message : typeof raw === "string" ? raw : JSON.stringify(raw);
-  return { code: "internal", message: "Unexpected IPC failure", detail, retriable: false };
+    raw instanceof Error
+      ? raw.message
+      : typeof raw === "string"
+        ? raw
+        : JSON.stringify(raw);
+  return {
+    code: "internal",
+    message: "Unexpected IPC failure",
+    detail,
+    retriable: false,
+  };
 }
 
 export function isTauriRuntime(): boolean {
@@ -73,11 +115,15 @@ export function isTauriRuntime(): boolean {
 }
 
 /** Invokes a backend command. Rejects only with an `AppError`. */
-export async function call<T>(cmd: CommandName, args?: Record<string, unknown>): Promise<T> {
+export async function call<T>(
+  cmd: CommandName,
+  args?: Record<string, unknown>,
+): Promise<T> {
   if (!isTauriRuntime()) {
     const error: AppError = {
       code: "notSupported",
-      message: "Tauri runtime not available: the UI is running outside the desktop app",
+      message:
+        "Tauri runtime not available: the UI is running outside the desktop app",
       detail: null,
       retriable: false,
     };

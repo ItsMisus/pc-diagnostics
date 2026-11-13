@@ -23,4 +23,7 @@ export default {
   viewModeSwitchTo: "passa a {mode}",
   viewModeAdvanced: "Avanzata",
   viewModeHint: "Semplice: spiegazioni in parole semplici. Avanzata: tutti i dettagli tecnici. Si cambia anche in Settings.",
+  supportSupported: "Disponibile",
+  supportReadOnly: "Sola lettura",
+  supportUnsupported: "Non supportato",
 } satisfies Record<string, string>;

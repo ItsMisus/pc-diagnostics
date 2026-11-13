@@ -1,4 +1,5 @@
 mod commands;
+mod control_store;
 mod state;
 
 use std::sync::{Arc, Weak};
@@ -23,6 +24,8 @@ pub fn run() {
         .init();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Per-user local data dir (%APPDATA%\<identifier>): no admin rights needed.
             let dir = app.path().app_data_dir()?;
@@ -77,6 +80,54 @@ pub fn run() {
             );
 
             app.manage(AppState::new(db, monitor, processes, bench));
+
+            // Control centers (Performance, Cooling, Lighting, Gaming): each one is managed
+            // state of its own, built on a shared document store.
+            let store: Arc<dyn control::DocumentStore> = Arc::new(
+                control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
+            );
+            // Cooling center: CPU temperature for the curve editor from the live monitor (weak).
+            let cooling_monitor = Arc::downgrade(&app.state::<AppState>().monitor()?);
+            let cooling = Arc::new(control::cooling::CoolingController::new(
+                Arc::new(control::cooling::OsCoolingBackend::new(Arc::new(
+                    move || {
+                        let sample = cooling_monitor.upgrade()?.latest()?;
+                        sample.cpu.temperature_c.value().copied()
+                    },
+                ))),
+                Arc::clone(&store),
+            ));
+            app.manage(Arc::clone(&cooling));
+            let performance = Arc::new(control::performance::PerformanceController::system(
+                Arc::clone(&store),
+            ));
+            performance.resume();
+            performance.start_watcher(control::performance::SUPPLY_POLL);
+            app.manage(Arc::clone(&performance));
+
+            // Lighting center.
+            let lighting = Arc::new(control::lighting::LightingController::system(Arc::clone(
+                &store,
+            )));
+            app.manage(Arc::clone(&lighting));
+
+            // Gaming: library, game profiles and game mode. A game profile links one profile
+            // of each center below (`ProfileDomain`).
+            // Game profiles link Performance and Cooling only (not Lighting).
+            let domains: Vec<control::SharedDomain> = vec![performance, cooling];
+            let gaming = Arc::new(control::gaming::GamingController::new(
+                Arc::clone(&store),
+                domains,
+                Box::new(control::gaming::SystemProcessLister::new()),
+            ));
+            let handle = app.handle().clone();
+            gaming.start_watcher(move |event| {
+                notify_game_session(&handle, &event);
+                if let Err(e) = handle.emit(models::control::gaming::GAMING_SESSION_EVENT, event) {
+                    tracing::warn!(error = %e, "failed to emit gaming session event");
+                }
+            });
+            app.manage(gaming);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -108,6 +159,35 @@ pub fn run() {
             commands::assistant::preview_fix,
             commands::assistant::request_fix,
             commands::assistant::execute_fix_step,
+            commands::cooling::get_cooling_state,
+            commands::cooling::apply_cooling_profile,
+            commands::cooling::save_cooling_profile,
+            commands::cooling::delete_cooling_profile,
+            commands::cooling::restore_cooling,
+            commands::performance::get_performance_state,
+            commands::performance::apply_performance_profile,
+            commands::performance::save_performance_profile,
+            commands::performance::delete_performance_profile,
+            commands::performance::restore_performance_original,
+            commands::performance::open_power_settings,
+            commands::gaming::get_gaming_state,
+            commands::gaming::get_game_art,
+            commands::gaming::launch_game,
+            commands::gaming::add_manual_game,
+            commands::gaming::remove_manual_game,
+            commands::gaming::set_game_hidden,
+            commands::gaming::set_game_profile,
+            commands::gaming::set_game_mode,
+            commands::gaming::stop_game_session,
+            commands::lighting::lighting_get_state,
+            commands::lighting::lighting_refresh,
+            commands::lighting::lighting_apply_profile,
+            commands::lighting::lighting_apply_setup,
+            commands::lighting::lighting_preview_setup,
+            commands::lighting::lighting_set_brightness,
+            commands::lighting::lighting_save_profile,
+            commands::lighting::lighting_delete_profile,
+            commands::lighting::lighting_restore,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -118,7 +198,64 @@ pub fn run() {
             let state = handle.state::<AppState>();
             state.bench().shutdown();
             state.shutdown_samplers();
+            // Gaming: stop the watcher and clear any game override.
+            if let Some(gaming) = handle.try_state::<Arc<control::gaming::GamingController>>() {
+                gaming.shutdown();
+            }
+            // Cooling: a game override never outlives the app.
+            if let Some(cooling) = handle.try_state::<Arc<control::cooling::CoolingController>>() {
+                cooling.shutdown();
+            }
             tracing::info!("samplers stopped");
+            if let Some(performance) =
+                handle.try_state::<Arc<control::performance::PerformanceController>>()
+            {
+                performance.shutdown();
+            }
+            // Lighting: stop the effect engine, hand LampArray devices back.
+            if let Some(lighting) = handle.try_state::<Arc<control::lighting::LightingController>>()
+            {
+                lighting.shutdown();
+            }
         }
     });
+}
+
+/// System notification for game mode switching on (a game started) or off (the game was
+/// closed). Nothing for a session the user stopped, or at shutdown.
+fn notify_game_session(
+    app: &tauri::AppHandle,
+    event: &models::control::gaming::GamingSessionEvent,
+) {
+    use models::control::gaming::GameSessionEndReason;
+    use tauri_plugin_notification::NotificationExt;
+    let lang = app.state::<AppState>().language();
+    let (title, body) = if event.active {
+        (
+            lang.pick("Modalità gioco attiva", "Game mode on"),
+            lang.pick(
+                format!("{} è in esecuzione.", event.title),
+                format!("{} is running.", event.title),
+            ),
+        )
+    } else if matches!(
+        event.reason,
+        Some(GameSessionEndReason::Exited | GameSessionEndReason::NotDetected)
+    ) {
+        (
+            lang.pick("Modalità gioco terminata", "Game mode off"),
+            lang.pick(
+                format!(
+                    "{} è stato chiuso: le tue impostazioni sono tornate.",
+                    event.title
+                ),
+                format!("{} was closed: your settings are back.", event.title),
+            ),
+        )
+    } else {
+        return;
+    };
+    if let Err(e) = app.notification().builder().title(title).body(body).show() {
+        tracing::warn!(error = %e, "game mode notification not shown");
+    }
 }
