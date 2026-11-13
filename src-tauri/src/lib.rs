@@ -85,6 +85,17 @@ pub fn run() {
                 control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
             );
             let _ = &store;
+            // Cooling center: CPU temperature for the curve editor from the live monitor (weak).
+            let cooling_monitor = Arc::downgrade(&app.state::<AppState>().monitor()?);
+            app.manage(Arc::new(control::cooling::CoolingController::new(
+                Arc::new(control::cooling::OsCoolingBackend::new(Arc::new(
+                    move || {
+                        let sample = cooling_monitor.upgrade()?.latest()?;
+                        sample.cpu.temperature_c.value().copied()
+                    },
+                ))),
+                Arc::clone(&store),
+            )));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -116,6 +127,11 @@ pub fn run() {
             commands::assistant::preview_fix,
             commands::assistant::request_fix,
             commands::assistant::execute_fix_step,
+            commands::cooling::get_cooling_state,
+            commands::cooling::apply_cooling_profile,
+            commands::cooling::save_cooling_profile,
+            commands::cooling::delete_cooling_profile,
+            commands::cooling::restore_cooling,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -126,6 +142,10 @@ pub fn run() {
             let state = handle.state::<AppState>();
             state.bench().shutdown();
             state.shutdown_samplers();
+            // Cooling: a game override never outlives the app.
+            if let Some(cooling) = handle.try_state::<Arc<control::cooling::CoolingController>>() {
+                cooling.shutdown();
+            }
             tracing::info!("samplers stopped");
         }
     });
