@@ -5,6 +5,7 @@ import type { Translation } from "../types";
 export default {
   language: "Language",
   languageHint: "“System” follows the Windows display language.",
+  "languageHint@macos": "“System” follows the macOS language.",
   languageSystem: "System",
 
   // Page
@@ -33,6 +34,8 @@ export default {
   privacy: "Privacy and network",
   onlineChecks: "Allow online checks",
   onlineChecksHint: "Needed to look for driver updates through Windows Update. No driver is installed.",
+  onlineChecksWindowsOnly:
+    "On this system the app makes no online checks: the only one, the driver update search through Windows Update, exists only on Windows.",
 
   // App overhead card
   overhead: "App resource usage",
@@ -40,9 +43,11 @@ export default {
   colComponent: "Component",
   colCpu: "CPU",
   colMemory: "Memory (working set)",
+  "colMemory@macos": "Memory (resident)",
   colProcesses: "Processes",
   rowCore: "Core (Rust)",
   rowWebview: "WebView2 (interface)",
+  "rowWebview@macos": "WebKit (interface)",
   overheadCpuNote: "Share of the whole machine, averaged over the last {window}",
   historyCapacity: "History capacity",
   historyCapacityValue: "{count} samples (about {duration})",
@@ -67,6 +72,7 @@ export default {
   assistantPointConfirm:
     "Nothing runs without your confirmation, one step at a time, and only from a short list of safe operations built into the app.",
   assistantPointKey: "The key is kept in Windows Credential Manager and is never shown again.",
+  "assistantPointKey@macos": "The key is kept in the macOS Keychain and is never shown again.",
   assistantEnable: "Turn on the Fix it assistant",
   offByDefault: "Off by default.",
   apiKey: "Anthropic API key",
@@ -74,6 +80,7 @@ export default {
   keyStatusUnavailable: "Status not available",
   keySaved: "Key saved",
   keySavedDetail: "Stored in Windows Credential Manager.",
+  "keySavedDetail@macos": "Stored in the macOS Keychain.",
   keyRemoved: "Key removed",
   noKey: "No key",
   keyReplacePlaceholder: "Paste a new key to replace it",

@@ -28,6 +28,8 @@ pub enum GpuVendor {
     Amd,
     Intel,
     Microsoft,
+    /// Apple (PCI vendor id 0x106B): Apple silicon GPUs and the GPUs Apple names on Intel Macs.
+    Apple,
     Other,
 }
 
@@ -39,6 +41,7 @@ impl GpuVendor {
             0x1002 | 0x1022 => Self::Amd,
             0x8086 => Self::Intel,
             0x1414 => Self::Microsoft,
+            0x106B => Self::Apple,
             _ => Self::Other,
         }
     }
@@ -53,11 +56,14 @@ pub struct GpuInfo {
     pub name: String,
     pub vendor: GpuVendor,
     pub vendor_id: u32,
-    pub device_id: u32,
-    #[ts(type = "number")]
-    pub dedicated_vram_bytes: u64,
-    #[ts(type = "number")]
-    pub shared_memory_bytes: u64,
+    /// PCI device id. `NotSupported` for GPUs that are not PCI devices (Apple silicon).
+    pub device_id: Metric<u32>,
+    /// Memory that belongs to the GPU alone. `NotSupported` on unified-memory GPUs (Apple
+    /// silicon), where the processor and the GPU share the same RAM: there is none.
+    pub dedicated_vram_bytes: Metric<f64>,
+    /// System RAM the OS lets the GPU use: DXGI `SharedSystemMemory` on Windows, Metal
+    /// `recommendedMaxWorkingSetSize` on macOS (the GPU's working-set budget).
+    pub shared_memory_bytes: Metric<f64>,
     /// Software rasterizer (e.g. Microsoft Basic Render Driver).
     pub is_software: bool,
     /// Indirect-display (virtual display) adapter, e.g. remote-desktop/streaming drivers.
@@ -181,6 +187,7 @@ mod tests {
         assert_eq!(GpuVendor::from_pci_id(0x1002), GpuVendor::Amd);
         assert_eq!(GpuVendor::from_pci_id(0x8086), GpuVendor::Intel);
         assert_eq!(GpuVendor::from_pci_id(0x1414), GpuVendor::Microsoft);
+        assert_eq!(GpuVendor::from_pci_id(0x106B), GpuVendor::Apple);
         assert_eq!(GpuVendor::from_pci_id(0x1234), GpuVendor::Other);
     }
 }

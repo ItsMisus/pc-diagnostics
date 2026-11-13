@@ -12,13 +12,15 @@ should get a first answer within a week.
 
 Things we especially want to hear about:
 
-- Any way for the web interface to run commands, read files or call Windows APIs beyond
-  the app's Tauri commands.
-- Personal data leaving the PC, or appearing in a redacted report export.
+- Any way for the web interface to run commands, read files or call Windows or macOS APIs
+  beyond the app's Tauri commands.
+- Personal data leaving the computer, or appearing in a redacted report export.
 - The optional "Risolvi" assistant: data sent without the user's consent, the API key
-  leaking (it is stored in Windows Credential Manager), or an action running that is not on
-  the built-in list or without its own confirmation.
-- The installer or uninstaller touching files outside its own folders.
+  leaking (it is stored in the system credential store: Windows Credential Manager; on
+  macOS the Keychain), or an action running that is not on the built-in list or without
+  its own confirmation.
+- The Windows installer or uninstaller touching files outside its own folders, or the
+  macOS app bundle asking for entitlements or access it does not need.
 
 ## Design limits
 
@@ -26,5 +28,6 @@ The app runs without admin rights, works offline, sends no telemetry and never c
 drivers, the registry or the BIOS. The only network use is the optional Windows Update
 driver check and the optional assistant, both after explicit consent.
 
-Release installers are currently unsigned; check the SHA-256 published next to each
-installer on the Releases page.
+Release builds are not signed with a trusted certificate yet: the Windows installer is
+unsigned and the macOS app is ad-hoc signed and not notarized. Check the SHA-256 published
+next to each file on the Releases page before running it.

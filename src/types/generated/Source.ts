@@ -3,4 +3,4 @@
 /**
  * Where a value came from. Shown in the UI so every number is traceable.
  */
-export type Source = "sysinfo" | "pdh" | "dxgi" | "nvml" | "powerApi" | "wmi" | "configManager" | "windowsUpdate" | "benchmark" | "kernel" | "d3dkmt";
+export type Source = "sysinfo" | "pdh" | "dxgi" | "nvml" | "powerApi" | "wmi" | "configManager" | "windowsUpdate" | "benchmark" | "kernel" | "d3dkmt" | "ioKit" | "mach" | "metal";

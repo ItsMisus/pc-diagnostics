@@ -4,7 +4,10 @@
 //!
 //! Process rules:
 //! - the worker is this executable started with `--pcdiag-gpu-worker`, no console window,
-//!   stdin/stdout/stderr piped, and placed in a kill-on-close job object;
+//!   stdin/stdout/stderr piped, and (Windows) placed in a kill-on-close job object. macOS
+//!   has no job objects: the worker stops by itself when its parent is gone
+//!   (`gpu_worker::watch_parent`), and every exit path of this module still kills and
+//!   reaps it;
 //! - stop = write `cancel` + close stdin, wait up to [`CANCEL_GRACE`], then kill;
 //! - every exit path waits for the process and joins both reader threads (no zombies);
 //! - a worker that dies, is killed, goes silent for [`STALL_TIMEOUT`] or exits without a
@@ -27,7 +30,7 @@ use models::{AppError, ErrorCode, Unit};
 use platform::gpu_bench::{GpuThermalThresholds, KillOnCloseJob};
 
 use crate::gpu_worker::protocol::{self, AdapterReport, MatchKind, Msg, WorkerResult};
-use crate::gpu_worker::select::{self, NoMatch, Target};
+use crate::gpu_worker::select::{self, COMPUTE_API, NoMatch, Target};
 use crate::gpu_worker::{Simulate, WORKER_FLAG, WorkerArgs, kernel};
 use crate::runtime::{Outcome, RunCtx, RunError, metric};
 use crate::stats;
@@ -166,12 +169,17 @@ impl WorkerProcess {
             )
             .with_detail(format!("{}: {e}", cmd.program.display()))
         })?;
-        let job = match KillOnCloseJob::assign(&child) {
-            Ok(j) => Some(j),
-            Err(e) => {
-                tracing::warn!(error = %e, "GPU worker not placed in a job object");
-                None
+        // Job objects exist only on Windows; elsewhere the worker's parent watchdog applies.
+        let job = if cfg!(windows) {
+            match KillOnCloseJob::assign(&child) {
+                Ok(j) => Some(j),
+                Err(e) => {
+                    tracing::warn!(error = %e, "GPU worker not placed in a job object");
+                    None
+                }
             }
+        } else {
+            None
         };
         let stdin = child.stdin.take();
         let stdout = child.stdout.take();
@@ -444,7 +452,7 @@ pub(crate) fn thresholds_text(t: &Thermal, lang: Language) -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct GpuTarget {
-    /// `GpuInfo::id` (DXGI LUID).
+    /// `GpuInfo::id` (DXGI LUID on Windows, I/O Kit registry id on macOS).
     pub id: String,
     pub name: String,
     pub vendor_id: u32,
@@ -469,7 +477,7 @@ pub(crate) struct GpuReady {
 /// ([`Unusable::render`]).
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Unusable {
-    /// The DXGI adapter list could not be read.
+    /// The GPU list (DXGI on Windows, I/O Kit on macOS) could not be read.
     AdapterListFailed(AppError),
     /// Only software or virtual adapters.
     NoPhysicalGpu,
@@ -477,9 +485,16 @@ pub(crate) enum Unusable {
     NoUsableGpu,
     /// The wgpu probe failed.
     ProbeFailed(AppError),
-    /// wgpu has no (or no unambiguous) DX12/Vulkan adapter for the GPU named `gpu`.
+    /// wgpu has no (or no unambiguous) adapter of the worker's backends ([`COMPUTE_API`])
+    /// for the GPU named `gpu`.
     NoComputeAdapter { gpu: String, why: NoMatch },
 }
+
+/// Where the GPU list comes from, as named in user-facing texts.
+#[cfg(not(target_os = "macos"))]
+const ADAPTER_LIST_API: &str = "DXGI";
+#[cfg(target_os = "macos")]
+const ADAPTER_LIST_API: &str = "I/O Kit";
 
 /// [`Unusable`] in one language.
 #[derive(Debug, Clone, PartialEq)]
@@ -495,10 +510,9 @@ impl Unusable {
             Self::AdapterListFailed(e) => (
                 Unavailability::Failed(e.clone()),
                 lang.pick(
-                    "Elenco delle GPU (DXGI) non disponibile.",
-                    "GPU list (DXGI) unavailable.",
-                )
-                .to_owned(),
+                    format!("Elenco delle GPU ({ADAPTER_LIST_API}) non disponibile."),
+                    format!("GPU list ({ADAPTER_LIST_API}) unavailable."),
+                ),
             ),
             Self::NoPhysicalGpu => (
                 Unavailability::NotSupported,
@@ -519,15 +533,14 @@ impl Unusable {
             Self::ProbeFailed(e) => (
                 Unavailability::Failed(e.clone()),
                 lang.pick(
-                    "Verifica del supporto wgpu (DX12/Vulkan) non riuscita.",
-                    "The wgpu (DX12/Vulkan) support check failed.",
-                )
-                .to_owned(),
+                    format!("Verifica del supporto wgpu ({COMPUTE_API}) non riuscita."),
+                    format!("The wgpu ({COMPUTE_API}) support check failed."),
+                ),
             ),
             Self::NoComputeAdapter { gpu, why } => (
                 Unavailability::ProviderMissing(lang.pick(
-                    format!("adattatore wgpu DX12/Vulkan per {gpu}"),
-                    format!("wgpu DX12/Vulkan adapter for {gpu}"),
+                    format!("adattatore wgpu {COMPUTE_API} per {gpu}"),
+                    format!("wgpu {COMPUTE_API} adapter for {gpu}"),
                 )),
                 format!("GPU {gpu}: {}.", why.text(lang)),
             ),
@@ -716,11 +729,15 @@ pub(crate) fn decide(
         .iter()
         .enumerate()
         .map(|(i, g)| {
+            // 0 = no PCI device id (Apple silicon). wgpu reports 0 for those adapters too,
+            // so the PCI-id fallback in `select` still compares like with like; the LUID /
+            // registry id match comes first anyway.
+            let device_id = g.device_id.value().copied().unwrap_or(0);
             let target = GpuTarget {
                 id: g.id.clone(),
                 name: g.name.clone(),
                 vendor_id: g.vendor_id,
-                device_id: g.device_id,
+                device_id,
             };
             let th = thermal(g);
             let exclude_luids: Vec<String> = gpus
@@ -734,7 +751,7 @@ pub(crate) fn decide(
                     let want = Target {
                         luid: Some(g.id.clone()),
                         vendor_id: g.vendor_id,
-                        device_id: g.device_id,
+                        device_id,
                     };
                     match select::select(adapters, &want, &exclude_luids) {
                         Ok((k, matched_by)) => Ok(Box::new(GpuReady {
@@ -834,6 +851,9 @@ pub(crate) struct GpuPlan {
 }
 
 fn adapter_text(a: &AdapterReport, how: MatchKind, lang: Language) -> String {
+    if a.backend == "metal" {
+        return metal_adapter_text(a, how, lang);
+    }
     let how = match how {
         MatchKind::Luid => lang.pick("selezionato per LUID", "selected by LUID"),
         MatchKind::PciIds => lang.pick(
@@ -852,6 +872,27 @@ fn adapter_text(a: &AdapterReport, how: MatchKind, lang: Language) -> String {
             .map(|l| format!(", {l}"))
             .unwrap_or_default()
     );
+    lang.pick(
+        format!("Adattatore GPU utilizzato: {adapter}, {how}."),
+        format!("GPU adapter used: {adapter}, {how}."),
+    )
+}
+
+/// Metal adapters have no PCI ids and are matched by their I/O Kit registry id.
+fn metal_adapter_text(a: &AdapterReport, how: MatchKind, lang: Language) -> String {
+    let id = a
+        .luid
+        .as_deref()
+        .map(|l| format!(", {l}"))
+        .unwrap_or_default();
+    let adapter = format!("{} (Metal{id})", a.name);
+    let how = match how {
+        MatchKind::Luid => lang.pick(
+            "selezionato per ID del registro I/O Kit",
+            "selected by I/O Kit registry ID",
+        ),
+        MatchKind::PciIds => lang.pick("selezionato per ID PCI", "selected by PCI ID"),
+    };
     lang.pick(
         format!("Adattatore GPU utilizzato: {adapter}, {how}."),
         format!("GPU adapter used: {adapter}, {how}."),
@@ -1262,7 +1303,7 @@ mod tests {
 
     const IT: Language = Language::Italian;
     const EN: Language = Language::English;
-    use models::metric::Metric;
+    use models::metric::{Metric, Source};
 
     fn info(id: &str, name: &str, vendor: u32, device: u32, sw: bool, virt: bool) -> GpuInfo {
         GpuInfo {
@@ -1270,9 +1311,9 @@ mod tests {
             name: name.into(),
             vendor: models::hardware::GpuVendor::from_pci_id(vendor),
             vendor_id: vendor,
-            device_id: device,
-            dedicated_vram_bytes: 0,
-            shared_memory_bytes: 0,
+            device_id: Metric::available(device, Unit::None, Source::Dxgi),
+            dedicated_vram_bytes: Metric::available(0.0, Unit::Bytes, Source::Dxgi),
+            shared_memory_bytes: Metric::available(0.0, Unit::Bytes, Source::Dxgi),
             is_software: sw,
             is_virtual: virt,
             driver_version: Metric::unavailable(Unavailability::NotSupported),
@@ -1426,11 +1467,18 @@ mod tests {
                 reason: Unavailability::ProviderMissing(d),
                 note,
             }) => {
-                assert_eq!(d, "wgpu DX12/Vulkan adapter for AMD Radeon(TM) Graphics");
+                let api = if cfg!(target_os = "macos") {
+                    "Metal"
+                } else {
+                    "DX12/Vulkan"
+                };
+                assert_eq!(d, format!("wgpu {api} adapter for AMD Radeon(TM) Graphics"));
                 assert_eq!(
                     note,
-                    "GPU AMD Radeon(TM) Graphics: no physical DX12/Vulkan adapter matches the \
-                     requested GPU (PCI 1002:164E, luid:00000000-0000A000)."
+                    format!(
+                        "GPU AMD Radeon(TM) Graphics: no physical {api} adapter matches the \
+                         requested GPU (PCI 1002:164E, luid:00000000-0000A000)."
+                    )
                 );
             }
             other => panic!("{other:?}"),
@@ -1778,6 +1826,81 @@ mod tests {
             o.warnings[0].starts_with("Possible sustained GPU performance reduction"),
             "{:?}",
             o.warnings
+        );
+    }
+
+    /// An Apple Silicon Mac: one `IOAccelerator` (vendor 0x106B, no PCI device id) and the
+    /// Metal adapter with the same registry id (Metal reports no PCI ids).
+    #[test]
+    fn apple_gpu_is_matched_by_registry_id() {
+        const M5: &str = "ioreg:00000001000004A1";
+        let env = decide(
+            Ok(vec![info(M5, "Apple M5", 0x106B, 0, false, false)]),
+            || {
+                Ok(vec![report(
+                    "Apple M5",
+                    "metal",
+                    "integrated",
+                    0,
+                    0,
+                    Some(M5),
+                )])
+            },
+            |_| Thermal::unobservable(),
+        );
+        let r = env.ready().expect("ready");
+        assert_eq!((r.target.id.as_str(), r.matched_by), (M5, MatchKind::Luid));
+        assert!(r.exclude_luids.is_empty());
+        // No readable GPU temperature: the conservative cap applies.
+        assert_eq!(r.thermal.max_duration_s(), MAX_S_UNOBSERVED);
+        let o = build_outcome(
+            &WorkerResult {
+                flops_per_invocation: kernel::flops_per_invocation(),
+                invocations_per_dispatch: 1024,
+                dispatches_per_batch: 1,
+                batches: 2,
+                total_flops: 2.0e12,
+                timed_ms: 2000,
+                warmup_ms: 200,
+                points: Vec::new(),
+                verified_elements: 64,
+                max_rel_error: 0.0,
+            },
+            &r.adapter,
+            r.matched_by,
+            0,
+            EN,
+        );
+        assert_eq!(
+            o.notes,
+            [format!(
+                "GPU adapter used: Apple M5 (Metal, {M5}), selected by I/O Kit registry ID."
+            )]
+        );
+        let o = build_outcome(
+            &WorkerResult {
+                flops_per_invocation: kernel::flops_per_invocation(),
+                invocations_per_dispatch: 1024,
+                dispatches_per_batch: 1,
+                batches: 2,
+                total_flops: 2.0e12,
+                timed_ms: 2000,
+                warmup_ms: 200,
+                points: Vec::new(),
+                verified_elements: 64,
+                max_rel_error: 0.0,
+            },
+            &r.adapter,
+            r.matched_by,
+            0,
+            IT,
+        );
+        assert_eq!(
+            o.notes,
+            [format!(
+                "Adattatore GPU utilizzato: Apple M5 (Metal, {M5}), selezionato per ID del \
+                 registro I/O Kit."
+            )]
         );
     }
 

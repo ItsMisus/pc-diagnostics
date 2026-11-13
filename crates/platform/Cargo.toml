@@ -10,7 +10,17 @@ license.workspace = true
 [dependencies]
 models.workspace = true
 tracing.workspace = true
-sysinfo = { version = "0.40", default-features = false, features = ["system", "disk"] }
+sysinfo = { version = "0.40", default-features = false, features = ["system", "disk", "gpu", "component"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+security-framework = "3"
+# Core Foundation, I/O Kit (registry, IOPowerSources) and Metal at the versions sysinfo and
+# wgpu already use; NSProcessInfo for Low Power Mode.
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFArray", "CFBase", "CFData", "CFDictionary", "CFLocale", "CFNumber", "CFString"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSProcessInfo"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "ps"] }
+objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice"] }
 
 [target.'cfg(windows)'.dependencies]
 serde.workspace = true

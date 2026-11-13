@@ -7,7 +7,7 @@ import { useIsSimple } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
 import { formatBytes, sourceLabel } from "@/lib/format";
 import { gpuVendorLabel } from "@/features/monitoring/labels";
-import { orderGpus } from "@/features/monitoring/selection";
+import { hasUnifiedMemory, orderGpus } from "@/features/monitoring/selection";
 import type { GpuInfo } from "@/types/generated/GpuInfo";
 import { metricItem } from "./metricItem";
 
@@ -22,10 +22,14 @@ export function GpuSection({ gpus }: { gpus: readonly GpuInfo[] }) {
       {ordered.length === 0 ? (
         <StateView compact kind="empty" title={t("noGpuAdapters")} />
       ) : (
-        <div className="grid grid-cols-1 gap-x-8 gap-y-5 @3xl:grid-cols-2">
-          {ordered.map((gpu) => (
-            <GpuBlock key={gpu.id} gpu={gpu} />
-          ))}
+        // Its own size container: the card can be half the page wide (next to Memory), so
+        // adapters go side by side only when the card itself has the room.
+        <div className="@container">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-5 @2xl:grid-cols-2">
+            {ordered.map((gpu) => (
+              <GpuBlock key={gpu.id} gpu={gpu} />
+            ))}
+          </div>
         </div>
       )}
     </Card>
@@ -36,10 +40,13 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
   const t = useT("hardware");
   const tm = useT("monitoring");
   const simple = useIsSimple();
+  const unified = hasUnifiedMemory(gpu);
   const items: DefinitionItem[] = [
     { label: t("manufacturer"), value: gpuVendorLabel(gpu.vendor, gpu.vendorId, tm) },
-    { label: t("dedicatedVram"), value: formatBytes(gpu.dedicatedVramBytes) },
-    { label: t("sharedMemory"), value: formatBytes(gpu.sharedMemoryBytes) },
+    // Apple silicon: no VRAM at all (unified memory), said in words instead of "0 B".
+    unified ? { label: t("dedicatedVram"), value: t("unifiedMemory") } : metricItem(t("dedicatedVram"), gpu.dedicatedVramBytes, formatBytes),
+    // With unified memory a missing budget says nothing useful: shown only when reported.
+    ...(unified && gpu.sharedMemoryBytes.status === "unavailable" ? [] : [metricItem(t("sharedMemory"), gpu.sharedMemoryBytes, formatBytes)]),
     metricItem(t("driverVersion"), gpu.driverVersion, text),
   ];
   // Which providers measure this adapter: technical, like sources (Advanced view only).
@@ -63,7 +70,7 @@ function GpuBlock({ gpu }: { gpu: GpuInfo }) {
         {gpu.isSoftware && <StatusBadge tone="neutral" label={t("softwareAdapter")} />}
         {gpu.isVirtual && <StatusBadge tone="neutral" label={t("virtualDisplay")} />}
       </header>
-      <DefinitionList items={items} />
+      <DefinitionList aligned items={items} />
     </article>
   );
 }

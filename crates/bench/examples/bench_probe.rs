@@ -1,6 +1,7 @@
 //! Runs benchmarks at their default settings on this machine and prints the results.
-//! Storage tests write a temporary file (explicit consent here) on `C:\` or on the volume
-//! named by the `BENCH_VOLUME` environment variable.
+//! Storage tests write a temporary file (explicit consent here) on the system volume (`C:\`
+//! on Windows, `/` on macOS) or on the volume named by the `BENCH_VOLUME` environment
+//! variable.
 //!
 //! `cargo run --release -p bench --example bench_probe [kind ...]`
 //! kinds: cpu1 cpun cpus memb meml seq rand cancel (default: all)
@@ -25,8 +26,12 @@ fn req(kind: BenchmarkKind) -> BenchmarkRequest {
         kind,
         duration_s: None,
         threads: None,
-        storage_volume: storage
-            .then(|| std::env::var("BENCH_VOLUME").unwrap_or_else(|_| "C:\\".to_owned())),
+        storage_volume: storage.then(|| {
+            std::env::var("BENCH_VOLUME")
+                .ok()
+                .or_else(platform::bench_env::system_volume)
+                .unwrap_or_else(|| "C:\\".to_owned())
+        }),
         storage_file_mib: std::env::var("BENCH_FILE_MIB")
             .ok()
             .and_then(|v| v.parse().ok())

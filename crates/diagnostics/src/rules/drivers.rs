@@ -6,7 +6,7 @@ use models::diagnostics::{Confidence, FindingKind, Severity, SimpleExplanation};
 use models::drivers::{DeviceCategory, DeviceHealth, DeviceRecord, UpdateStatus};
 use models::settings::Language;
 
-use super::{Cov, Ctx, Outcome, ev, finding, simple, strings};
+use super::{Cov, Ctx, Outcome, by_os, ev, finding, simple, strings};
 use crate::fmt;
 
 /// Device names listed in the "updates available" finding before summarizing the rest.
@@ -51,9 +51,16 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
     let mut cov = Cov::new(ComponentKind::Drivers);
     let lang = ctx.lang;
     let Some(inv) = ctx.input.drivers else {
-        cov.not_evaluated(lang.pick(
-            "inventario dei dispositivi non raccolto",
-            "device inventory not collected",
+        cov.not_evaluated(by_os(
+            ctx.platform,
+            lang.pick(
+                "inventario dei dispositivi non raccolto",
+                "device inventory not collected",
+            ),
+            lang.pick(
+                "inventario di driver e dispositivi non disponibile: l'app lo raccoglie solo su Windows",
+                "driver and device inventory not available: the app collects it only on Windows",
+            ),
         ));
         out.coverage.push(cov.finish());
         return out;

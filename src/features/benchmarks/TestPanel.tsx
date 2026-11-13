@@ -5,9 +5,10 @@ import { UnavailableReason, useUnavailabilityText } from "@/components/common/Me
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes } from "@/lib/format";
+import { formatMib, formatStorageBytes } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
+import { volumeDisplayName } from "@/features/monitoring/selection";
 import type { AppError } from "@/types/generated/AppError";
 import type { BenchmarkCapability } from "@/types/generated/BenchmarkCapability";
 import type { BenchmarkGpuTarget } from "@/types/generated/BenchmarkGpuTarget";
@@ -229,8 +230,8 @@ function Controls({
               {volumes.length === 0 && <option value="">{t("noVolumes")}</option>}
               {volumes.map((v) => (
                 <option key={v.mountPoint} value={v.mountPoint}>
-                  {v.mountPoint} {v.label ? `${v.label} ` : ""}· {mediaLabel(v.media, tm)} ·{" "}
-                  {t("volumeFree", { size: formatBytes(v.availableBytes) })}
+                  {volumeDisplayName(v)} · {mediaLabel(v.media, tm)} ·{" "}
+                  {t("volumeFree", { size: formatStorageBytes(v.availableBytes) })}
                   {v.removable ? ` · ${t("removable")}` : ""}
                 </option>
               ))}
@@ -248,7 +249,7 @@ function Controls({
             >
               {presets(fBounds, FILE_PRESETS).map((v) => (
                 <option key={v} value={v}>
-                  {v === fBounds.def ? t("optionDefault", { value: `${v} MiB` }) : `${v} MiB`}
+                  {v === fBounds.def ? t("optionDefault", { value: formatMib(v) }) : formatMib(v)}
                 </option>
               ))}
             </select>
@@ -274,7 +275,7 @@ function Controls({
           </label>
           {cap.maxBytesWritten !== null && (
             <p className="mt-1.5 pl-6.5 text-xs text-fg-muted tabular">
-              {t("maxWritten", { size: formatBytes(cap.maxBytesWritten) })}
+              {t("maxWritten", { size: formatStorageBytes(cap.maxBytesWritten) })}
             </p>
           )}
         </div>

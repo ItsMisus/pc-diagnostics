@@ -108,7 +108,7 @@ describe("buildRequest", () => {
   });
 
   it("states the file size in the consent copy", () => {
-    expect(storageConsentCopy(256)).toContain("file temporaneo di 256 MiB");
+    expect(storageConsentCopy(256)).toContain("file temporaneo di 256 MB");
     expect(storageConsentCopy(256)).toContain("Nessun dato personale viene letto o modificato.");
   });
 });
@@ -209,7 +209,7 @@ describe("texts in English", () => {
       expect(gpuStopCopy({ stopTemperatureC: 87 })).toBe("Automatic stop at 87 °C (driver threshold)");
       const full = buildRequest(cap, { ...draft, storageVolume: "D:\\" }, ctx);
       expect(!full.ok && full.reason).toBe("Not enough free space on the selected volume");
-      expect(storageConsentCopy(256)).toContain("temporary file of 256 MiB");
+      expect(storageConsentCopy(256)).toContain("temporary file of 256 MB");
     } finally {
       setLang("it");
     }

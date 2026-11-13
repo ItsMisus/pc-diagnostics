@@ -9,6 +9,10 @@ use std::time::Instant;
 use models::drivers::UpdateStatus;
 
 fn main() {
+    if !drivers::inventory_supported() {
+        eprintln!("{}", drivers::unsupported_error());
+        return;
+    }
     let t = Instant::now();
     let raw = platform::devices::enumerate_present_devices().expect("enumerate");
     let setupapi = t.elapsed();

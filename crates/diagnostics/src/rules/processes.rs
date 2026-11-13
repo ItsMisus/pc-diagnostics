@@ -1,12 +1,13 @@
 //! Process rules (Impact Score, docs/impact-score.md).
 
 use models::Source;
+use models::app::Platform;
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, FindingKind, Severity, SimpleExplanation};
 use models::process::{IMPACT_METHODOLOGY_VERSION, ProcessRow};
 use models::settings::Language;
 
-use super::{Cov, Ctx, Outcome, ev, finding, simple, strings};
+use super::{Cov, Ctx, Outcome, by_os, ev, finding, simple, strings};
 use crate::fmt;
 use crate::window::SHORT_WINDOW_S;
 
@@ -90,7 +91,7 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
                     if n == 1 { "process has" } else { "processes have" }
                 ),
             ),
-            impact_simple(lang, &high, &names),
+            impact_simple(lang, ctx.platform, &high, &names),
         );
         f.evidence = high
             .iter()
@@ -143,7 +144,12 @@ pub fn evaluate(ctx: &Ctx) -> Outcome {
 }
 
 /// Plain-language text for `processes.impact.high`, with singular/plural agreement.
-fn impact_simple(lang: Language, high: &[&ProcessRow], names: &[&str]) -> SimpleExplanation {
+fn impact_simple(
+    lang: Language,
+    platform: Platform,
+    high: &[&ProcessRow],
+    names: &[&str],
+) -> SimpleExplanation {
     let has_self = high.iter().any(|r| r.is_self);
     let self_note = if has_self {
         lang.pick(
@@ -153,9 +159,16 @@ fn impact_simple(lang: Language, high: &[&ProcessRow], names: &[&str]) -> Simple
     } else {
         ""
     };
-    let action = lang.pick(
-        "Se il PC è lento mentre questi programmi sono aperti, controlla se ti servono in quel momento e chiudi quelli che non stai usando. Non chiudere i programmi di sistema di Windows.",
-        "If the PC is slow while these programs are open, check whether you need them at that moment and close the ones you aren't using. Don't close Windows system programs.",
+    let action = by_os(
+        platform,
+        lang.pick(
+            "Se il PC è lento mentre questi programmi sono aperti, controlla se ti servono in quel momento e chiudi quelli che non stai usando. Non chiudere i programmi di sistema di Windows.",
+            "If the PC is slow while these programs are open, check whether you need them at that moment and close the ones you aren't using. Don't close Windows system programs.",
+        ),
+        lang.pick(
+            "Se il PC è lento mentre questi programmi sono aperti, controlla se ti servono in quel momento e chiudi quelli che non stai usando. Non chiudere i programmi di sistema di macOS.",
+            "If the PC is slow while these programs are open, check whether you need them at that moment and close the ones you aren't using. Don't close macOS system programs.",
+        ),
     );
     if let ([one], 1) = (names, high.len()) {
         let self_one = if has_self {
@@ -175,9 +188,16 @@ fn impact_simple(lang: Language, high: &[&ProcessRow], names: &[&str]) -> Simple
                 format!("Il programma «{one}» ha usato molto processore, memoria o disco nell'ultimo periodo analizzato. Non è una prova che rallenti il PC: è solo una stima di quanto lavoro sta facendo.{self_one}"),
                 format!("The program “{one}” used a lot of processor, memory, or disk in the last period analyzed. This isn't proof that it slows the PC down: it's only an estimate of how much work it's doing.{self_one}"),
             ),
-            lang.pick(
-                "Se il PC è lento mentre questo programma è aperto, controlla se ti serve in quel momento e chiudilo se non lo stai usando. Non chiudere i programmi di sistema di Windows.",
-                "If the PC is slow while this program is open, check whether you need it at that moment and close it if you aren't using it. Don't close Windows system programs.",
+            by_os(
+                platform,
+                lang.pick(
+                    "Se il PC è lento mentre questo programma è aperto, controlla se ti serve in quel momento e chiudilo se non lo stai usando. Non chiudere i programmi di sistema di Windows.",
+                    "If the PC is slow while this program is open, check whether you need it at that moment and close it if you aren't using it. Don't close Windows system programs.",
+                ),
+                lang.pick(
+                    "Se il PC è lento mentre questo programma è aperto, controlla se ti serve in quel momento e chiudilo se non lo stai usando. Non chiudere i programmi di sistema di macOS.",
+                    "If the PC is slow while this program is open, check whether you need it at that moment and close it if you aren't using it. Don't close macOS system programs.",
+                ),
             ),
         );
     }

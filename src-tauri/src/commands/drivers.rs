@@ -6,12 +6,16 @@ use super::blocking;
 use crate::state::AppState;
 
 /// Cached device inventory; `refresh` re-enumerates devices (local only, no network).
-/// Update-status reasons follow the current language even when cached.
+/// Update-status reasons follow the current language even when cached. Windows only:
+/// elsewhere (macOS) it rejects with `NotSupported` (`drivers::unsupported_error`).
 #[tauri::command]
 pub async fn get_driver_inventory(
     state: State<'_, AppState>,
     refresh: bool,
 ) -> Result<DriverInventory, AppError> {
+    if !drivers::inventory_supported() {
+        return Err(drivers::unsupported_error());
+    }
     if !refresh && let Some(mut cached) = state.driver_inventory()? {
         drivers::updates::localize_reasons(&mut cached.devices, state.language());
         return Ok(cached);
@@ -22,9 +26,13 @@ pub async fn get_driver_inventory(
 }
 
 /// Searches Windows Update for driver updates. Requires the "online checks" opt-in;
-/// only one search runs at a time. Read-only: nothing is installed.
+/// only one search runs at a time. Read-only: nothing is installed. Windows only:
+/// elsewhere it rejects with `NotSupported` before looking at the opt-in.
 #[tauri::command]
 pub async fn check_driver_updates(state: State<'_, AppState>) -> Result<DriverInventory, AppError> {
+    if !drivers::inventory_supported() {
+        return Err(drivers::unsupported_error());
+    }
     if !state.db()?.load_settings()?.allow_online_checks {
         return Err(AppError::new(
             ErrorCode::ConsentRequired,

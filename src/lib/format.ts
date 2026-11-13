@@ -3,25 +3,103 @@ import type { Metric } from "@/types/generated/Metric";
 import type { Source } from "@/types/generated/Source";
 import type { Unavailability } from "@/types/generated/Unavailability";
 import type { Unit } from "@/types/generated/Unit";
-import { localeTag, translatorFor } from "@/i18n";
+import { getLang, localeTag, translatorFor } from "@/i18n";
+import { getPlatform } from "@/lib/platform";
 
-const BYTE_UNITS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"] as const;
+/**
+ * A number with a fixed number of decimals in the current language: "19,4" in Italian,
+ * "19.4" in English. No thousands separator ("4700 MHz", "1863 GB"), like the backend's
+ * `fmt::num` (crates/diagnostics/src/fmt.rs), so the UI and the findings write numbers alike.
+ */
+export function formatNumber(value: number, fractionDigits = 0): string {
+  const s = value.toFixed(fractionDigits);
+  return getLang() === "it" ? s.replace(".", ",") : s;
+}
 
-/** Binary (IEC) units: Windows reports memory in powers of 1024. */
-export function formatBytes(bytes: number, fractionDigits = 1): string {
+/** "92 %" in Italian, "92%" in English (the backend's `with_percent`). */
+function withPercent(number: string): string {
+  return getLang() === "it" ? `${number} %` : `${number}%`;
+}
+
+/**
+ * How byte sizes are labelled. Both scale by 1024 (Windows reports sizes in powers of 1024);
+ * only the label differs:
+ * - `windows`: KB, MB, GB, TB, the labels File Explorer and Task Manager use, so the number
+ *   matches what the user sees in Windows. Used in the "Semplice" view.
+ * - `iec`: KiB, MiB, GiB, TiB, the exact technical names. Used in the "Avanzata" view.
+ * The backend follows the same rule (`fmt::bytes_plain` / `fmt::bytes` in crates/diagnostics).
+ * Memory (RAM, VRAM, process memory) uses powers of 1024 on every OS: Activity Monitor and
+ * About This Mac label memory that way too ("16 GB" for 16 GiB). Disk, volume and file sizes
+ * go through `formatStorageBytes`, which follows Finder on macOS (see there).
+ */
+export type ByteUnits = "windows" | "iec";
+
+const BYTE_LABELS: Record<ByteUnits, readonly string[]> = {
+  windows: ["B", "KB", "MB", "GB", "TB", "PB"],
+  iec: ["B", "KiB", "MiB", "GiB", "TiB", "PiB"],
+};
+
+let byteUnits: ByteUnits = "windows";
+
+/**
+ * Sets the labels `formatBytes` uses. Called by the app store whenever the view mode changes,
+ * before React re-renders, so the next render already shows the new labels.
+ */
+export function setByteUnits(units: ByteUnits): void {
+  byteUnits = units;
+}
+
+export function getByteUnits(): ByteUnits {
+  return byteUnits;
+}
+
+/** Powers of 1024, labelled per `units` (default: the current view mode's). */
+export function formatBytes(bytes: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  const labels = BYTE_LABELS[units];
   let value = bytes;
   let unit = 0;
-  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+  while (value >= 1024 && unit < labels.length - 1) {
     value /= 1024;
     unit += 1;
   }
   const digits = unit === 0 ? 0 : fractionDigits;
-  return `${value.toFixed(digits)} ${BYTE_UNITS[unit]}`;
+  return `${formatNumber(value, digits)} ${labels[unit]}`;
 }
 
-export function formatBytesPerSec(bytesPerSec: number, fractionDigits = 1): string {
-  const bytes = formatBytes(bytesPerSec, fractionDigits);
+/**
+ * A disk, volume or file size. Like `formatBytes`, except in the "Semplice" view on macOS:
+ * there it uses powers of 1000 with KB/MB/GB/TB, the units Finder, Disk Utility and About
+ * This Mac use for storage, so a Mac user reads the same number as in Finder ("865,3 GB"
+ * free rather than "805,9 GB"). The backend's `fmt::storage_plain` does the same.
+ * Throughput (MB/s) and memory are not storage sizes and keep `formatBytes`.
+ */
+export function formatStorageBytes(bytes: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
+  if (units === "windows" && getPlatform() === "macos") return formatDecimalBytes(bytes, fractionDigits);
+  return formatBytes(bytes, fractionDigits, units);
+}
+
+/** Powers of 1000 with KB, MB, GB, TB (Finder's storage units). */
+function formatDecimalBytes(bytes: number, fractionDigits: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  const labels = BYTE_LABELS.windows;
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1000 && unit < labels.length - 1) {
+    value /= 1000;
+    unit += 1;
+  }
+  const digits = unit === 0 ? 0 : fractionDigits;
+  return `${formatNumber(value, digits)} ${labels[unit]}`;
+}
+
+/** A size given in MiB (benchmark file sizes), labelled per the current view mode: "256 MB". */
+export function formatMib(mib: number): string {
+  return formatBytes(mib * 1024 * 1024, 0);
+}
+
+export function formatBytesPerSec(bytesPerSec: number, fractionDigits = 1, units: ByteUnits = byteUnits): string {
+  const bytes = formatBytes(bytesPerSec, fractionDigits, units);
   return bytes === "—" ? bytes : `${bytes}/s`;
 }
 
@@ -32,12 +110,12 @@ export function formatMhz(mhz: number): string {
 
 export function formatCelsius(celsius: number): string {
   if (!Number.isFinite(celsius)) return "—";
-  return `${celsius.toFixed(0)} °C`;
+  return `${formatNumber(celsius, 0)} °C`;
 }
 
 export function formatWatts(watts: number): string {
   if (!Number.isFinite(watts) || watts < 0) return "—";
-  return `${watts.toFixed(1)} W`;
+  return `${formatNumber(watts, 1)} W`;
 }
 
 /** Memory module transfer rate (`Win32_PhysicalMemory` reports MT/s). */
@@ -49,7 +127,7 @@ export function formatMts(mts: number): string {
 /** Events per second, e.g. hard page faults. */
 export function formatPerSec(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "—";
-  return `${value < 10 ? value.toFixed(1) : Math.round(value)}/s`;
+  return `${value < 10 ? formatNumber(value, 1) : Math.round(value)}/s`;
 }
 
 /** Wall-clock time of an epoch-ms timestamp, in the current language's locale. */
@@ -114,6 +192,9 @@ const SOURCE_LABELS: Record<Exclude<Source, "d3dkmt">, string> = {
   windowsUpdate: "Windows Update",
   benchmark: "Benchmark",
   kernel: "Kernel (NtQuerySystemInformation)",
+  ioKit: "I/O Kit",
+  metal: "Metal",
+  mach: "Mach (host_statistics64)",
 };
 
 export function sourceLabel(source: Source): string {
@@ -122,7 +203,7 @@ export function sourceLabel(source: Source): string {
 
 export function formatPercent(value: number, fractionDigits = 0): string {
   if (!Number.isFinite(value)) return "—";
-  return `${value.toFixed(fractionDigits)}%`;
+  return withPercent(formatNumber(value, fractionDigits));
 }
 
 /** Compact duration: "3 g 4 h" ("3 d 4 h" in English), "2 h 5 min", "42 s". */
@@ -163,10 +244,10 @@ export function formatMetric<T>(metric: Metric<T>, format: (value: T) => string)
 /** 2 decimals below 10, 1 below 100, none above: keeps result numbers readable. */
 function sig(value: number): string {
   const abs = Math.abs(value);
-  return value.toFixed(abs < 10 ? 2 : abs < 100 ? 1 : 0);
+  return formatNumber(value, abs < 10 ? 2 : abs < 100 ? 1 : 0);
 }
 
-/** Compact decimal number with SI prefix: "950", "12.3 k", "4.56 M", "1.20 G", "21.8 T". */
+/** Compact decimal number with SI prefix: "950", "12.3 k", "4.56 M", "1.20 G", "21.8 T" ("12,3 k" in Italian). */
 export function formatCompact(value: number): string {
   if (!Number.isFinite(value)) return "—";
   const abs = Math.abs(value);
@@ -218,12 +299,12 @@ export function formatMilliseconds(ms: number): string {
   return `${sig(ms)} ms`;
 }
 
-/** Signed percentage change with one decimal: "+4.2%", "−3.0%", "0.0%". */
+/** Signed percentage change with one decimal: "+4.2%", "−3.0%", "0.0%" ("+4,2 %" in Italian). */
 export function formatSignedPercent(value: number): string {
   if (!Number.isFinite(value)) return "—";
   const rounded = Math.round(value * 10) / 10;
-  if (rounded === 0) return "0.0%";
-  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded).toFixed(1)}%`;
+  if (rounded === 0) return withPercent(formatNumber(0, 1));
+  return withPercent(`${rounded > 0 ? "+" : "−"}${formatNumber(Math.abs(rounded), 1)}`);
 }
 
 /** Formats a benchmark result value according to its declared unit. */

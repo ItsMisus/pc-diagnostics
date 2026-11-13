@@ -8,14 +8,15 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { SourceCaption } from "@/components/common/SourceCaption";
 import { StateView } from "@/components/common/StateView";
 import { Tooltip } from "@/components/common/Tooltip";
-import { useIsSimple } from "@/hooks/useViewMode";
+import { useIsSimple, useViewMode } from "@/hooks/useViewMode";
 import { useT } from "@/i18n";
-import { formatBytes, formatBytesPerSec, formatCelsius, formatMhz, formatPercent, formatPerSec, formatRpm, formatTime, formatWatts } from "@/lib/format";
+import { formatBytes, formatBytesPerSec, formatCelsius, formatMhz, formatPercent, formatPerSec, formatRpm, formatStorageBytes, formatTime, formatWatts } from "@/lib/format";
 import { DiskHealth } from "@/features/monitoring/DiskHealth";
 import { gpuPowerReading } from "@/features/monitoring/gpuPower";
 import { useInventoryData } from "@/features/monitoring/hooks";
 import { useLive } from "@/features/monitoring/liveStore";
-import { isFrequencyLimited, primaryGpu } from "@/features/monitoring/selection";
+import { dedicatedVram, hasUnifiedMemory, isFrequencyLimited, primaryGpu, showsDiskStatus, volumeDisplayName } from "@/features/monitoring/selection";
+import { useIsMac, usePlatform } from "@/lib/platform";
 import { valueOf } from "@/features/monitoring/series";
 import { InventoryState, WaitingForSample } from "@/features/monitoring/StatusViews";
 import type { CpuSample } from "@/types/generated/CpuSample";
@@ -23,7 +24,8 @@ import type { GpuSample } from "@/types/generated/GpuSample";
 import type { Metric } from "@/types/generated/Metric";
 import type { PhysicalDiskInfo } from "@/types/generated/PhysicalDiskInfo";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
-import { type Bar, BarRow, GaugeLayout, GaugeSkeleton, metricText, splitUnit } from "./parts";
+import { commitLevel, type Level, memoryLevel, pressureLevel, volumeLevel, vramLevel } from "./levels";
+import { type Bar, BarRow, GaugeLayout, GaugeSkeleton, metricText, splitUnit, toneOf, useLevelText } from "./parts";
 
 /** Panels are flex columns so a trailing line can sit at the bottom when a row stretches them. */
 const PANEL = "flex flex-col";
@@ -48,6 +50,7 @@ function PercentGauge({
   percent,
   label,
   caption,
+  level,
   size = 140,
 }: {
   /** Drives availability and the reason. */
@@ -56,24 +59,29 @@ function PercentGauge({
   percent?: number | null;
   label: string;
   caption: string;
+  /** Status of the value (`levels.ts`): colours the arc. State it as text nearby too. */
+  level?: Level | undefined;
   size?: 140 | 112;
 }) {
   const tc = useT("common");
   const reasonText = useUnavailabilityText();
   const p = percent !== undefined ? percent : valueOf(metric);
+  const valueText = useLevelText(p === null ? "" : formatPercent(p), level);
   if (metric.status === "unavailable" || p === null) {
     const reason = metric.status === "unavailable" ? reasonText(metric.reason) : undefined;
     return (
-      <span title={reason} className="inline-flex shrink-0">
-        <RingGauge
-          percent={null}
-          value={tc("notAvailable")}
-          caption={caption}
-          label={label}
-          valueText={reason ? `${tc("notAvailable")} — ${reason}` : tc("notAvailable")}
-          size={size}
-        />
-      </span>
+      <Tooltip content={reason} side="bottom" multiline enabled={reason !== undefined}>
+        <span tabIndex={reason !== undefined ? 0 : undefined} className="inline-flex shrink-0 rounded-full">
+          <RingGauge
+            percent={null}
+            value={tc("notAvailable")}
+            caption={caption}
+            label={label}
+            valueText={reason ? `${tc("notAvailable")} — ${reason}` : tc("notAvailable")}
+            size={size}
+          />
+        </span>
+      </Tooltip>
     );
   }
   return (
@@ -83,7 +91,8 @@ function PercentGauge({
       unit="%"
       caption={caption}
       label={label}
-      valueText={formatPercent(p)}
+      valueText={valueText}
+      tone={toneOf(level)}
       size={size}
     />
   );
@@ -141,7 +150,7 @@ function CpuBody({ cpu }: { cpu: CpuSample }) {
   );
 }
 
-/** Shown only when Windows reports a limit below the nominal maximum; the cause is unknown. */
+/** Shown only when the OS reports a limit below the nominal maximum; the cause is unknown. */
 function FrequencyLimit({ cpu }: { cpu: CpuSample }) {
   const t = useT("overview");
   if (!isFrequencyLimited(cpu.limitMhz, cpu.maxMhz)) return null;
@@ -149,17 +158,21 @@ function FrequencyLimit({ cpu }: { cpu: CpuSample }) {
   const limit = formatMhz(cpu.limitMhz.value);
   const body = t("frequencyLimitBody", { limit, max: formatMhz(cpu.maxMhz.value) });
   return (
-    <p role="note" className="flex items-center gap-1.5 text-xs text-fg-muted" title={body}>
-      <Icon name="alert" size={14} className="shrink-0 text-warn" />
-      <span className="truncate">{t("frequencyLimited", { limit })}</span>
-      <span className="sr-only">{body}</span>
-    </p>
+    <Tooltip content={body} side="top" multiline className="min-w-0">
+      <p role="note" tabIndex={0} className="flex min-w-0 cursor-help items-center gap-1.5 rounded-sm text-xs text-fg-muted">
+        <Icon name="alert" size={14} className="shrink-0 text-warn" />
+        <span className="truncate">{t("frequencyLimited", { limit })}</span>
+        <span className="sr-only">{body}</span>
+      </p>
+    </Tooltip>
   );
 }
 
 // ---------------------------------------------------------------- GPU
 
 export const GpuPanel = memo(function GpuPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const { status, data } = useInventoryData();
@@ -176,13 +189,24 @@ export const GpuPanel = memo(function GpuPanel() {
           {...(data.gpus.length > 0 ? { description: t("onlySoftwareAdapters") } : {})}
         />
       ) : (
-        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={gpu.dedicatedVramBytes} />
+        <GpuBody id={gpu.id} name={gpu.name} dedicatedVramBytes={dedicatedVram(gpu)} unifiedMemory={hasUnifiedMemory(gpu)} />
       )}
     </Card>
   );
 });
 
-function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; dedicatedVramBytes: number }) {
+function GpuBody({
+  id,
+  name,
+  dedicatedVramBytes,
+  unifiedMemory,
+}: {
+  id: string;
+  name: string;
+  /** Null: no dedicated VRAM, or its size is not reported. */
+  dedicatedVramBytes: number | null;
+  unifiedMemory: boolean;
+}) {
   const tm = useT("monitoring");
   const hasSample = useLive((s) => s.latest !== null);
   const gpu = useLive((s) => s.latest?.gpus.find((g) => g.id === id));
@@ -196,7 +220,7 @@ function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; d
   if (!gpu) return <StateView compact kind="empty" title={tm("noSampleForAdapter")} description={name} />;
   return (
     <>
-      <GpuReadings gpu={gpu} dedicatedVramBytes={dedicatedVramBytes} />
+      <GpuReadings gpu={gpu} dedicatedVramBytes={dedicatedVramBytes} unifiedMemory={unifiedMemory} />
       {/* Which adapter (DXGI primary); pinned to the bottom edge when the row stretches the panel. */}
       <p className="mt-auto truncate pt-3 text-xs text-fg-subtle" title={name}>
         {name}
@@ -205,9 +229,19 @@ function GpuBody({ id, name, dedicatedVramBytes }: { id: string; name: string; d
   );
 }
 
-function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVramBytes: number }) {
+function GpuReadings({
+  gpu,
+  dedicatedVramBytes,
+  unifiedMemory,
+}: {
+  gpu: GpuSample;
+  dedicatedVramBytes: number | null;
+  /** Apple silicon: no VRAM exists, the GPU uses the RAM shown in the RAM panel. */
+  unifiedMemory: boolean;
+}) {
   const t = useT("overview");
   const tm = useT("monitoring");
+  const th = useT("hardware");
   const temp = useTemperatureBar(gpu.temperatureC, "GPU");
   const power = gpuPowerReading(gpu, tm);
   const powerBar: Bar | undefined =
@@ -219,13 +253,14 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
         }
       : undefined;
   const vramText = (v: number) =>
-    dedicatedVramBytes > 0 ? t("ofTotal", { used: formatBytes(v), total: formatBytes(dedicatedVramBytes) }) : formatBytes(v);
+    dedicatedVramBytes !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(dedicatedVramBytes) }) : formatBytes(v);
   const vramBar: Bar | undefined =
-    dedicatedVramBytes > 0
+    dedicatedVramBytes !== null
       ? {
           percent: ratio(valueOf(gpu.dedicatedUsedBytes), dedicatedVramBytes),
           label: t("meterAria", { label: "VRAM", component: "GPU" }),
           valueText: metricText(gpu.dedicatedUsedBytes, vramText, tm),
+          level: vramLevel(valueOf(gpu.dedicatedUsedBytes), dedicatedVramBytes),
         }
       : undefined;
 
@@ -235,7 +270,11 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
       <BarRow label={tm("coreClock")} value={<MetricValue metric={gpu.coreClockMhz} format={formatMhz} />} />
       <BarRow label={tm("power")} bar={powerBar} value={<MetricValue metric={power.metric} format={power.format} />} />
       <BarRow label={tm("fan")} value={<MetricValue metric={gpu.fanRpm} format={formatRpm} />} />
-      <BarRow label="VRAM" bar={vramBar} value={<MetricValue metric={gpu.dedicatedUsedBytes} format={vramText} />} />
+      {unifiedMemory && gpu.dedicatedUsedBytes.status === "unavailable" ? (
+        <BarRow label="VRAM" value={<span className="text-fg-muted">{th("unifiedMemory")}</span>} />
+      ) : (
+        <BarRow label="VRAM" bar={vramBar} value={<MetricValue metric={gpu.dedicatedUsedBytes} format={vramText} />} />
+      )}
     </GaugeLayout>
   );
 }
@@ -243,9 +282,12 @@ function GpuReadings({ gpu, dedicatedVramBytes }: { gpu: GpuSample; dedicatedVra
 // ---------------------------------------------------------------- RAM
 
 export const RamPanel = memo(function RamPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const simple = useIsSimple();
+  const mac = useIsMac();
   const mem = useLive((s) => s.latest?.memory);
   if (!mem) {
     return (
@@ -259,8 +301,13 @@ export const RamPanel = memo(function RamPanel() {
   const total = valueOf(mem.totalBytes);
   const usedText = (v: number) => (total !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(total) }) : formatBytes(v));
   const commitLimit = valueOf(mem.commitLimitBytes);
+  const memLevel = memoryLevel(valueOf(mem.availableBytes), total);
   const commitText = (v: number) =>
     commitLimit !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(commitLimit) }) : formatBytes(v);
+  const swapTotal = valueOf(mem.swapTotalBytes);
+  const swapText = (v: number) =>
+    swapTotal !== null ? t("ofTotal", { used: formatBytes(v), total: formatBytes(swapTotal) }) : formatBytes(v);
+  const pLevel = pressureLevel(mem.pressure.status === "available" ? mem.pressure.value : null);
   return (
     <Card title="RAM" className={PANEL} aside={<SourceCaption metric={mem.usedBytes} />}>
       <GaugeLayout
@@ -270,23 +317,39 @@ export const RamPanel = memo(function RamPanel() {
             percent={ratio(valueOf(mem.usedBytes), total)}
             label={tm("memoryInUse")}
             caption={t("inUse")}
+            level={memLevel}
             size={112}
           />
         }
       >
-        <BarRow label={t("used")} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
+        <BarRow label={t("used")} level={memLevel} value={<MetricValue metric={mem.usedBytes} format={usedText} />} />
         <BarRow label={tm("available")} value={<MetricValue metric={mem.availableBytes} format={bytes} />} />
+        {mac && (
+          // The kernel's level is the "memory is short" signal on macOS: shown in both views.
+          // Above normal, the status word ("Avviso" / "Critico") is the value itself.
+          <BarRow
+            label={t("memoryPressure")}
+            level={pLevel}
+            value={pLevel === "normal" ? <MetricValue metric={mem.pressure} format={() => t("pressureNormal")} /> : null}
+          />
+        )}
         {!simple && (
           <>
-            <BarRow
-              label={t("committedMemory")}
-              bar={{
-                percent: ratio(valueOf(mem.commitUsedBytes), commitLimit),
-                label: t("committedMemory"),
-                valueText: metricText(mem.commitUsedBytes, commitText, tm),
-              }}
-              value={<MetricValue metric={mem.commitUsedBytes} format={commitText} />}
-            />
+            {mac ? (
+              // No bar: macOS grows the swap files on demand, so the total is not a limit.
+              <BarRow label={t("swapUsed")} value={<MetricValue metric={mem.swapUsedBytes} format={swapText} />} />
+            ) : (
+              <BarRow
+                label={t("committedMemory")}
+                bar={{
+                  percent: ratio(valueOf(mem.commitUsedBytes), commitLimit),
+                  label: t("committedMemory"),
+                  valueText: metricText(mem.commitUsedBytes, commitText, tm),
+                  level: commitLevel(valueOf(mem.commitUsedBytes), commitLimit),
+                }}
+                value={<MetricValue metric={mem.commitUsedBytes} format={commitText} />}
+              />
+            )}
             <BarRow label={t("pagesFromDisk")} value={<MetricValue metric={mem.pagesPerSec} format={formatPerSec} />} />
           </>
         )}
@@ -298,6 +361,8 @@ export const RamPanel = memo(function RamPanel() {
 // ---------------------------------------------------------------- Disk activity
 
 export const DiskPanel = memo(function DiskPanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
   const storage = useLive((s) => s.latest?.storage);
@@ -351,8 +416,11 @@ function RateReadout({ label, metric }: { label: string; metric: Metric<number> 
 // ---------------------------------------------------------------- Storage (inventory)
 
 export const StoragePanel = memo(function StoragePanel() {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("overview");
   const tm = useT("monitoring");
+  const platform = usePlatform();
   const { status, data } = useInventoryData();
   if (status !== "ready" || !data) {
     return (
@@ -370,21 +438,25 @@ export const StoragePanel = memo(function StoragePanel() {
       {data.volumes.length === 0 ? (
         <StateView compact kind="empty" title={tm("noVolumes")} />
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {data.volumes.map((v) => (
             <VolumeRow key={v.mountPoint} volume={v} />
           ))}
         </div>
       )}
-      <div className="mt-4 mb-2 flex items-center gap-1.5">
-        <h3 className="eyebrow">{tm("windowsHealth")}</h3>
-        <Tooltip content={t("healthNote")} side="top">
-          <span tabIndex={0} aria-label={t("healthNote")} className="inline-flex rounded text-fg-subtle">
-            <Icon name="info" size={12} />
-          </span>
-        </Tooltip>
-      </div>
-      <DiskHealthList disks={data.physicalDisks} />
+      {showsDiskStatus(data.physicalDisks, platform) && (
+        <>
+          <div className="mt-4 mb-2 flex items-center gap-1.5">
+            <h3 className="eyebrow">{tm("windowsHealth")}</h3>
+            <Tooltip content={t("healthNote")} side="top">
+              <span tabIndex={0} aria-label={t("healthNote")} className="inline-flex rounded text-fg-subtle">
+                <Icon name="info" size={12} />
+              </span>
+            </Tooltip>
+          </div>
+          <DiskHealthList disks={data.physicalDisks} />
+        </>
+      )}
     </Card>
   );
 });
@@ -396,14 +468,15 @@ function VolumeRow({ volume: v }: { volume: VolumeInfo }) {
   const percent = ratio(used, v.totalBytes);
   return (
     <BarRow
-      label={v.label ? `${v.mountPoint} ${v.label}` : v.mountPoint}
+      label={volumeDisplayName(v)}
       title={v.label || undefined}
       bar={{
         percent,
         label: tm("usedSpaceOn", { mount: v.mountPoint }),
         valueText: percent !== null ? tm("percentUsed", { percent: formatPercent(percent) }) : tm("notAvailableText"),
+        level: volumeLevel(v.availableBytes, v.totalBytes),
       }}
-      value={t("ofTotal", { used: formatBytes(used), total: formatBytes(v.totalBytes) })}
+      value={t("ofTotal", { used: formatStorageBytes(used), total: formatStorageBytes(v.totalBytes) })}
     />
   );
 }

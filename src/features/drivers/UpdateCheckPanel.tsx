@@ -27,8 +27,10 @@ export function UpdateCheckPanel() {
         <p id="update-check-desc" className="max-w-prose text-[13px] text-fg-muted">
           {t("updatesDescription")}
         </p>
+        {/* One primary action per view: while online checks are off, it is the consent
+            button below (the only one that unblocks the search); this one stays secondary. */}
         <Button
-          variant="primary"
+          variant={allowed ? "primary" : "secondary"}
           onClick={run}
           disabled={!allowed || running || refreshing}
           aria-busy={running}
@@ -77,7 +79,7 @@ function ConsentNotice() {
         <span className="font-medium text-fg">{t("onlineOff")}</span>{" "}
         <span className="text-fg-muted">{t("consentRevoke")}</span>
       </p>
-      <Button size="sm" onClick={() => void updateSettings({ allowOnlineChecks: true })} disabled={settings.saving}>
+      <Button variant="primary" size="sm" onClick={() => void updateSettings({ allowOnlineChecks: true })} disabled={settings.saving}>
         {settings.saving ? t("saving") : t("allowOnline")}
       </Button>
       {settings.saveError && (

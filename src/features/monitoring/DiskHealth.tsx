@@ -5,7 +5,10 @@ import type { DiskHealthStatus } from "@/types/generated/DiskHealthStatus";
 import type { Metric } from "@/types/generated/Metric";
 import { healthLabel, healthTone } from "./selection";
 
-/** Windows Storage health summary (not a SMART evaluation). Text always states the status. */
+/**
+ * The OS's disk health summary (Windows Storage on Windows, the status macOS reports on a Mac;
+ * not a SMART evaluation). Text always states the status.
+ */
 export function DiskHealth({ health }: { health: Metric<DiskHealthStatus> }) {
   const t = useT("monitoring");
   if (health.status === "unavailable") {

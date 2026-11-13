@@ -1,3 +1,4 @@
+import { useViewMode } from "@/hooks/useViewMode";
 import { memo, type ReactNode, useCallback, useId, useMemo } from "react";
 import { LineChart, type Series } from "@/components/charts/LineChart";
 import type { Domain, Point } from "@/components/charts/scale";
@@ -12,7 +13,7 @@ import { UsageBar } from "@/components/common/UsageBar";
 import { usePolling } from "@/hooks/usePolling";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatBytesPerSec, formatPercent } from "@/lib/format";
+import { formatBytes, formatBytesPerSec, formatPercent, formatNumber } from "@/lib/format";
 import { commands } from "@/services/commands";
 import type { ProcessHistory } from "@/types/generated/ProcessHistory";
 import type { ProcessRow } from "@/types/generated/ProcessRow";
@@ -95,7 +96,7 @@ function ProcessDetail({ lastSeen }: { lastSeen: ProcessRow }) {
         <Section label={t("memorySection")}>
           <DefinitionList
             items={[
-              { label: "Working set", value: <MetricValue metric={row.workingSetBytes} format={bytes} /> },
+              { label: t("workingSet"), value: <MetricValue metric={row.workingSetBytes} format={bytes} /> },
               { label: t("privateMemory"), value: <MetricValue metric={row.privateBytes} format={bytes} /> },
             ]}
           />
@@ -156,10 +157,10 @@ function PressureBreakdown({ row, stale }: { row: ProcessRow; stale: boolean }) 
             <UsageBar
               percent={i.value}
               label={t("pressureOf", { label: i.label })}
-              valueText={t("outOf100", { value: i.value.toFixed(1) })}
+              valueText={t("outOf100", { value: formatNumber(i.value, 1) })}
             />
             <span className="text-right tabular" aria-hidden="true">
-              {i.value.toFixed(1)}
+              {formatNumber(i.value, 1)}
             </span>
           </li>
         ))}
@@ -172,6 +173,8 @@ function PressureBreakdown({ row, stale }: { row: ProcessRow; stale: boolean }) 
 }
 
 const HistoryView = memo(function HistoryView({ history }: { history: ProcessHistory }) {
+  // Byte labels follow the view mode (lib/format.ts): re-render when it changes.
+  useViewMode();
   const t = useT("processes");
   const { points } = history;
   const charts = useMemo(() => {
@@ -191,7 +194,7 @@ const HistoryView = memo(function HistoryView({ history }: { history: ProcessHis
     return {
       xDomain,
       cpu: [{ id: "cpu", label: "CPU", points: cpu }] satisfies Series[],
-      ram: [{ id: "ram", label: "Working set", points: ram }] satisfies Series[],
+      ram: [{ id: "ram", label: t("workingSet"), points: ram }] satisfies Series[],
       io: [
         { id: "write", label: t("seriesWrite"), points: write },
         { id: "read", label: t("seriesRead"), points: read, tone: "secondary" },

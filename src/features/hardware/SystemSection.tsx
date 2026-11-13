@@ -49,5 +49,5 @@ function SystemRows() {
     [t("uptime"), s.uptimeS !== null ? formatDuration(s.uptimeS) : na],
   ];
 
-  return <DefinitionList items={rows.map(([label, value]) => ({ label, value }))} />;
+  return <DefinitionList aligned items={rows.map(([label, value]) => ({ label, value }))} />;
 }

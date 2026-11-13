@@ -23,7 +23,11 @@ export default {
   // ProcessTable
   protectedNote:
     "Processo protetto: il percorso dell'eseguibile non è leggibile senza privilegi elevati. Le metriche provengono dallo snapshot del kernel e sono reali.",
+  "protectedNote@macos":
+    "Processo di sistema o di un altro utente: macOS non mostra il percorso dell'eseguibile senza privilegi elevati.",
   ioNote: "I/O logico (file, rete, dispositivi): non corrisponde ai byte fisici scritti sul disco",
+  "ioNote@macos":
+    "I/O su disco: byte letti e scritti dal processo (macOS non conta per processo il traffico di rete e dei dispositivi)",
   colName: "Nome processo",
   colPeak: "Picco",
   selfTag: "questa app",
@@ -48,11 +52,17 @@ export default {
   detailEmpty: "Seleziona un processo nella tabella per vederne l'andamento recente.",
   protectedDetail:
     "Processo protetto: percorso dell'eseguibile non leggibile senza privilegi elevati (metriche reali dal kernel)",
+  "protectedDetail@macos":
+    "Processo di sistema o di un altro utente: percorso dell'eseguibile non leggibile senza privilegi elevati",
   historyLoading: "Caricamento dello storico…",
   endedTitle: "Processo terminato o non più monitorato",
   endedDescription: "Lo storico di un processo viene conservato solo per poco tempo dopo la sua chiusura.",
   memorySection: "Memoria",
+  workingSet: "Working set",
+  "workingSet@macos": "Memoria residente",
   privateMemory: "Memoria privata",
+  // Physical footprint: the "Memoria" column of Activity Monitor.
+  "privateMemory@macos": "Impronta in memoria",
   exePathSection: "Percorso eseguibile",
   localInfoAria: "Informazioni locali",
   exePathUnavailable: "Non disponibile per questo processo",
@@ -64,11 +74,14 @@ export default {
   historyEnded: "Terminato",
   noSamples: "Nessun campione ancora registrato per questo processo.",
   cpuChartTitle: "CPU (% dell'intero sistema)",
-  cpuChartAria: "CPU del processo nel tempo, scala fissa 0–100%",
+  cpuChartAria: "CPU del processo nel tempo, scala fissa 0–100 %",
   ramChartTitle: "RAM (working set)",
+  "ramChartTitle@macos": "RAM (memoria residente)",
   ramChartAria: "Memoria del processo nel tempo, scala da zero",
   ioChartTitle: "I/O logico: scrittura (linea piena) e lettura",
+  "ioChartTitle@macos": "I/O su disco: scrittura (linea piena) e lettura",
   ioChartAria: "I/O logico del processo nel tempo, scala da zero",
+  "ioChartAria@macos": "I/O su disco del processo nel tempo, scala da zero",
   seriesWrite: "Scrittura",
   seriesRead: "Lettura",
 
@@ -81,6 +94,7 @@ export default {
   scoreRam: "memoria del processo rapportata alla memoria fisica totale ({total}; disponibile ora {available}).",
   scoreIo:
     "I/O logico (file, rete, dispositivi) rapportato a un riferimento di {reference}, che corrisponde a 100.",
+  "scoreIo@macos": "I/O su disco rapportato a un riferimento di {reference}, che corrisponde a 100.",
   scoreModes:
     "«Istantanea» usa l'ultimo campione (ogni {interval} s). «Intervallo» usa la media degli ultimi {window} s; il picco è il valore massimo osservato nello stesso intervallo.",
   scoreMethodology:

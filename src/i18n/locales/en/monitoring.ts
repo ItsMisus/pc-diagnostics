@@ -18,6 +18,7 @@ export default {
   usedSpaceOn: "Used space on {mount}",
   percentUsed: "{percent} used",
   windowsHealth: "Windows status",
+  "windowsHealth@macos": "Disk status",
   diskFallback: "Disk {id}",
   noVolumes: "No volumes detected",
   noHardwareGpu: "No hardware GPU detected",
@@ -28,6 +29,7 @@ export default {
 
   // Labels for inventory enums.
   vendorOther: "Other (0x{id})",
+  vendorNotReported: "Not reported",
   busVirtual: "Virtual",
   busOther: "Other",
   mediaUnknown: "Unknown",

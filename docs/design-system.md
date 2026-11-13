@@ -32,23 +32,47 @@ Rules:
 - The accent appears in small doses: the active nav icon, the selected thumb, primary buttons,
   chart lines, meters, focus rings. One primary button per view at most.
 - Status color is never the only signal (`StatusBadge` always has a label).
+- Meters are grey (`--meter`) until a value crosses a threshold where "high" means a
+  problem; then the fill takes `--warn` / `--bad` and a short status word ("Avviso",
+  "Critico") sits next to the value. The thresholds live in `src/features/overview/levels.ts`
+  and mirror the diagnostics rules (available memory, commit, VRAM, free space). Load, power
+  and temperature stay grey: high load is normal, and there is no diagnostics threshold for
+  temperature.
 - Do not use raw hex or Tailwind palette colors (`zinc-500`, `black/40`...) in components.
 
 ## Typography
 
 - Body: Segoe UI Variable Text, 14 px base. Display (page titles): Segoe UI Variable Display.
 - Scale: `text-2xs` 11 (captions, table headers, sources), `text-xs` 12 (hints), `text-[13px]`
-  (controls, nav, card titles, dense body), `text-sm` 14 (body), 15 (dialog titles),
-  22 (page titles), `text-2xl` 24 (headline metrics).
+  (controls, nav, dense body), `text-sm` 14 (body), 15 (dialog titles), `text-lg` 18 (card
+  titles), `text-xl` 20 (section headings), 26 (page titles); headline metrics are light
+  numbers (`Readout`, `RingGauge`).
 - Numbers: always `tabular` so live values do not jitter.
+- Decimals and percentages follow the language, like the backend's `fmt::num` / `fmt::pct`:
+  "19,4 GB", "6,2 %" in Italian; "19.4 GB", "6.2%" in English; no thousands separator
+  ("4700 MHz"). Use `formatNumber` / `formatPercent` (`src/lib/format.ts`), never `toFixed`
+  in a component.
+- Byte sizes scale by 1024 and follow the view mode: "Semplice" uses the labels File
+  Explorer and Task Manager use (KB, MB, GB, TB), so the numbers match Windows; "Avanzata"
+  uses the exact IEC names (KiB, MiB, GiB, TiB). Always format them with `formatBytes` /
+  `formatBytesPerSec` / `formatMib` (`src/lib/format.ts`), never a hand-written unit. The
+  backend's texts follow the same rule (`fmt::bytes_plain` / `fmt::bytes`).
+- Disk, volume and file sizes use `formatStorageBytes` (backend: `fmt::storage_plain`). It
+  is `formatBytes` everywhere except "Semplice" on macOS, where it uses powers of 1000 with
+  KB/MB/GB/TB like Finder and Disk Utility ("994,6 GB" for the disk Finder shows as
+  994,61 GB). Memory (RAM, VRAM, swap, process memory), throughput and benchmark file sizes
+  (`formatMib`) stay on powers of 1024 on macOS too: Activity Monitor and About This Mac
+  label memory that way ("16 GB" for 16 GiB).
 - Section labels inside cards: `eyebrow` utility (11 px, uppercase, tracked, `fg-subtle`).
-- Card titles: sentence case, 13 px medium, `fg-muted` (handled by `<Card title>`).
+- Hierarchy of headings: page title 26 px (`PageHeader`) > section heading 20 px
+  (`SectionHeading`, a group of cards such as "Andamento recente" or "Avvisi") > card title
+  18 px semibold `fg`, display font (handled by `<Card title>`, the component's name: "CPU").
 
 ## Space, radius, elevation
 
 - 4 px grid. Card padding 16 (`p-4`); grid gaps 16 (`gap-4`); section spacing 24–32.
-- Radius: `rounded-md` (7) controls, `rounded-lg` (10) panels/tooltips/toasts, `rounded-xl` (12) cards, dialogs.
-- Elevation: cards are flat (hairline + faint top highlight). Shadows only on floating
+- Radius: one small radius, `rounded-md` (7), for cards, panels, dialogs, tooltips, toasts, controls and navigation rows; `rounded-sm` for tiny chips, `rounded-full` for pills and gauges.
+- Elevation: cards are flat (hairline, no shadow). Shadows only on floating
   surfaces: `shadow-md` tooltips/chart tooltips, `shadow-lg` dialogs and toasts.
 
 ## Components
@@ -56,17 +80,19 @@ Rules:
 | Component | Notes |
 | --- | --- |
 | `Button` | `primary` / `secondary` / `ghost` / `danger`, sizes `sm` / `md`. Press = 3 % scale. |
-| `Card` | Flat panel (radius 6, hairline). `title` (component name, bold), `description`, `aside`, `flush`. |
+| `Card` | Flat panel (`rounded-md`, hairline). `title` (component name, 18 px semibold), `description`, `aside`, `flush`. |
+| `SectionHeading` | 20 px heading of a group of cards, optional muted `count`. |
 | `Segmented` | Radio group, sliding thumb, arrow keys. `size="sm"` for dense headers. |
 | `Switch` | Spring thumb. Settings' `Toggle` delegates to it. |
-| `Tooltip` | Label tooltips (delay 350 ms, instant on keyboard focus, Esc). Supplementary only. |
+| `Tooltip` | Tooltips (delay 350 ms, instant on keyboard focus, Esc). Supplementary only. `multiline` wraps a sentence at 16 rem; `side="top-end"` for triggers near a right edge. Never a native `title` for information the user needs: it does not open from the keyboard. |
+| `MetricValue` | A value, or a focusable "n/d" whose `Tooltip` gives the reason (plain + technical in "Semplice"). |
 | `toast` / `<Toaster>` | `toast.success(title, description?)` for confirmations of a user action. Errors stay inline. |
 | `Skeleton` / `SkeletonLines` | First-load placeholders. Never for refreshes of data already shown. |
 | `Spinner` (in `StateView`) | Indeterminate activity. |
 | `StatusBadge` | Tinted chip + dot + text. |
-| `RingGauge` | Open 270° monochrome gauge for headline live values; number + small unit in the centre, caption in the opening. Not animated. |
+| `RingGauge` | Open 270° gauge for headline live values, grey unless `tone` (`warn` / `bad`) is set; number + small unit in the centre, caption in the opening. Not animated. |
 | `Readout` | Big light number + small unit. |
-| `UsageBar` / `ProgressBar` | Transform-scaled fill. `UsageBar` (live) is not animated; `ProgressBar` (benchmark) eases. |
+| `UsageBar` / `ProgressBar` | Transform-scaled fill; `UsageBar` takes the same `tone` as `RingGauge`. `UsageBar` (live) is not animated; `ProgressBar` (benchmark) eases. |
 | `Disclosure` | Native `<details>`; height animates via global CSS, chevron rotates. |
 | Native `select`, text inputs, checkboxes | Styled globally in `index.css`; just use the element. Add only sizing utilities (`h-8`, `w-56`, `px-2.5`). |
 
@@ -97,7 +123,9 @@ Principles:
 
 - Sidebar: icons stay at a fixed x in both states; width animates; labels fade; selection pill
   springs between rows; collapsed items get tooltips with their shortcut.
-- Shortcuts: `Ctrl+B` toggles the sidebar; `Ctrl+1…8` jumps to a section (ignored while typing
-  or while a dialog is open).
+- Shortcuts: `Ctrl+B` (Windows) / `⌘B` (macOS) toggles the sidebar; `Ctrl+1…8` on Windows and
+  `⌘1…7` on macOS (no Drivers section there) jump to the sections in sidebar order (ignored
+  while typing or while a dialog is open). Ctrl is not used on macOS (Ctrl+number switches
+  desktops).
 - Pages cross-fade (`PageTransition`, `mode="wait"`); scroll resets after the old page leaves.
 - The main area reserves its scrollbar gutter so content never shifts when a page starts scrolling.

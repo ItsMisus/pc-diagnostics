@@ -17,8 +17,11 @@ export default defineConfig({
   },
   envPrefix: ["VITE_", "TAURI_ENV_"],
   build: {
-    // WebView2 is evergreen Chromium.
-    target: "chrome120",
+    // The two WebViews the app ships in: WebView2 on Windows (evergreen Chromium) and WKWebView
+    // on macOS, which is the system Safari engine (16.4 on the oldest supported macOS, 13.3:
+    // LSMinimumSystemVersion). Lightning CSS (CSS minification, cssTarget follows target) adds
+    // the -webkit- prefixes Safari still needs (backdrop-filter, user-select, …).
+    target: ["chrome120", "safari16.4"],
     sourcemap: false,
   },
   test: {

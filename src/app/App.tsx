@@ -8,7 +8,8 @@ import { FixDialog } from "@/features/assistant/FixDialog";
 import { liveStore } from "@/features/monitoring/liveStore";
 import { OverviewPage } from "@/features/overview/OverviewPage";
 import { useLangSync, useThemeSync } from "@/hooks/useThemeSync";
-import type { SectionId } from "./sections";
+import { getPlatform, usePlatform } from "@/lib/platform";
+import { isSectionAvailable, type SectionId } from "./sections";
 import { useAppStore } from "./store";
 
 // Overview (the start page) and Diagnostics (Overview embeds its insights card) stay in the
@@ -31,7 +32,12 @@ const SettingsPage = lazy(pageLoaders.settings);
 
 function preloadPages(): () => void {
   const run = () => {
-    for (const load of Object.values(pageLoaders)) void load();
+    // Read when the preload runs (by then the backend has normally confirmed the platform):
+    // a page the platform does not have (Drivers on macOS) is not preloaded.
+    const platform = getPlatform();
+    for (const [id, load] of Object.entries(pageLoaders)) {
+      if (isSectionAvailable(id as SectionId, platform)) void load();
+    }
   };
   if (typeof requestIdleCallback === "function") {
     const id = requestIdleCallback(run, { timeout: 2000 });
@@ -42,6 +48,9 @@ function preloadPages(): () => void {
 }
 
 function Page({ id }: { id: SectionId }): ReactNode {
+  const platform = usePlatform();
+  // The store never selects a section the platform lacks; this guards the render as well.
+  if (!isSectionAvailable(id, platform)) return <OverviewPage />;
   switch (id) {
     case "overview":
       return <OverviewPage />;
@@ -64,10 +73,18 @@ function Page({ id }: { id: SectionId }): ReactNode {
 
 export function App() {
   const sectionId = useAppStore((s) => s.section);
+  // Re-renders the page tree when the view mode changes, so every size picks up the new
+  // byte labels (KB/MB/GB or KiB/MiB/GiB, lib/format.ts). Memoised components that format
+  // bytes subscribe on their own.
+  useAppStore((s) => s.viewMode);
   const loadSettings = useAppStore((s) => s.loadSettings);
+  const loadPlatform = useAppStore((s) => s.loadPlatform);
   useThemeSync();
   useLangSync();
 
+  useEffect(() => {
+    void loadPlatform();
+  }, [loadPlatform]);
   useEffect(() => {
     void loadSettings();
   }, [loadSettings]);

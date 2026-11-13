@@ -22,6 +22,7 @@ use models::system::SystemInfo;
 use models::{Metric, Source, Unavailability, Unit};
 
 use crate::DiagnosticInput;
+use models::app::Platform;
 
 pub const T0: u64 = 1_793_755_260_000; // 2026-11-04 01:21:00 UTC
 pub const GIB: f64 = 1024.0 * 1024.0 * 1024.0;
@@ -32,6 +33,15 @@ pub fn avail(v: f64, unit: Unit, source: Source) -> Metric<f64> {
         value: v,
         unit,
         source,
+        at: T0,
+    }
+}
+
+pub fn pressure(p: models::monitor::MemoryPressure) -> Metric<models::monitor::MemoryPressure> {
+    Metric::Available {
+        value: p,
+        unit: Unit::None,
+        source: Source::Mach,
         at: T0,
     }
 }
@@ -60,6 +70,10 @@ pub fn base_sample(i: usize) -> LiveSample {
             commit_used_bytes: avail(12.0 * GIB, Unit::Bytes, Source::Pdh),
             commit_limit_bytes: avail(32.0 * GIB, Unit::Bytes, Source::Pdh),
             pages_per_sec: avail(5.0, Unit::Count, Source::Pdh),
+            // Windows-shaped: no swap or pressure readings.
+            swap_used_bytes: Metric::unavailable(Unavailability::NotSupported),
+            swap_total_bytes: Metric::unavailable(Unavailability::NotSupported),
+            pressure: Metric::unavailable(Unavailability::NotSupported),
         },
         gpus: vec![GpuSample {
             id: GPU_ID.into(),
@@ -149,9 +163,9 @@ pub fn inventory() -> HardwareInventory {
             name: "Test GPU 8GB".into(),
             vendor: GpuVendor::Nvidia,
             vendor_id: 0x10DE,
-            device_id: 1,
-            dedicated_vram_bytes: (8.0 * GIB) as u64,
-            shared_memory_bytes: (8.0 * GIB) as u64,
+            device_id: Metric::available(1, Unit::None, Source::Dxgi),
+            dedicated_vram_bytes: avail(8.0 * GIB, Unit::Bytes, Source::Dxgi),
+            shared_memory_bytes: avail(8.0 * GIB, Unit::Bytes, Source::Dxgi),
             is_software: false,
             is_virtual: false,
             driver_version: Metric::Available {
@@ -346,5 +360,6 @@ pub fn input<'a>(live: &'a [LiveSample]) -> DiagnosticInput<'a> {
         drivers: None,
         benchmarks: &[],
         language: Language::Italian,
+        platform: Platform::Windows,
     }
 }

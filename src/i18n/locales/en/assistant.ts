@@ -57,14 +57,24 @@ export default {
   days_other: "{count} days",
   action_openSettingsPage:
     "It will open the “{page}” page in Windows Settings. On its own it changes nothing: you decide what to change.",
+  "action_openSettingsPage@macos":
+    "Opens the “{page}” page in Windows Settings: it exists only on Windows, so on this Mac the app does not run it.",
   action_openDeviceManager: "It will open Windows Device Manager. On its own it changes nothing: you decide what to do.",
+  "action_openDeviceManager@macos":
+    "Opens Windows Device Manager: it exists only on Windows, so on this Mac the app does not run it.",
   action_openDiskCleanup: "It will open Windows Disk Cleanup for drive {drive}. You choose what to delete.",
+  "action_openDiskCleanup@macos":
+    "Opens Windows Disk Cleanup: it exists only on Windows, so on this Mac the app does not run it.",
   action_emptyRecycleBin: "It will empty the Recycle Bin. Windows will ask you to confirm. This can't be undone.",
+  "action_emptyRecycleBin@macos": "It will empty the Trash. This can't be undone.",
   action_cleanTempFiles:
     "It will delete temporary files older than {days} from your temporary files folder. Files still in use are skipped. This can't be undone.",
   action_closeProgram: "It will ask “{name}” to close, like clicking the X. Save your work first.",
+  "action_closeProgram@macos": "It will ask “{name}” to close. Save your work first.",
   action_runSystemFileCheck:
     "Windows will ask for administrator permission, then a window opens that checks and repairs the Windows system files. It can take 10–20 minutes: leave the window open until it finishes.",
+  "action_runSystemFileCheck@macos":
+    "Starts the Windows system file check: it exists only on Windows, so on this Mac the app does not run it.",
 
   // Numbers (model.ts)
   costZero: "$0",
@@ -115,10 +125,12 @@ export default {
   stepNumber: "Step {n}:",
   requiresAdmin: "Requires administrator",
   notReversible: "Not reversible",
+  windowsOnly: "Windows only",
   appNote: "App note: {note}",
   confirmStepAria: "Confirm step {n}",
   whatWillHappen: "What will happen:",
   mayAskAdmin: "Windows may ask you for administrator permission.",
+  "mayAskAdmin@macos": "This step needs administrator rights, which the app never asks for on macOS.",
   cannotUndo: "This step can't be undone.",
   confirmAndRun: "Confirm and run",
   runningStep: "Running…",

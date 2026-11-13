@@ -2,9 +2,10 @@
 
 ## Overview
 
-PC Diagnostics is a Tauri 2 desktop app. A Rust backend gathers real system data and
-runs benchmarks. A React/TypeScript UI renders that data. The two sides communicate
-only through typed Tauri commands and channels.
+PC Diagnostics is a Tauri 2 desktop app for Windows and macOS. A Rust backend gathers
+real system data and runs benchmarks. A React/TypeScript UI renders that data. The two
+sides communicate only through typed Tauri commands and channels. The UI runs in the
+system web view: WebView2 on Windows, WKWebView on macOS.
 
 ```
 React UI ──invoke / Channel──▶ src-tauri (commands, state, validation)
@@ -13,7 +14,7 @@ React UI ──invoke / Channel──▶ src-tauri (commands, state, validation)
   monitor    processes    drivers     bench      diagnostics    persistence
      │          │           │           │      (pure, no I/O)   (SQLite)
      └──────────┴─────┬─────┴───────────┘
-                  platform (OS access; windows/ impl)
+        platform (OS access; windows/ and macos/ impls)
                       │
                     models (shared contracts, exported to TypeScript)
 ```
@@ -23,7 +24,7 @@ React UI ──invoke / Channel──▶ src-tauri (commands, state, validation)
 | Crate | Role | Status |
 |---|---|---|
 | `crates/models` | Shared serializable types, `Metric<T>`, `AppError`, settings, benchmark state machine, `Finding`. Generates TS bindings. | Phase 1 |
-| `crates/platform` | The only crate that calls OS APIs. Currently returns OS facts via `sysinfo`. | Phase 1 (minimal) |
+| `crates/platform` | The only crate that calls OS APIs. Windows providers in `windows/`, macOS providers in `macos/` (see "Platform layer"). | Phase 1; macOS port 2026-11 |
 | `crates/persistence` | SQLite access, append-only migrations, settings repository. | Phase 1 |
 | `src-tauri` | Thin app shell: command handlers, managed state, input validation. | Phase 1 |
 | `crates/monitor` | Sampler, ring buffers, provider scheduling. | Phase 2 |
@@ -71,10 +72,54 @@ never be edited by hand.
   `core:app|event|window:default`. No shell, fs or http plugins are installed, so the
   frontend cannot run commands or read files.
 - A strict CSP is in place: `script-src 'self'`, no remote origins.
-- Data lives in the per-user app data dir (`%APPDATA%\com.pcdiagnostics.desktop`). No
-  admin rights are needed.
+- Data lives in the per-user app data dir (`%APPDATA%\com.pcdiagnostics.desktop` on
+  Windows, `~/Library/Application Support/com.pcdiagnostics.desktop` on macOS). No admin
+  rights are needed.
+- The CSP is the same on both systems. Tauri serves the frontend from
+  `http://tauri.localhost` on Windows and `tauri://localhost` on macOS (both are `'self'`),
+  and IPC goes to `http://ipc.localhost` on Windows and `ipc://localhost` on macOS, which
+  `connect-src ipc: http://ipc.localhost` covers.
+- macOS bundle: ad-hoc signed, hardened runtime, no entitlements (no sandbox exceptions,
+  JIT, or library-validation exceptions are requested). The only Info.plist addition is
+  `NSDocumentsFolderUsageDescription`, because report export writes to `~/Documents`,
+  which TCC protects.
 - No telemetry. Network use (Windows Update driver search, phase 4) is gated by
   `allowOnlineChecks`, which defaults to `false`.
+
+## Platform layer
+
+`crates/platform` is the only crate that talks to the OS. Each module (`live`,
+`inventory`, `process`, `system`, `credentials`, `bench_env`, `gpu_bench`, `devices`,
+`locale`, `overhead`, `remediation`) exposes one OS-independent API that returns types
+from `models`, and dispatches by target:
+
+```
+platform/src/<module>.rs      public API, shared logic, tests
+  ├─ #[cfg(windows)]                              → windows/<provider>.rs
+  ├─ #[cfg(target_os = "macos")]                  → macos/<provider>.rs
+  └─ #[cfg(not(any(windows, target_os = "macos")))] → explained Unavailability
+```
+
+| | Windows (`windows/`) | macOS (`macos/`) |
+|---|---|---|
+| APIs | PDH, WMI, DXGI, D3DKMT, NVML, SetupAPI/CfgMgr32, WUA, Toolhelp/NtQuerySystemInformation, Credential Manager | sysctl, Mach host statistics, I/O Kit (`objc2-io-kit`), libproc (through `sysinfo`), Security framework |
+| `Source` variants | `Pdh`, `Wmi`, `Dxgi`, `D3dkmt`, `Nvml`, `Kernel`, `PowerApi`, `ConfigManager`, `WindowsUpdate` | `IoKit` ("I/O Kit"), `Mach` ("Mach (host_statistics64)"); `Sysinfo` and `Benchmark` on both |
+| Not provided | | Driver inventory and Windows Update (no equivalent); Windows-only concepts such as commit charge stay unavailable rather than being filled with a value of a different meaning |
+
+Rules for macOS providers: no admin rights, privileged helpers or kernel extensions; no
+shelling out to `powermetrics`, `system_profiler`, `ioreg`, `diskutil` or similar tools for
+data; every `unsafe` block has a `// SAFETY:` comment. `AppInfo.platform` (`windows` |
+`macos` | `linux` | `other`) tells the UI which system it runs on, so it can word texts
+per platform. The per-item status of the port is in `docs/roadmap.md` ("macOS port").
+
+## Packaging
+
+`src-tauri/tauri.conf.json` is the shared config and builds the NSIS installer on Windows.
+Tauri merges `src-tauri/tauri.macos.conf.json` on top of it on macOS: `app` + `dmg`
+targets, the `.icns` icon, `minimumSystemVersion` 13.3 (the first macOS that ships the
+WebKit Tailwind CSS 4 needs), ad-hoc signing and the localized `InfoPlist.strings`.
+`src-tauri/Info.plist` is merged into the bundle's Info.plist. CI runs `npm run check` on
+`windows-latest` and `macos-latest`; the Release workflow builds both bundles for a tag.
 
 ## Persistence
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged by Tauri into the macOS bundle's Info.plist (it looks for this file next to
+  tauri.conf.json). Windows builds ignore it.
+
+  Report export writes to ~/Documents/PC Diagnostics. On macOS that folder is protected by
+  TCC, so the first export shows a system consent prompt; this is the text it shows.
+  Localized copies live in macos/<lang>.lproj/InfoPlist.strings (bundle.macOS.files).
+-->
+<plist version="1.0">
+<dict>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>PC Diagnostics saves the reports you export to the PC Diagnostics folder in Documents.</string>
+</dict>
+</plist>

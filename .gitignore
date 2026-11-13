@@ -5,3 +5,4 @@ target/
 .vite/
 src-tauri/gen/schemas/
 .claude/worktrees/
+.claude/settings.local.json

@@ -1,5 +1,6 @@
 import { Card } from "@/components/common/Card";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { SectionHeading } from "@/components/layout/SectionHeading";
 import { InsightsCard } from "@/features/diagnostics/InsightsCard";
 import { CpuChart, GpuChart, MemoryChart, ThroughputChart } from "@/features/monitoring/LiveCharts";
 import { useLive } from "@/features/monitoring/liveStore";
@@ -59,7 +60,7 @@ export function OverviewPage() {
           <>
             <PerCorePanel />
             <section>
-              <h2 className="mb-3 text-sm leading-5 font-medium text-fg">{t("recentTrend")}</h2>
+              <SectionHeading className="mb-3">{t("recentTrend")}</SectionHeading>
               <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2 @4xl:grid-cols-4">
                 <CpuChart />
                 <MemoryChart />

@@ -1,13 +1,32 @@
-# Session handoff (2026-11-05)
+# Session handoff (2026-11-12)
 
 Read this first in a new session. User is Italian: reply in Italian. Standing consent:
 never ask before acting. Use worktree subagents with strict file ownership; the
 orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `src/app`,
 `src/components` and `src/i18n/index.ts`.
 
+## macOS port (2026-11-11/12, current focus)
+
+- Since 2026-11-11 work targets macOS only (Apple Silicon, this Mac: M5, macOS 27.2.1);
+  Windows work is paused until the user says otherwise, but `cfg(windows)` code must keep
+  compiling. Toolchains are user-local: `export PATH="$HOME/.local/node/bin:$HOME/.cargo/bin:$PATH"`.
+- Branch `claude/fervent-goodall-os9jse` (this clone of the public repo; no
+  `archive/full-history` branch here). The port is merged on it (commit 6850c69), not yet on
+  `master` and not pushed.
+- `npm run check` on macOS: Rust 509 passed / 3 ignored, web 325 passed, build OK,
+  clippy `-D warnings` clean (2026-11-12).
+- What works, measured values and what is still open: `docs/roadmap.md` "macOS port".
+  Main open items: Windows tests of the port (CI on the pull request; the core crates
+  already pass clippy for x86_64-pc-windows-msvc from this Mac), Developer ID
+  signing/notarization, ATA SMART for SATA/USB disks on macOS.
+- Windows type-check from the Mac: `cargo clippy -p models -p platform -p diagnostics -p monitor
+  -p bench -p processes -p drivers --all-targets --target x86_64-pc-windows-msvc -- -D warnings`.
+- Build the app: `npx tauri build` (`.app` + `.dmg`, ad-hoc signed, `src-tauri/tauri.macos.conf.json`).
+  Data: `~/Library/Application Support/com.pcdiagnostics.desktop/`.
+
 ## Direction
 
-PC Diagnostics is an open-source app (MIT) for everyone, on any Windows PC. The "Risolvi"
+PC Diagnostics is an open-source app (MIT) for everyone, on Windows and now macOS. The "Risolvi"
 assistant (Anthropic API) is optional and set aside: keep it working, don't push it, don't
 list a live API test as a next step.
 

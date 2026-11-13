@@ -7,7 +7,21 @@ export type GpuInfo = {
 /**
  * Adapter LUID as hex (`luid:<high>-<low>`). Stable until reboot; joins inventory to samples.
  */
-id: string, name: string, vendor: GpuVendor, vendorId: number, deviceId: number, dedicatedVramBytes: number, sharedMemoryBytes: number, 
+id: string, name: string, vendor: GpuVendor, vendorId: number, 
+/**
+ * PCI device id. `NotSupported` for GPUs that are not PCI devices (Apple silicon).
+ */
+deviceId: Metric<number>, 
+/**
+ * Memory that belongs to the GPU alone. `NotSupported` on unified-memory GPUs (Apple
+ * silicon), where the processor and the GPU share the same RAM: there is none.
+ */
+dedicatedVramBytes: Metric<number>, 
+/**
+ * System RAM the OS lets the GPU use: DXGI `SharedSystemMemory` on Windows, Metal
+ * `recommendedMaxWorkingSetSize` on macOS (the GPU's working-set budget).
+ */
+sharedMemoryBytes: Metric<number>, 
 /**
  * Software rasterizer (e.g. Microsoft Basic Render Driver).
  */

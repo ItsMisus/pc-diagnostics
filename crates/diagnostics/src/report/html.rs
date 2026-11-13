@@ -2,12 +2,15 @@
 //!
 //! Every label exists in Italian and English (`lang.pick`), chosen by
 //! `ExportDocument::language`. The findings keep the language they were generated in.
+//! Labels that name the operating system follow the platform passed to [`render`]
+//! (`by_os`); the Windows labels are unchanged.
 
 use models::Metric;
+use models::app::Platform;
 use models::benchmark_run::{BenchmarkResult, PowerSource};
 use models::diagnostics::Finding;
 use models::drivers::DeviceHealth;
-use models::hardware::{DiskHealthStatus, MediaKind};
+use models::hardware::{DiskHealthStatus, GpuVendor, MediaKind};
 use models::settings::Language;
 
 use super::{
@@ -15,6 +18,7 @@ use super::{
     kind_label, severity_label, state_label,
 };
 use crate::fmt;
+use crate::rules::by_os;
 use crate::rules::drivers::category_label;
 use crate::rules::processes::impact_disclaimer;
 use crate::rules::storage::unavailability_label;
@@ -119,9 +123,10 @@ fn metric_text<T>(lang: Language, m: &Metric<T>, f: impl Fn(&T) -> String) -> St
     }
 }
 
-pub fn render(doc: &ExportDocument) -> String {
+pub fn render(doc: &ExportDocument, platform: Platform) -> String {
     let r = &doc.report;
     let lang = doc.language;
+    let os = |windows: &'static str, macos: &'static str| by_os(platform, windows, macos);
     let na = fmt::not_available(lang);
     let when = |ms: u64| fmt::datetime_local(lang, ms, doc.utc_offset_minutes);
     let mut h = String::with_capacity(32 * 1024);
@@ -319,7 +324,14 @@ pub fn render(doc: &ExportDocument) -> String {
                     };
                     h.push_str(&tr(&[
                         escape(&g.name),
-                        escape(&fmt::bytes_u64(lang, g.dedicated_vram_bytes)),
+                        escape(&if g.vendor == GpuVendor::Apple
+                            && !g.dedicated_vram_bytes.is_available()
+                        {
+                            lang.pick("nessuna (memoria unificata)", "none (unified memory)")
+                                .to_owned()
+                        } else {
+                            metric_text(lang, &g.dedicated_vram_bytes, |b| fmt::bytes(lang, *b))
+                        }),
                         escape(&metric_text(lang, &g.driver_version, |v| v.clone())),
                         escape(note),
                     ]));
@@ -340,8 +352,18 @@ pub fn render(doc: &ExportDocument) -> String {
                 Metric::Available { value: disks, .. } => {
                     h.push_str("<table>");
                     h.push_str(&th(&lang.pick(
-                        ["Modello", "Tipo", "Capacità", "Stato riportato da Windows"],
-                        ["Model", "Type", "Capacity", "Status reported by Windows"],
+                        [
+                            "Modello",
+                            "Tipo",
+                            "Capacità",
+                            os("Stato riportato da Windows", "Stato (registro SMART)"),
+                        ],
+                        [
+                            "Model",
+                            "Type",
+                            "Capacity",
+                            os("Status reported by Windows", "Status (SMART log)"),
+                        ],
                     )));
                     for d in disks {
                         h.push_str(&tr(&[
@@ -349,13 +371,19 @@ pub fn render(doc: &ExportDocument) -> String {
                             escape(&format!("{} {:?}", media_label(d.media), d.bus)),
                             escape(&fmt::bytes_u64(lang, d.size_bytes)),
                             escape(&metric_text(lang, &d.health, |v| {
-                                health_label(lang, *v).into()
+                                health_label(lang, platform, *v).into()
                             })),
                         ]));
                     }
                     h.push_str(lang.pick(
-                        "</table><p class=\"muted\">Lo stato è il riepilogo di Windows, non un'analisi SMART completa.</p>",
-                        "</table><p class=\"muted\">The status is the Windows summary, not a full SMART analysis.</p>",
+                        os(
+                            "</table><p class=\"muted\">Lo stato è il riepilogo di Windows, non un'analisi SMART completa.</p>",
+                            "</table><p class=\"muted\">Lo stato dei dischi NVMe viene dal loro registro SMART (avvisi critici, riserva, usura), non da un'analisi completa.</p>",
+                        ),
+                        os(
+                            "</table><p class=\"muted\">The status is the Windows summary, not a full SMART analysis.</p>",
+                            "</table><p class=\"muted\">The status of NVMe disks comes from their SMART log (critical warnings, spare, wear), not from a full analysis.</p>",
+                        ),
                     ));
                 }
             }
@@ -410,8 +438,14 @@ pub fn render(doc: &ExportDocument) -> String {
     ));
     match &doc.drivers {
         None => h.push_str(lang.pick(
-            "<p class=\"muted\">Inventario dei dispositivi non disponibile.</p>",
-            "<p class=\"muted\">Device inventory not available.</p>",
+            os(
+                "<p class=\"muted\">Inventario dei dispositivi non disponibile.</p>",
+                "<p class=\"muted\">Inventario di driver e dispositivi non disponibile: l'app lo raccoglie solo su Windows.</p>",
+            ),
+            os(
+                "<p class=\"muted\">Device inventory not available.</p>",
+                "<p class=\"muted\">Driver and device inventory not available: the app collects it only on Windows.</p>",
+            ),
         )),
         Some(d) => {
             let s = &d.summary;
@@ -797,11 +831,20 @@ fn media_label(m: MediaKind) -> &'static str {
     }
 }
 
-fn health_label(lang: Language, h: DiskHealthStatus) -> &'static str {
+fn health_label(lang: Language, platform: Platform, h: DiskHealthStatus) -> &'static str {
     match h {
-        DiskHealthStatus::Healthy => {
-            lang.pick("Integro (riepilogo Windows)", "Healthy (Windows summary)")
-        }
+        DiskHealthStatus::Healthy => lang.pick(
+            by_os(
+                platform,
+                "Integro (riepilogo Windows)",
+                "Integro (riepilogo macOS)",
+            ),
+            by_os(
+                platform,
+                "Healthy (Windows summary)",
+                "Healthy (macOS summary)",
+            ),
+        ),
         DiskHealthStatus::Warning => lang.pick("Avviso", "Warning"),
         DiskHealthStatus::Unhealthy => lang.pick("Non integro", "Unhealthy"),
         DiskHealthStatus::Unknown => lang.pick("Sconosciuto", "Unknown"),

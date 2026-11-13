@@ -121,7 +121,9 @@ struct HardwareOut {
 struct GpuOut {
     name: String,
     vendor: models::hardware::GpuVendor,
-    dedicated_memory: String,
+    /// `None`: the GPU has no dedicated memory of its own (unified memory, Apple
+    /// silicon) or its size is not reported.
+    dedicated_memory: Option<String>,
     driver_version: Option<String>,
 }
 
@@ -254,7 +256,7 @@ fn build(input: &PayloadInput) -> Payload {
             .map(|g| GpuOut {
                 name: g.name.clone(),
                 vendor: g.vendor,
-                dedicated_memory: bytes_u64(g.dedicated_vram_bytes),
+                dedicated_memory: g.dedicated_vram_bytes.value().map(|b| human_bytes(*b)),
                 driver_version: g.driver_version.value().cloned(),
             })
             .collect(),

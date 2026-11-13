@@ -39,7 +39,7 @@ export default {
   // Comparison.
   deltaUnknown: "Variazione non calcolabile (valore precedente nullo)",
   deltaNotComparable: "Esecuzioni non confrontabili: variazione solo indicativa",
-  deltaNoise: "Variazione entro ±{pct}%: compatibile con la normale variabilità tra esecuzioni",
+  deltaNoise: "Variazione entro ±{pct} %: compatibile con la normale variabilità tra esecuzioni",
   deltaBetter: "Migliore dell'esecuzione precedente",
   deltaWorse: "Peggiore dell'esecuzione precedente",
   compareTitle: "Confronto con l'esecuzione precedente",
@@ -58,7 +58,7 @@ export default {
   colChange: "Variazione",
   better: "migliore",
   worse: "peggiore",
-  noiseNote: "Variazioni inferiori a ±{pct}% sono considerate normale variabilità e non vengono evidenziate.",
+  noiseNote: "Variazioni inferiori a ±{pct} % sono considerate normale variabilità e non vengono evidenziate.",
 
   // Result view.
   cancelledDesc: "L'esecuzione è stata interrotta prima del termine.",
@@ -132,6 +132,7 @@ export default {
   modules: "Moduli",
   moduleN: "Modulo {n}",
   detailUnavailable: "Dettaglio non disponibile",
+  noModulesReported: "Nessuno riportato dal sistema",
   volumesLabel: "Volumi",
   noVolumes: "Nessun volume rilevato",
   freeOfTotal: "{free} liberi di {total}",

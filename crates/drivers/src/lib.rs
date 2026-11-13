@@ -9,6 +9,10 @@
 //! - [`check_updates`]: Windows Update Agent search; fills `update` and `update_check`.
 //!
 //! Health and update status are independent: see docs/driver-verification.md.
+//!
+//! Windows only. On other platforms (macOS) [`inventory_supported`] is `false` and both
+//! entry points return [`unsupported_error`] (`NotSupported`) at once; the pure helpers
+//! still build and are tested everywhere.
 
 pub mod category;
 pub mod problem;
@@ -34,9 +38,33 @@ pub const SIGNED_DRIVERS_TIMEOUT: Duration = Duration::from_secs(60);
 /// Bound for the Windows Update search (network; can legitimately take minutes).
 pub const UPDATE_SEARCH_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 
+/// Message of [`unsupported_error`] (stable: the UI and tests may match on it).
+pub const UNSUPPORTED_MESSAGE: &str =
+    "the device and driver inventory is only available on Windows";
+
+/// Whether this build can collect the device and driver inventory. Only Windows: the
+/// inventory is built on SetupAPI/CfgMgr32, WMI and Windows Update, and macOS has no
+/// per-device driver list that an app can read without privileges (its drivers ship with
+/// the system and update with it).
+pub const fn inventory_supported() -> bool {
+    cfg!(windows)
+}
+
+/// The error [`collect_inventory`] and [`check_updates`] return where
+/// [`inventory_supported`] is `false`: code `NotSupported`, so the UI shows "not available
+/// on this system" rather than a failure, and diagnostics report the component as not
+/// evaluated.
+pub fn unsupported_error() -> AppError {
+    AppError::new(ErrorCode::NotSupported, UNSUPPORTED_MESSAGE)
+        .with_detail(format!("platform: {}", std::env::consts::OS))
+}
+
 /// Enumerates present devices (fast path: SetupAPI/CfgMgr32) and enriches with signature
-/// data. No network.
+/// data. No network. `NotSupported` ([`unsupported_error`]) outside Windows.
 pub fn collect_inventory() -> Result<DriverInventory, AppError> {
+    if !inventory_supported() {
+        return Err(unsupported_error());
+    }
     // The WMI query is the slow part: run it concurrently with the enumeration.
     let wmi = std::thread::Builder::new()
         .name("drivers-signed".into())
@@ -58,11 +86,15 @@ pub fn collect_inventory() -> Result<DriverInventory, AppError> {
 
 /// Searches Windows Update for applicable driver updates and returns `inventory` with
 /// `update` statuses (reasons in `lang`) and `update_check` filled. Network; may take
-/// minutes; blocking. Never installs.
+/// minutes; blocking. Never installs. `NotSupported` ([`unsupported_error`]) outside
+/// Windows.
 pub fn check_updates(
     inventory: &DriverInventory,
     lang: Language,
 ) -> Result<DriverInventory, AppError> {
+    if !inventory_supported() {
+        return Err(unsupported_error());
+    }
     let checked_at = now_unix_ms();
     let started = Instant::now();
     let offers = platform::devices::search_driver_updates(UPDATE_SEARCH_TIMEOUT)?;
@@ -498,5 +530,20 @@ mod tests {
             }
             Err(e) => panic!("Windows Update search failed: {e:?}"),
         }
+    }
+
+    /// Outside Windows both entry points fail fast with the recognisable `NotSupported`
+    /// error, without touching the platform layer.
+    #[cfg(not(windows))]
+    #[test]
+    fn host_inventory_is_not_supported() {
+        assert!(!inventory_supported());
+        let e = collect_inventory().expect_err("not supported");
+        assert_eq!(e.code, ErrorCode::NotSupported);
+        assert_eq!(e.message, UNSUPPORTED_MESSAGE);
+        assert!(!e.retriable);
+        let empty = build_inventory(Vec::new(), &Ok(Vec::new()));
+        let e = check_updates(&empty, Language::Italian).expect_err("not supported");
+        assert_eq!(e.code, ErrorCode::NotSupported);
     }
 }

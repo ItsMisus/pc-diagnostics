@@ -26,7 +26,11 @@ export default {
   // ProcessTable
   protectedNote:
     "Protected process: the executable path can't be read without elevated privileges. The metrics come from the kernel snapshot and are real.",
+  "protectedNote@macos":
+    "System process or another user's process: macOS does not reveal the executable path without elevated privileges.",
   ioNote: "Logical I/O (files, network, devices): it does not match the physical bytes written to disk",
+  "ioNote@macos":
+    "Disk I/O: bytes the process read and wrote (macOS does not count network and device traffic per process)",
   colName: "Process name",
   colPeak: "Peak",
   selfTag: "this app",
@@ -50,11 +54,17 @@ export default {
   detailTitle: "Details",
   detailEmpty: "Select a process in the table to see its recent trend.",
   protectedDetail: "Protected process: executable path not readable without elevated privileges (real metrics from the kernel)",
+  "protectedDetail@macos":
+    "System process or another user's process: executable path not readable without elevated privileges",
   historyLoading: "Loading history…",
   endedTitle: "Process ended or no longer monitored",
   endedDescription: "A process's history is kept only for a short time after it closes.",
   memorySection: "Memory",
+  workingSet: "Working set",
+  "workingSet@macos": "Resident memory",
   privateMemory: "Private memory",
+  // Physical footprint: the "Memory" column of Activity Monitor.
+  "privateMemory@macos": "Memory footprint",
   exePathSection: "Executable path",
   localInfoAria: "Local information",
   exePathUnavailable: "Not available for this process",
@@ -68,9 +78,12 @@ export default {
   cpuChartTitle: "CPU (% of the whole system)",
   cpuChartAria: "Process CPU over time, fixed 0–100% scale",
   ramChartTitle: "RAM (working set)",
+  "ramChartTitle@macos": "RAM (resident memory)",
   ramChartAria: "Process memory over time, scale from zero",
   ioChartTitle: "Logical I/O: write (solid line) and read",
+  "ioChartTitle@macos": "Disk I/O: write (solid line) and read",
   ioChartAria: "Process logical I/O over time, scale from zero",
+  "ioChartAria@macos": "Process disk I/O over time, scale from zero",
   seriesWrite: "Write",
   seriesRead: "Read",
 
@@ -82,6 +95,7 @@ export default {
   scoreRam: "process memory relative to total physical memory ({total}; available now {available}).",
   scoreIo:
     "logical I/O (files, network, devices) relative to a reference of {reference}, which corresponds to 100.",
+  "scoreIo@macos": "disk I/O relative to a reference of {reference}, which corresponds to 100.",
   scoreModes:
     "“Instant” uses the latest sample (every {interval} s). “Interval” uses the average of the last {window} s; the peak is the highest value seen in the same interval.",
   scoreMethodology:

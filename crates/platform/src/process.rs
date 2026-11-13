@@ -31,8 +31,11 @@ pub struct RawProcess {
     /// Kernel + user CPU time, 100 ns units, summed across all threads.
     pub cpu_time_100ns: u64,
     pub working_set_bytes: u64,
-    /// Private committed bytes (Task Manager "Commit size").
-    pub private_bytes: u64,
+    /// Memory that belongs to this process alone. Windows: private committed bytes (Task
+    /// Manager "Commit size"). macOS: the physical footprint (`ri_phys_footprint`, the
+    /// "Memory" column of Activity Monitor). `None` when the OS refuses to report it
+    /// (macOS: processes of other users, e.g. root daemons, without privileges).
+    pub private_bytes: Option<u64>,
     /// Cumulative logical read / write transfer counts (files, network, devices).
     pub io_read_bytes: u64,
     pub io_write_bytes: u64,
@@ -86,6 +89,8 @@ pub fn unix_ms_to_filetime(ms: u64) -> i64 {
 pub struct ProcessEnumerator {
     #[cfg(windows)]
     inner: crate::windows::process::Enumerator,
+    #[cfg(target_os = "macos")]
+    inner: crate::macos::process::Enumerator,
 }
 
 impl ProcessEnumerator {
@@ -93,15 +98,17 @@ impl ProcessEnumerator {
         Self {
             #[cfg(windows)]
             inner: crate::windows::process::Enumerator::new(),
+            #[cfg(target_os = "macos")]
+            inner: crate::macos::process::Enumerator::new(),
         }
     }
 
     pub fn scan(&mut self) -> Result<ProcessScan, AppError> {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "macos"))]
         {
             self.inner.scan()
         }
-        #[cfg(not(windows))]
+        #[cfg(not(any(windows, target_os = "macos")))]
         {
             Err(not_supported())
         }
@@ -122,7 +129,11 @@ pub fn image_access(pid: u32, create_time_100ns: i64) -> ImageAccess {
     {
         crate::windows::process::image_access(pid, create_time_100ns)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::process::image_access(pid, create_time_100ns)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = (pid, create_time_100ns);
         ImageAccess::Denied
@@ -135,7 +146,11 @@ pub fn visible_window_pids() -> Result<HashSet<u32>, AppError> {
     {
         crate::windows::process::visible_window_pids()
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::process::visible_window_pids()
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         Err(not_supported())
     }
@@ -146,7 +161,11 @@ pub fn memory_status() -> Result<MemoryStatus, AppError> {
     {
         crate::windows::process::memory_status()
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::process::memory_status()
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         Err(not_supported())
     }
@@ -164,11 +183,11 @@ pub fn system_directory() -> Option<String> {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn not_supported() -> AppError {
     AppError::new(
         models::ErrorCode::NotSupported,
-        "process enumeration is implemented for Windows only",
+        "process enumeration is implemented for Windows and macOS only",
     )
 }
 
@@ -185,7 +204,7 @@ mod tests {
         assert_eq!(filetime_to_unix_ms(unix_ms_to_filetime(ms)), ms);
     }
 
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     #[test]
     fn host_scan_lists_self_and_counters_grow() {
         let mut e = ProcessEnumerator::new();
@@ -199,10 +218,15 @@ mod tests {
             .expect("own pid present")
             .clone();
         assert!(mine.working_set_bytes > 0);
-        assert!(mine.private_bytes > 0);
+        assert!(mine.private_bytes.is_some_and(|b| b > 0));
         assert!(mine.create_time_100ns > FILETIME_UNIX_EPOCH);
-        assert!(mine.name.to_ascii_lowercase().ends_with(".exe"));
-        assert!(a.processes.iter().any(|p| p.pid == 4), "System present");
+        #[cfg(windows)]
+        {
+            assert!(mine.name.to_ascii_lowercase().ends_with(".exe"));
+            assert!(a.processes.iter().any(|p| p.pid == 4), "System present");
+        }
+        #[cfg(target_os = "macos")]
+        assert!(a.processes.iter().any(|p| p.pid == 1), "launchd present");
         // Burn CPU, then the counter must have advanced.
         let t = Instant::now();
         let mut x = 0u64;
@@ -216,7 +240,10 @@ mod tests {
         assert_eq!(again.create_time_100ns, mine.create_time_100ns);
         match image_access(me, mine.create_time_100ns) {
             ImageAccess::Accessible { path: Some(p) } => {
+                #[cfg(windows)]
                 assert!(p.to_ascii_lowercase().ends_with(".exe"), "{p}");
+                #[cfg(not(windows))]
+                assert!(p.starts_with('/'), "{p}");
             }
             other => panic!("own process must be accessible: {other:?}"),
         }
@@ -227,6 +254,7 @@ mod tests {
         );
         let m = memory_status().expect("memory");
         assert!(m.total_bytes > 0 && m.available_bytes <= m.total_bytes);
+        #[cfg(windows)]
         assert!(system_directory().is_some());
         let _ = visible_window_pids().expect("enum windows");
     }

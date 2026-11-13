@@ -1,3 +1,4 @@
+import { Tooltip } from "@/components/common/Tooltip";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { reasonTexts } from "@/lib/plain";
 import type { Metric } from "@/types/generated/Metric";
@@ -13,6 +14,8 @@ interface MetricValueProps<T> {
 /**
  * Renders a measured value, or "n/d" with the reason as an accessible description.
  * In the "Semplice" view the reason is in plain words, with the technical one in the tooltip.
+ * The "n/d" is focusable, so the reason's tooltip opens from the keyboard too, not only on
+ * hover (a native `title` never does).
  */
 export function MetricValue<T>({ metric, format, className = "" }: MetricValueProps<T>) {
   const simple = useIsSimple();
@@ -22,9 +25,12 @@ export function MetricValue<T>({ metric, format, className = "" }: MetricValuePr
   }
   const { text, tooltip } = reasonTexts(metric.reason, simple);
   return (
-    <span className={`text-fg-subtle ${className}`} title={tooltip}>
-      {t("notAvailable")}<span className="sr-only"> — {text}</span>
-    </span>
+    <Tooltip content={tooltip} side="top-end" multiline>
+      <span tabIndex={0} className={`cursor-help rounded-sm text-fg-subtle ${className}`}>
+        {t("notAvailable")}
+        <span className="sr-only"> — {text}</span>
+      </span>
+    </Tooltip>
   );
 }
 

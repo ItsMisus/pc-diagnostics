@@ -1,5 +1,7 @@
 import { Fragment, createElement, type ReactNode } from "react";
 import { create } from "zustand";
+import { getPlatform, usePlatform } from "@/lib/platform";
+import type { Platform } from "@/types/generated/Platform";
 import { dictionaries, type Namespace } from "./locales";
 
 /**
@@ -13,7 +15,12 @@ import { dictionaries, type Namespace } from "./locales";
  * - Components: `const t = useT("overview")`, then `t("title")`, `t("count", { n })`,
  *   `t.plural("devices", n)`, `t.rich("hint", { link: <a>…</a> })`.
  * - Outside React (stores, formatters): `tr("errors", "notFound")`. Never compute translated
- *   strings at module scope: they would not follow a language change.
+ *   strings at module scope: they would not follow a language or platform change.
+ * - Platform variants: a key `<key>@<platform>` (e.g. `languageHint@macos`) replaces `<key>`
+ *   when the app runs on that platform (`lib/platform.ts`), in every lookup (`t`, `t.plural`
+ *   on the resolved `<base>_<form>` key, `t.rich`, `tr`). Callers always use the base key; the
+ *   base text is the Windows wording. A variant needs a base key and may use only the base
+ *   key's placeholders (unit test), and every language has the same variants.
  *
  * Adding a language: add it to `Lang`, `LOCALE_TAGS` and `locales/index.ts`, then copy
  * `locales/en` and translate.
@@ -24,7 +31,8 @@ type Dict = Record<string, string>;
 type Params = Record<string, string | number>;
 type RichParams = Record<string, ReactNode>;
 
-type Keys<N extends Namespace> = Extract<keyof (typeof dictionaries)["it"][N], string>;
+/** Base keys only: platform variants (`key@macos`) are picked by the lookup, never named by callers. */
+type Keys<N extends Namespace> = Exclude<Extract<keyof (typeof dictionaries)["it"][N], string>, `${string}@${string}`>;
 type PluralBase<K extends string> = K extends `${infer B}_one` ? B : never;
 
 const LOCALE_TAGS: Record<Lang, string> = { it: "it-IT", en: "en-US" };
@@ -35,7 +43,7 @@ interface LangStore {
 }
 
 /**
- * The effective language. Seeded from the WebView language (which follows Windows), then
+ * The effective language. Seeded from the WebView language (which follows the OS), then
  * replaced by the backend's answer (`get_language`) so frontend and backend texts agree.
  */
 export const useLangStore = create<LangStore>((set) => ({
@@ -55,11 +63,17 @@ export const useLang = (): Lang => useLangStore((s) => s.lang);
 /** BCP 47 tag of the current language, for `Intl` and `toLocale*` calls. */
 export const localeTag = (lang: Lang = getLang()): string => LOCALE_TAGS[lang];
 
-function lookup(lang: Lang, ns: Namespace, key: string): string {
-  const own = (dictionaries[lang][ns] as Dict)[key];
-  if (own !== undefined) return own;
+function lookup(lang: Lang, platform: Platform, ns: Namespace, key: string): string {
+  const own = dictionaries[lang][ns] as Dict;
+  const it = dictionaries.it[ns] as Dict;
+  // Windows texts are the base keys, so Windows never looks for a variant.
+  if (platform !== "windows") {
+    const variant = `${key}@${platform}`;
+    const text = own[variant] ?? it[variant];
+    if (text !== undefined) return text;
+  }
   // Missing keys fall back to Italian, then to the key itself (visible, never blank).
-  return (dictionaries.it[ns] as Dict)[key] ?? `${ns}.${key}`;
+  return own[key] ?? it[key] ?? `${ns}.${key}`;
 }
 
 function fill(text: string, params?: Params): string {
@@ -88,42 +102,46 @@ export interface Translator<N extends Namespace> {
   rich: (key: Keys<N>, params: RichParams) => ReactNode;
 }
 
-function makeTranslator<N extends Namespace>(lang: Lang, ns: N): Translator<N> {
-  const t = ((key: string, params?: Params) => fill(lookup(lang, ns, key), params)) as unknown as Translator<N>;
+function makeTranslator<N extends Namespace>(lang: Lang, platform: Platform, ns: N): Translator<N> {
+  const t = ((key: string, params?: Params) => fill(lookup(lang, platform, ns, key), params)) as unknown as Translator<N>;
   t.plural = (base, count, params) => {
     const form = new Intl.PluralRules(LOCALE_TAGS[lang]).select(count) === "one" ? "one" : "other";
-    return fill(lookup(lang, ns, `${base}_${form}`), { count, ...params });
+    return fill(lookup(lang, platform, ns, `${base}_${form}`), { count, ...params });
   };
-  t.rich = (key, params) => fillRich(lookup(lang, ns, key), params);
+  t.rich = (key, params) => fillRich(lookup(lang, platform, ns, key), params);
   return t;
 }
 
 const cache = new Map<string, Translator<Namespace>>();
 
-function translator<N extends Namespace>(lang: Lang, ns: N): Translator<N> {
-  const id = `${lang}:${ns}`;
+function translator<N extends Namespace>(lang: Lang, platform: Platform, ns: N): Translator<N> {
+  const id = `${lang}:${platform}:${ns}`;
   let t = cache.get(id);
   if (!t) {
-    t = makeTranslator(lang, ns) as Translator<Namespace>;
+    t = makeTranslator(lang, platform, ns) as Translator<Namespace>;
     cache.set(id, t);
   }
   return t as unknown as Translator<N>;
 }
 
-/** React hook: re-renders on language change. The returned function is stable per language. */
+/**
+ * React hook: re-renders on a language or platform change. The returned function is stable
+ * per language and platform.
+ */
 export function useT<N extends Namespace>(ns: N): Translator<N> {
   const lang = useLang();
-  return translator(lang, ns);
+  const platform = usePlatform();
+  return translator(lang, platform, ns);
 }
 
-/** Non-React access with the current language. */
+/** Non-React access with the current language and platform. */
 export function tr<N extends Namespace>(ns: N, key: Keys<N>, params?: Params): string {
-  return translator(getLang(), ns)(key, params);
+  return translator(getLang(), getPlatform(), ns)(key, params);
 }
 
-/** Non-React translator bound to the current language (e.g. inside a store action). */
-export function translatorFor<N extends Namespace>(ns: N, lang: Lang = getLang()): Translator<N> {
-  return translator(lang, ns);
+/** Non-React translator bound to the current language (e.g. inside a store action) and platform. */
+export function translatorFor<N extends Namespace>(ns: N, lang: Lang = getLang(), platform: Platform = getPlatform()): Translator<N> {
+  return translator(lang, platform, ns);
 }
 
 export type { Namespace };

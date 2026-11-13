@@ -1,3 +1,4 @@
+import { useViewMode } from "@/hooks/useViewMode";
 import { memo, type ReactNode, useMemo } from "react";
 import { LineChart } from "@/components/charts/LineChart";
 import { DefinitionList, type DefinitionItem } from "@/components/common/DefinitionList";
@@ -8,6 +9,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { useT } from "@/i18n";
 import {
   formatBytes,
+  formatMib,
   formatDateTime,
   formatElapsed,
   formatMhz,
@@ -19,6 +21,7 @@ import type { BenchmarkContext } from "@/types/generated/BenchmarkContext";
 import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 import type { BenchmarkSeries } from "@/types/generated/BenchmarkSeries";
 import type { ResultMetric } from "@/types/generated/ResultMetric";
+import { useIsMac } from "@/lib/platform";
 import {
   isDebugBuild,
   isStorageKind,
@@ -186,6 +189,8 @@ export function MetricsGrid({ metrics, interim = false }: { metrics: readonly Re
 }
 
 const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSeries }) {
+  // Byte labels follow the view mode (lib/format.ts).
+  const viewMode = useViewMode();
   const t = useT("benchmarks");
   const { points, xDomain, yDomain } = useMemo(() => {
     const pts = series.points.map((p) => ({ t: p.elapsedMs, v: Number.isFinite(p.value) ? p.value : null }));
@@ -198,7 +203,7 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
     () => [{ id: series.id, label: series.label, points, tone: "primary" as const }],
     [series.id, series.label, points],
   );
-  const formatY = useMemo(() => (v: number) => formatUnitValue(v, series.unit), [series.unit]);
+  const formatY = useMemo(() => (v: number) => formatUnitValue(v, series.unit), [series.unit, viewMode]);
 
   return (
     <figure className={`${INSET} min-w-0 p-3`}>
@@ -218,9 +223,11 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
 
 function ContextList({ context }: { context: BenchmarkContext }) {
   const t = useT("benchmarks");
+  // Power plans are a Windows concept: on macOS an absent plan is no missing reading.
+  const showPowerPlan = context.powerPlan !== null || !useIsMac();
   const items: DefinitionItem[] = [
     { label: t("powerSource"), value: powerSourceLabel(context.powerSource, t) },
-    { label: t("powerPlan"), value: context.powerPlan ?? t("notReported") },
+    ...(showPowerPlan ? [{ label: t("powerPlan"), value: context.powerPlan ?? t("notReported") }] : []),
     {
       label: t("backgroundCpu"),
       value: <MetricValue metric={context.backgroundCpuPercent} format={(v) => formatPercent(v, 1)} />,
@@ -252,7 +259,7 @@ function RunParams({ result }: { result: BenchmarkResult }) {
   if (r.threads !== null) items.push({ label: t("threads"), value: r.threads });
   if (isStorageKind(result.kind)) {
     items.push({ label: t("volume"), value: r.storageVolume ?? "—" });
-    if (r.storageFileMib !== null) items.push({ label: t("tempFile"), value: `${r.storageFileMib} MiB` });
+    if (r.storageFileMib !== null) items.push({ label: t("tempFile"), value: formatMib(r.storageFileMib) });
   }
   items.push(
     { label: t("actualDuration"), value: formatElapsed(result.durationMs) },

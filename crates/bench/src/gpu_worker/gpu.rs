@@ -33,8 +33,14 @@ fn failed(msg: &str, detail: impl Into<String>) -> WorkErr {
     WorkErr::Failed(AppError::new(ErrorCode::Platform, msg).with_detail(detail))
 }
 
+/// Windows (and other non-Apple targets): DX12, Vulkan as fallback. macOS: Metal only
+/// (the only native GPU API there).
 fn backends() -> wgpu::Backends {
-    wgpu::Backends::DX12 | wgpu::Backends::VULKAN
+    if cfg!(target_os = "macos") {
+        wgpu::Backends::METAL
+    } else {
+        wgpu::Backends::DX12 | wgpu::Backends::VULKAN
+    }
 }
 
 fn instance() -> wgpu::Instance {
@@ -50,6 +56,7 @@ fn backend_name(b: wgpu::Backend) -> &'static str {
     match b {
         wgpu::Backend::Dx12 => "dx12",
         wgpu::Backend::Vulkan => "vulkan",
+        wgpu::Backend::Metal => "metal",
         _ => "other",
     }
 }
@@ -64,7 +71,10 @@ fn device_type_name(t: wgpu::DeviceType) -> &'static str {
     }
 }
 
-/// DXGI LUID of a DX12 adapter (`luid:<high>-<low>`), `None` for other backends.
+/// The adapter's id in `GpuInfo::id` format: the DXGI LUID of a DX12 adapter
+/// (`luid:<high>-<low>`), or the I/O Kit registry id of a Metal device (`ioreg:<16 hex>`,
+/// `MTLDevice.registryID`, which is the `IOAccelerator` entry the inventory lists). `None`
+/// for other backends (Vulkan).
 fn luid_of(adapter: &wgpu::Adapter) -> Option<String> {
     #[cfg(windows)]
     {
@@ -82,7 +92,19 @@ fn luid_of(adapter: &wgpu::Adapter) -> Option<String> {
             desc.AdapterLuid.HighPart as u32, desc.AdapterLuid.LowPart
         ))
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_metal::MTLDevice;
+        if adapter.get_info().backend != wgpu::Backend::Metal {
+            return None;
+        }
+        // SAFETY: only reads the device's registry id through the guard, which is dropped
+        // at the end of this block; nothing is destroyed or mutated.
+        let hal = unsafe { adapter.as_hal::<wgpu::hal::api::Metal>() }?;
+        let id = hal.raw_device().registryID();
+        (id != 0).then(|| platform::gpu_bench::registry_gpu_id(id))
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = adapter;
         None

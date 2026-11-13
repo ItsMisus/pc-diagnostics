@@ -17,7 +17,11 @@ export function gpuVendorLabel(
       return "Intel";
     case "microsoft":
       return "Microsoft";
+    case "apple":
+      return "Apple";
     case "other":
+      // 0 is not a valid PCI vendor id: it means the OS reported none.
+      if (vendorId === 0) return t("vendorNotReported");
       return t("vendorOther", { id: vendorId.toString(16).toUpperCase().padStart(4, "0") });
   }
 }

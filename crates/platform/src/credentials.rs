@@ -1,8 +1,12 @@
-//! The user's Anthropic API key, stored in Windows Credential Manager.
+//! The user's Anthropic API key, stored in the OS credential store.
 //!
-//! One generic credential ([`API_KEY_TARGET`], `CRED_PERSIST_LOCAL_MACHINE`: this user on
-//! this PC, not roamed). Windows protects the blob with the user's logon secrets (DPAPI);
-//! the app never writes the key to disk, settings or logs.
+//! - Windows: one generic credential in Credential Manager ([`API_KEY_TARGET`],
+//!   `CRED_PERSIST_LOCAL_MACHINE`: this user on this PC, not roamed). Windows protects the
+//!   blob with the user's logon secrets (DPAPI).
+//! - macOS: one generic password in the user's login Keychain (service
+//!   [`API_KEY_TARGET`], fixed account), encrypted by the Keychain.
+//!
+//! The app never writes the key to disk, settings or logs.
 //!
 //! - [`store_api_key`]: validates the format, then creates or replaces the credential.
 //! - [`load_api_key`]: the key, or `None` if none is stored.
@@ -15,7 +19,8 @@
 
 use models::{AppError, ErrorCode};
 
-/// Credential Manager target name ("Credenziali generiche" in the Control Panel).
+/// Credential Manager target name ("Credenziali generiche" in the Control Panel); on macOS
+/// the service name of the Keychain item.
 pub const API_KEY_TARGET: &str = "PCDiagnostics/AnthropicApiKey";
 /// Longest accepted key, in characters (Anthropic keys are ~110).
 pub const MAX_API_KEY_LEN: usize = 512;
@@ -62,6 +67,7 @@ pub fn validate_api_key(key: &str) -> Result<&str, AppError> {
 }
 
 /// Overwrites a buffer with zeros in a way the optimizer may not elide.
+#[cfg(any(windows, target_os = "macos", test))]
 pub(crate) fn zeroize(buf: &mut [u8]) {
     buf.fill(0);
     std::hint::black_box(&mut *buf);
@@ -74,7 +80,11 @@ fn store_at(target: &str, key: &str) -> Result<(), AppError> {
     {
         crate::windows::credentials::write(target, key.as_bytes())
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::credentials::write(target, key.as_bytes())
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = (target, key);
         Err(not_supported())
@@ -87,22 +97,35 @@ fn load_at(target: &str) -> Result<Option<String>, AppError> {
         let Some(bytes) = crate::windows::credentials::read(target)? else {
             return Ok(None);
         };
-        match String::from_utf8(bytes) {
-            Ok(s) => Ok(Some(s)),
-            Err(e) => {
-                let mut bytes = e.into_bytes();
-                zeroize(&mut bytes);
-                Err(AppError::new(
-                    ErrorCode::Platform,
-                    "the stored API key is corrupted: enter it again",
-                ))
-            }
-        }
+        key_from_bytes(bytes).map(Some)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        let Some(bytes) = crate::macos::credentials::read(target)? else {
+            return Ok(None);
+        };
+        key_from_bytes(bytes).map(Some)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = target;
         Err(not_supported())
+    }
+}
+
+/// The stored bytes as the key (moved, not copied); zeroed when they are not UTF-8.
+#[cfg(any(windows, target_os = "macos"))]
+fn key_from_bytes(bytes: Vec<u8>) -> Result<String, AppError> {
+    match String::from_utf8(bytes) {
+        Ok(s) => Ok(s),
+        Err(e) => {
+            let mut bytes = e.into_bytes();
+            zeroize(&mut bytes);
+            Err(AppError::new(
+                ErrorCode::Platform,
+                "the stored API key is corrupted: enter it again",
+            ))
+        }
     }
 }
 
@@ -111,18 +134,22 @@ fn delete_at(target: &str) -> Result<(), AppError> {
     {
         crate::windows::credentials::delete(target)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos::credentials::delete(target)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = target;
         Err(not_supported())
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn not_supported() -> AppError {
     AppError::new(
         ErrorCode::NotSupported,
-        "the credential store is only available on Windows",
+        "the credential store is only available on Windows and macOS",
     )
 }
 
@@ -163,22 +190,35 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn credential_manager_round_trip() {
-        let target = format!("PCDiagnostics/Test/ApiKey-{}", std::process::id());
-        let _ = delete_at(&target);
-        assert_eq!(load_at(&target).expect("load absent"), None);
-        delete_at(&target).expect("deleting an absent key is ok");
+        round_trip(&format!("PCDiagnostics/Test/ApiKey-{}", std::process::id()));
+    }
 
-        store_at(&target, " sk-ant-test-0123456789 ").expect("store");
+    /// Real login-Keychain round trip on a test-only service (the user's real key is never
+    /// touched). The item is created by this test binary, which the Keychain then trusts
+    /// for it, so no access prompt is expected; the item is deleted at the end.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn keychain_round_trip() {
+        round_trip(&format!("PCDiagnostics/Test/ApiKey-{}", std::process::id()));
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    fn round_trip(target: &str) {
+        let _ = delete_at(target);
+        assert_eq!(load_at(target).expect("load absent"), None);
+        delete_at(target).expect("deleting an absent key is ok");
+
+        store_at(target, " sk-ant-test-0123456789 ").expect("store");
         assert_eq!(
-            load_at(&target).expect("load").as_deref(),
+            load_at(target).expect("load").as_deref(),
             Some("sk-ant-test-0123456789")
         );
-        store_at(&target, "sk-ant-test-replaced").expect("replace");
+        store_at(target, "sk-ant-test-replaced").expect("replace");
         assert_eq!(
-            load_at(&target).expect("load").as_deref(),
+            load_at(target).expect("load").as_deref(),
             Some("sk-ant-test-replaced")
         );
-        delete_at(&target).expect("delete");
-        assert_eq!(load_at(&target).expect("load deleted"), None);
+        delete_at(target).expect("delete");
+        assert_eq!(load_at(target).expect("load deleted"), None);
     }
 }

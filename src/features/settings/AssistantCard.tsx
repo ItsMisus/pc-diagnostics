@@ -36,7 +36,7 @@ const HINT = "text-xs leading-[18px] text-fg-muted";
 /**
  * "Assistente Risolvi (AI)" settings. The API key is write-only: it lives only in the
  * password field until "Salva chiave", is cleared right away and never stored or shown
- * again; the backend keeps it in Windows Credential Manager.
+ * again; the backend keeps it in the OS credential store (Windows Credential Manager, macOS Keychain).
  */
 export function AssistantCard({ enabled, model, onEnabledChange, onModelChange }: AssistantCardProps) {
   const [state, setState] = useState<StatusState>({ status: "loading" });

@@ -18,17 +18,39 @@
 //!
 //! Never done here: force-killing a process, touching the registry, drivers or BIOS,
 //! reading file contents, deleting anything outside the user's temp folder.
+//!
+//! macOS: only two actions exist there, both low-risk.
+//! - `OpenSettingsPage` opens the matching System Settings pane through a fixed
+//!   `x-apple.systempreferences:` URL from a closed list (see `macos::remediation`);
+//!   pages without a macOS pane are refused.
+//! - `CleanTempFiles` cleans the per-user folder `confstr(_CS_DARWIN_USER_TEMP_DIR)`
+//!   (`/private/var/folders/…/T`, owned by the user, not shared) with the same walk and
+//!   limits as on Windows. Because macOS lets a program delete a file another program
+//!   still has open, a file is deleted only if both its modification and its access time
+//!   are older than the requested age (the same "not accessed" rule macOS applies when it
+//!   cleans that folder itself).
+//!
+//! Device Manager, Disk Cleanup, emptying the Recycle Bin, closing a program and System
+//! File Checker are Windows tools or Windows-only mechanisms: on macOS they are refused
+//! with a plain-language reason (`validate`) and a `NotSupported` error (`execute`).
 
+#[cfg(any(windows, test))]
 use std::collections::HashMap;
+#[cfg(any(windows, target_os = "macos", test))]
 use std::fs;
+#[cfg(any(windows, target_os = "macos", test))]
 use std::io;
+#[cfg(any(windows, target_os = "macos", test))]
 use std::path::Path;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+#[cfg(any(windows, target_os = "macos", test))]
+use std::time::SystemTime;
 
 use models::assistant::{RemediationAction, SettingsPage};
 use models::settings::Language;
 use models::{AppError, ErrorCode};
 
+#[cfg(any(windows, test))]
 use crate::process::RawProcess;
 
 /// Smallest accepted `CleanTempFiles::older_than_days`.
@@ -41,9 +63,12 @@ pub const CLOSE_TIMEOUT: Duration = Duration::from_secs(10);
 pub const SFC_PARAMETERS: &str = "/k sfc /scannow";
 
 /// Directory depth limit for the temp-folder walk.
+#[cfg(any(windows, target_os = "macos", test))]
 const MAX_TEMP_DEPTH: u32 = 32;
 /// Entry budget for one temp-folder walk (bounds the time a pathological tree can take).
+#[cfg(any(windows, target_os = "macos", test))]
 const MAX_TEMP_ENTRIES: u64 = 500_000;
+#[cfg(windows)]
 const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 
 /// Processes `CloseProgram` never targets (lower-case image names without `.exe`):
@@ -167,6 +192,7 @@ pub fn is_protected_process_name(name: &str) -> bool {
 }
 
 /// Case-insensitive file-name comparison; `"notepad"` matches `"Notepad.exe"`.
+#[cfg(any(windows, test))]
 fn names_match(image: &str, requested: &str) -> bool {
     !requested.trim().is_empty() && process_base_name(image) == process_base_name(requested)
 }
@@ -210,6 +236,7 @@ fn count_en(n: u64, one: &str, many: &str) -> String {
     }
 }
 
+#[cfg(any(windows, target_os = "macos", test))]
 fn check_days(days: u32, lang: Language) -> Result<(), String> {
     if (MIN_TEMP_AGE_DAYS..=MAX_TEMP_AGE_DAYS).contains(&days) {
         Ok(())
@@ -225,6 +252,7 @@ fn check_days(days: u32, lang: Language) -> Result<(), String> {
     }
 }
 
+#[cfg(any(windows, target_os = "macos", test))]
 fn days_text(days: u32, lang: Language) -> String {
     match lang {
         Language::Italian if days == 1 => "1 giorno".into(),
@@ -234,6 +262,7 @@ fn days_text(days: u32, lang: Language) -> String {
 }
 
 /// The program named by `pid` has exited (or the pid was reused).
+#[cfg(any(windows, test))]
 pub(crate) fn gone_text(pid: u32, lang: Language) -> String {
     lang.pick(
         format!("Il programma indicato (PID {pid}) non è più in esecuzione"),
@@ -243,6 +272,7 @@ pub(crate) fn gone_text(pid: u32, lang: Language) -> String {
 
 /// True when `pid` descends from `ancestor` in the snapshot. A parent link is trusted only
 /// if the parent was created before the child (otherwise the parent pid was reused).
+#[cfg(any(windows, test))]
 fn is_descendant_of(procs: &[RawProcess], pid: u32, ancestor: u32) -> bool {
     let by_pid: HashMap<u32, &RawProcess> = procs.iter().map(|p| (p.pid, p)).collect();
     let Some(anc) = by_pid.get(&ancestor) else {
@@ -268,6 +298,7 @@ fn is_descendant_of(procs: &[RawProcess], pid: u32, ancestor: u32) -> bool {
 
 /// The snapshot-only part of the `CloseProgram` rules (everything except window ownership
 /// and the handle-based critical/protected checks). Returns the target process.
+#[cfg(any(windows, test))]
 pub(crate) fn check_close_target<'a>(
     procs: &'a [RawProcess],
     self_pid: u32,
@@ -349,7 +380,10 @@ pub(crate) fn check_close_target<'a>(
 }
 
 /// Rejects a temp folder that is a drive root or not strictly inside the user's profile.
-/// Both paths must already be canonical (`fs::canonicalize`).
+/// Both paths must already be canonical (`fs::canonicalize`). Windows rule; macOS has its
+/// own (`macos::remediation::check_temp_root`) because its temp folder is not inside the
+/// home folder.
+#[cfg(any(windows, test))]
 pub(crate) fn check_temp_root(temp: &Path, profile: &Path, lang: Language) -> Result<(), String> {
     if temp.parent().is_none() || profile.parent().is_none() {
         return Err(lang
@@ -386,6 +420,7 @@ pub struct TempCleanReport {
     pub truncated: bool,
 }
 
+#[cfg(any(windows, target_os = "macos", test))]
 fn is_reparse(md: &fs::Metadata) -> bool {
     #[cfg(windows)]
     {
@@ -394,11 +429,11 @@ fn is_reparse(md: &fs::Metadata) -> bool {
     }
     #[cfg(not(windows))]
     {
-        let _ = FILE_ATTRIBUTE_REPARSE_POINT;
         md.file_type().is_symlink()
     }
 }
 
+#[cfg(any(windows, target_os = "macos", test))]
 struct TempWalk<'a> {
     root: &'a Path,
     cutoff: SystemTime,
@@ -406,9 +441,21 @@ struct TempWalk<'a> {
     report: TempCleanReport,
 }
 
+#[cfg(any(windows, target_os = "macos", test))]
 impl TempWalk<'_> {
+    /// Windows: last modified before the cutoff (a file in use cannot be deleted there, so
+    /// the deletion itself skips it). Elsewhere a file still open by a program can be
+    /// deleted, so it must also not have been read since the cutoff.
     fn is_old(&self, md: &fs::Metadata) -> bool {
-        md.modified().is_ok_and(|t| t < self.cutoff)
+        let modified_old = md.modified().is_ok_and(|t| t < self.cutoff);
+        #[cfg(windows)]
+        {
+            modified_old
+        }
+        #[cfg(not(windows))]
+        {
+            modified_old && md.accessed().is_ok_and(|t| t < self.cutoff)
+        }
     }
 
     fn walk(&mut self, dir: &Path, depth: u32) {
@@ -468,6 +515,7 @@ impl TempWalk<'_> {
 /// under `root`, then removes sub-folders that were already old and are now empty. Never
 /// follows or deletes reparse points; never removes `root` itself. `root` must be
 /// canonical and must not itself be a reparse point.
+#[cfg(any(windows, target_os = "macos", test))]
 pub(crate) fn clean_temp_dir(
     root: &Path,
     older_than_days: u32,
@@ -493,6 +541,7 @@ pub(crate) fn clean_temp_dir(
 }
 
 /// "Eliminati N file, liberati X" / "Deleted N files, freed X" plus skipped/removed details.
+#[cfg(any(windows, target_os = "macos", test))]
 pub(crate) fn temp_clean_message(r: &TempCleanReport, days: u32, lang: Language) -> String {
     let age = days_text(days, lang);
     let freed = format_bytes(r.freed_bytes, lang);
@@ -574,7 +623,7 @@ impl ActionFailure {
     }
 
     /// Refused by the safety checks; `reason` is already in the user's language.
-    #[cfg_attr(not(windows), allow(dead_code))]
+    #[cfg(any(windows, target_os = "macos"))]
     fn refused(reason: String) -> Self {
         Self::new(
             AppError::invalid_input("the action was refused by the safety checks"),
@@ -589,7 +638,11 @@ pub fn validate(action: &RemediationAction, lang: Language) -> Result<(), String
     {
         sys::validate(action, lang)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        mac::validate(action, lang)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = action;
         Err(lang
@@ -609,7 +662,11 @@ pub fn execute(action: &RemediationAction, lang: Language) -> Result<String, Act
     {
         sys::execute(action, lang)
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        mac::execute(action, lang)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let _ = action;
         Err(ActionFailure::new(
@@ -883,6 +940,154 @@ mod sys {
     }
 }
 
+#[cfg(target_os = "macos")]
+mod mac {
+    use super::*;
+    use crate::macos::remediation as macos;
+
+    /// Why `action` cannot run on macOS, in `lang`. `None` for the actions macOS supports.
+    pub(super) fn unavailable_reason(action: &RemediationAction, lang: Language) -> Option<String> {
+        let text = match action {
+            RemediationAction::OpenSettingsPage { page } => {
+                if macos::settings_url(*page).is_some() {
+                    return None;
+                }
+                let label = settings_page_label(*page, lang);
+                return Some(lang.pick(
+                    format!(
+                        "La pagina «{label}» delle Impostazioni di Windows non ha un equivalente in Impostazioni di Sistema di macOS"
+                    ),
+                    format!(
+                        "The Windows Settings page “{label}” has no equivalent in macOS System Settings"
+                    ),
+                ));
+            }
+            RemediationAction::CleanTempFiles { .. } => return None,
+            RemediationAction::OpenDeviceManager => lang.pick(
+                "Gestione dispositivi è uno strumento di Windows e non esiste su macOS",
+                "Device Manager is a Windows tool and doesn't exist on macOS",
+            ),
+            RemediationAction::OpenDiskCleanup { .. } => lang.pick(
+                "Pulizia disco è uno strumento di Windows: su macOS lo spazio si gestisce in Impostazioni di Sistema > Generali > Spazio",
+                "Disk Cleanup is a Windows tool: on macOS, storage is managed in System Settings > General > Storage",
+            ),
+            RemediationAction::EmptyRecycleBin => lang.pick(
+                "Su macOS l'app non svuota il Cestino: puoi svuotarlo dal Finder (menu Finder > Svuota il Cestino)",
+                "On macOS the app doesn't empty the Trash: you can empty it from the Finder (Finder menu > Empty Trash)",
+            ),
+            RemediationAction::CloseProgram { .. } => lang.pick(
+                "Su macOS l'app non chiude i programmi: chiudilo dal suo menu con «Esci»",
+                "On macOS the app doesn't close programs: quit it from its own menu with “Quit”",
+            ),
+            RemediationAction::RunSystemFileCheck => lang.pick(
+                "Il Controllo file di sistema (sfc) esiste solo su Windows; macOS protegge e verifica da sé i propri file di sistema",
+                "System File Checker (sfc) exists only on Windows; macOS protects and verifies its own system files",
+            ),
+        };
+        Some(text.to_owned())
+    }
+
+    /// The canonical per-user temp folder, checked by `macos::check_temp_root`.
+    fn temp_root(lang: Language) -> Result<std::path::PathBuf, String> {
+        let refuse = |_| {
+            lang.pick(
+                "Impossibile individuare la cartella dei file temporanei",
+                "Couldn't find the temporary files folder",
+            )
+            .to_string()
+        };
+        let raw = macos::user_temp_dir().map_err(|e| refuse(e.message))?;
+        let temp = fs::canonicalize(raw).map_err(|e| refuse(e.to_string()))?;
+        let facts = macos::TempRootFacts::read(&temp).map_err(|e| refuse(e.to_string()))?;
+        macos::check_temp_root(&facts, macos::current_uid(), lang)?;
+        Ok(temp)
+    }
+
+    pub fn validate(action: &RemediationAction, lang: Language) -> Result<(), String> {
+        if let Some(reason) = unavailable_reason(action, lang) {
+            return Err(reason);
+        }
+        match action {
+            RemediationAction::CleanTempFiles { older_than_days } => {
+                check_days(*older_than_days, lang)?;
+                temp_root(lang).map(|_| ())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    pub fn execute(action: &RemediationAction, lang: Language) -> Result<String, ActionFailure> {
+        if let Some(reason) = unavailable_reason(action, lang) {
+            return Err(ActionFailure::new(
+                AppError::new(
+                    ErrorCode::NotSupported,
+                    "this fix action is not available on macOS",
+                ),
+                reason,
+            ));
+        }
+        validate(action, lang).map_err(ActionFailure::refused)?;
+        match action {
+            RemediationAction::OpenSettingsPage { page } => {
+                let (Some(url), Some(label)) = (
+                    macos::settings_url(*page),
+                    macos::settings_label(*page, lang),
+                ) else {
+                    return Err(ActionFailure::new(
+                        AppError::new(ErrorCode::NotSupported, "no macOS settings pane"),
+                        lang.pick(
+                            "Pagina non disponibile su macOS",
+                            "Page not available on macOS",
+                        ),
+                    ));
+                };
+                macos::open_settings_url(url).map_err(|e| {
+                    ActionFailure::new(
+                        e,
+                        lang.pick(
+                            "Impossibile aprire Impostazioni di Sistema",
+                            "Couldn't open System Settings",
+                        ),
+                    )
+                })?;
+                Ok(lang.pick(
+                    format!("Aperta la sezione «{label}» di Impostazioni di Sistema"),
+                    format!("Opened “{label}” in System Settings"),
+                ))
+            }
+            RemediationAction::CleanTempFiles { older_than_days } => {
+                let root = temp_root(lang).map_err(ActionFailure::refused)?;
+                let report =
+                    clean_temp_dir(&root, *older_than_days, SystemTime::now()).map_err(|e| {
+                        ActionFailure::new(
+                            AppError::new(
+                                ErrorCode::Platform,
+                                "could not clean the temporary files folder",
+                            )
+                            .with_detail(e.to_string()),
+                            lang.pick(
+                                "Impossibile pulire la cartella dei file temporanei",
+                                "Couldn't clean the temporary files folder",
+                            ),
+                        )
+                    })?;
+                Ok(temp_clean_message(&report, *older_than_days, lang))
+            }
+            // Refused above by `unavailable_reason`.
+            _ => Err(ActionFailure::new(
+                AppError::new(
+                    ErrorCode::NotSupported,
+                    "this fix action is not available on macOS",
+                ),
+                lang.pick(
+                    "Azione non disponibile su macOS",
+                    "Action not available on macOS",
+                ),
+            )),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -900,7 +1105,7 @@ mod tests {
             create_time_100ns: created,
             cpu_time_100ns: 0,
             working_set_bytes: 0,
-            private_bytes: 0,
+            private_bytes: Some(0),
             io_read_bytes: 0,
             io_write_bytes: 0,
         }
@@ -1054,6 +1259,7 @@ mod tests {
         assert!(err(2200, "svc.exe").contains("servizio"));
     }
 
+    #[cfg(windows)]
     #[test]
     fn temp_root_must_be_inside_profile() {
         let profile = PathBuf::from(r"\\?\C:\Users\anna");
@@ -1167,14 +1373,26 @@ mod tests {
 
     const DAY: Duration = Duration::from_secs(86_400);
 
+    /// Writes `bytes` bytes and dates both the modification and the access time
+    /// `age_days` back (macOS also requires an old access time).
     fn write_file(path: &Path, bytes: usize, age_days: u64) {
         fs::write(path, vec![b'x'; bytes]).expect("write");
         let f = fs::OpenOptions::new()
             .write(true)
             .open(path)
             .expect("open for times");
-        f.set_modified(SystemTime::now() - DAY * u32::try_from(age_days).unwrap_or(0))
-            .expect("set mtime");
+        let t = SystemTime::now() - DAY * u32::try_from(age_days).unwrap_or(0);
+        f.set_times(fs::FileTimes::new().set_accessed(t).set_modified(t))
+            .expect("set times");
+    }
+
+    #[cfg(unix)]
+    fn set_dir_mtime(path: &Path, age_days: u32) {
+        let t = SystemTime::now() - DAY * age_days;
+        fs::File::open(path)
+            .expect("open dir")
+            .set_times(fs::FileTimes::new().set_accessed(t).set_modified(t))
+            .expect("set dir times");
     }
 
     #[cfg(windows)]
@@ -1204,7 +1422,7 @@ mod tests {
         let keep = root.join("recent-dir");
         fs::create_dir(&keep).expect("recent dir");
         write_file(&keep.join("old3.tmp"), 1, 30);
-        #[cfg(windows)]
+        #[cfg(any(windows, unix))]
         set_dir_mtime(&sub, 30);
 
         let r = clean_temp_dir(root, 7, SystemTime::now()).expect("clean");
@@ -1215,7 +1433,7 @@ mod tests {
         assert!(root.join("edge.tmp").exists());
         assert!(!root.join("old.tmp").exists());
         // An old folder emptied by the cleaning goes; a recent (possibly in-use) one stays.
-        #[cfg(windows)]
+        #[cfg(any(windows, unix))]
         {
             assert!(!sub.exists());
             assert_eq!(r.removed_dirs, 1);
@@ -1289,6 +1507,134 @@ mod tests {
         let f = s.0.join("file");
         write_file(&f, 1, 0);
         assert!(clean_temp_dir(&f, 1, SystemTime::now()).is_err());
+    }
+
+    /// Symlinks (to a file and to a folder outside the root) are never followed or deleted.
+    #[cfg(unix)]
+    #[test]
+    fn temp_cleaning_never_follows_symlinks() {
+        let s = Scratch::new("symlinks");
+        let root = s.0.join("root");
+        let outside = s.0.join("outside");
+        fs::create_dir(&root).expect("root");
+        fs::create_dir(&outside).expect("outside");
+        let precious = outside.join("precious.txt");
+        write_file(&precious, 64, 100);
+        let root = fs::canonicalize(&root).expect("canonical root");
+        std::os::unix::fs::symlink(&precious, root.join("link.txt")).expect("file link");
+        std::os::unix::fs::symlink(&outside, root.join("dir-link")).expect("dir link");
+
+        let r = clean_temp_dir(&root, 1, SystemTime::now()).expect("clean");
+        assert!(precious.exists(), "target outside the root survives");
+        assert_eq!(r.deleted_files, 0, "{r:?}");
+        assert_eq!(r.skipped_reparse, 2, "{r:?}");
+        assert!(root.join("link.txt").symlink_metadata().is_ok());
+        assert!(root.join("dir-link").symlink_metadata().is_ok());
+    }
+
+    /// A file modified long ago but read recently is kept on macOS (it may still be open).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn temp_cleaning_keeps_recently_read_files() {
+        let s = Scratch::new("atime");
+        let path = s.0.join("old-but-read.tmp");
+        write_file(&path, 10, 30);
+        let f = fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .expect("open");
+        f.set_times(fs::FileTimes::new().set_accessed(SystemTime::now()))
+            .expect("atime");
+        drop(f);
+        let r = clean_temp_dir(&s.0, 7, SystemTime::now()).expect("clean");
+        assert_eq!(r.deleted_files, 0, "{r:?}");
+        assert!(path.exists());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_refuses_windows_only_actions() {
+        let windows_only = [
+            RemediationAction::OpenDeviceManager,
+            RemediationAction::OpenDiskCleanup { drive: "C:".into() },
+            RemediationAction::EmptyRecycleBin,
+            RemediationAction::CloseProgram {
+                pid: std::process::id(),
+                name: "x".into(),
+            },
+            RemediationAction::RunSystemFileCheck,
+            RemediationAction::OpenSettingsPage {
+                page: SettingsPage::Troubleshoot,
+            },
+            RemediationAction::OpenSettingsPage {
+                page: SettingsPage::WindowsUpdateOptional,
+            },
+            RemediationAction::OpenSettingsPage {
+                page: SettingsPage::InstalledApps,
+            },
+            RemediationAction::OpenSettingsPage {
+                page: SettingsPage::Power,
+            },
+        ];
+        for a in &windows_only {
+            let it = validate(a, IT).expect_err("refused");
+            let en = validate(a, EN).expect_err("refused");
+            assert!(!it.is_empty() && !en.is_empty());
+            assert!(en.contains("macOS") || en.contains("Windows"), "{en}");
+            // Nothing runs: refused before any side effect, as NotSupported.
+            let f = execute(a, EN).expect_err("not run");
+            assert_eq!(f.error.code, ErrorCode::NotSupported, "{a:?}");
+            assert_eq!(f.message, en);
+        }
+        assert_eq!(
+            validate(&RemediationAction::EmptyRecycleBin, EN).expect_err("trash"),
+            "On macOS the app doesn't empty the Trash: you can empty it from the Finder \
+             (Finder menu > Empty Trash)"
+        );
+        assert!(recycle_bin_contents().is_err_and(|e| e.code == ErrorCode::NotSupported));
+    }
+
+    /// Supported macOS actions validate against the real system (nothing is opened or
+    /// deleted).
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn host_validation_macos() {
+        for page in crate::macos::remediation::supported_pages() {
+            validate(&RemediationAction::OpenSettingsPage { page }, IT).expect("pane");
+        }
+        validate(
+            &RemediationAction::CleanTempFiles { older_than_days: 7 },
+            IT,
+        )
+        .expect("temp folder accepted");
+        assert!(
+            validate(
+                &RemediationAction::CleanTempFiles { older_than_days: 0 },
+                IT
+            )
+            .is_err()
+        );
+        let errs = execute(
+            &RemediationAction::CleanTempFiles { older_than_days: 0 },
+            IT,
+        )
+        .expect_err("invalid days refused by execute");
+        assert_eq!(errs.error.code, ErrorCode::InvalidInput);
+    }
+
+    /// Opens the Storage pane of System Settings. Run manually with --ignored.
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore = "opens System Settings"]
+    fn host_open_settings_macos() {
+        let m = execute(
+            &RemediationAction::OpenSettingsPage {
+                page: SettingsPage::StorageSense,
+            },
+            EN,
+        )
+        .expect("settings");
+        assert_eq!(m, "Opened “Storage” in System Settings");
     }
 
     #[cfg(windows)]

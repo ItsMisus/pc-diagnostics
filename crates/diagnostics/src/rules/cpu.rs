@@ -6,7 +6,9 @@ use models::benchmark_run::{BenchmarkResult, PowerSource};
 use models::component::ComponentKind;
 use models::diagnostics::{Confidence, FindingKind, Severity};
 
-use super::{Cov, Ctx, Outcome, count_of, ev, finding, no_samples, simple, strings, window_notes};
+use super::{
+    Cov, Ctx, Outcome, by_os, count_of, ev, finding, no_samples, simple, strings, window_notes,
+};
 use crate::fmt;
 use crate::window::{Sustained, src, val};
 
@@ -217,9 +219,16 @@ fn dominant_process(ctx: &Ctx, usage: &Sustained, out: &mut Outcome) {
                 format!("Il programma «{name}» da solo ha usato circa {cpu_plain} della capacità del processore nell'ultimo periodo analizzato. Può essere normale se lo stai usando per un lavoro pesante; se non lo stai usando, conviene controllare.{self_note}"),
                 format!("On its own, the program “{name}” used about {cpu_plain} of the processor's capacity in the last period analyzed. That can be normal if you're using it for heavy work; if you aren't using it, it's worth checking.{self_note}"),
             ),
-            lang.pick(
-                "Controlla se è un programma che stai usando. Se non lo è, guarda le sue impostazioni oppure chiudilo dal programma stesso. Non chiudere i programmi di sistema di Windows.",
-                "Check whether it's a program you're using. If it isn't, look at its settings or close it from within the program. Don't close Windows system programs.",
+            by_os(
+                ctx.platform,
+                lang.pick(
+                    "Controlla se è un programma che stai usando. Se non lo è, guarda le sue impostazioni oppure chiudilo dal programma stesso. Non chiudere i programmi di sistema di Windows.",
+                    "Check whether it's a program you're using. If it isn't, look at its settings or close it from within the program. Don't close Windows system programs.",
+                ),
+                lang.pick(
+                    "Controlla se è un programma che stai usando. Se non lo è, guarda le sue impostazioni oppure chiudilo dal programma stesso. Non chiudere i programmi di sistema di macOS.",
+                    "Check whether it's a program you're using. If it isn't, look at its settings or close it from within the program. Don't close macOS system programs.",
+                ),
             ),
         ),
     );
@@ -296,9 +305,16 @@ fn frequency_limit(ctx: &Ctx, out: &mut Outcome, cov: &mut Cov) {
         .collect();
     if pairs.len() < CPU_LIMIT_MIN_SAMPLES {
         if !ctx.input.live.is_empty() {
-            cov.partial(lang.pick(
-                "limite di frequenza della CPU non disponibile o con troppi pochi campioni",
-                "CPU frequency limit unavailable or with too few samples",
+            cov.partial(by_os(
+                ctx.platform,
+                lang.pick(
+                    "limite di frequenza della CPU non disponibile o con troppi pochi campioni",
+                    "CPU frequency limit unavailable or with too few samples",
+                ),
+                lang.pick(
+                    "limite di frequenza della CPU non disponibile o con troppi pochi campioni (macOS non lo rende leggibile senza privilegi di amministratore)",
+                    "CPU frequency limit unavailable or with too few samples (macOS does not expose it without administrator privileges)",
+                ),
             ));
         }
         return;

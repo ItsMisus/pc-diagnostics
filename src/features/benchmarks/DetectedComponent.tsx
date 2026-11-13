@@ -4,9 +4,10 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import { type Translator, translatorFor, useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatBytes, formatMts } from "@/lib/format";
+import { formatBytes, formatMts, formatStorageBytes } from "@/lib/format";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import { mediaLabel } from "@/features/monitoring/labels";
+import { dedicatedVram } from "@/features/monitoring/selection";
 import type { HardwareInventory } from "@/types/generated/HardwareInventory";
 import type { BenchComponent } from "./model";
 
@@ -91,16 +92,20 @@ function items(
     case "gpu": {
       const real = inv.gpus.filter((g) => !g.isSoftware && !g.isVirtual);
       if (real.length === 0) return [{ label: "GPU", value: t("noHardwareGpu") }];
-      return real.map((g, i) => ({
-        label: real.length > 1 ? t("gpuN", { n: i + 1 }) : "GPU",
-        value: `${g.name}${g.dedicatedVramBytes > 0 ? ` · ${t("vramDedicated", { size: formatBytes(g.dedicatedVramBytes) })}` : ""}`,
-      }));
+      return real.map((g, i) => {
+        const vram = dedicatedVram(g);
+        return {
+          label: real.length > 1 ? t("gpuN", { n: i + 1 }) : "GPU",
+          value: `${g.name}${vram !== null ? ` · ${t("vramDedicated", { size: formatBytes(vram) })}` : ""}`,
+        };
+      });
     }
     case "memory": {
       const list: DefinitionItem[] = [{ label: t("total"), value: formatBytes(inv.memory.totalBytes) }];
       if (inv.memory.modules.status === "available") {
         const modules = inv.memory.modules.value;
-        list.push({ label: t("modules"), value: modules.length });
+        // An empty list (e.g. memory built into the chip package) is no count of modules.
+        list.push({ label: t("modules"), value: modules.length > 0 ? modules.length : t("noModulesReported") });
         modules.forEach((m, i) => {
           const speed = m.configuredSpeedMts ?? m.speedMts;
           list.push({
@@ -122,7 +127,7 @@ function items(
         value: [
           v.label || null,
           mediaLabel(v.media, tm),
-          t("freeOfTotal", { free: formatBytes(v.availableBytes), total: formatBytes(v.totalBytes) }),
+          t("freeOfTotal", { free: formatStorageBytes(v.availableBytes), total: formatStorageBytes(v.totalBytes) }),
           v.removable ? t("removable") : null,
         ]
           .filter(Boolean)

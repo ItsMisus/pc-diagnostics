@@ -131,12 +131,13 @@ reacting to one burst.
 | `cpu.benchmark.sustained_drop` | Latest completed `CpuSustained` run: drop ≥ 15 % (see below) | Hypothesis | Warning | Medium |
 | `memory.available.low` | Available < 10 % of total (sustained); Critical if < 5 % is also sustained | Observation | Warning / Critical | High |
 | `memory.commit.high` | Commit used ≥ 90 % of the commit limit (sustained) | Observation | Warning | High |
-| `memory.paging.high` | `Pages/sec` ≥ 1000 (sustained) | Hypothesis | Warning + Medium if a memory rule above also fired; otherwise Info + Low | — |
+| `memory.pressure.high` | macOS kernel pressure level (`kern.memorystatus_vm_pressure_level`) Warning or Critical (sustained); Critical if the Critical level is also sustained. Swap in use is listed as evidence. Not reported on Windows | Observation | Warning / Critical | High |
+| `memory.paging.high` | `Pages/sec` ≥ 1000 on Windows, pageins/s ≥ 250 on macOS (same ≈ 4 MiB/s; sustained) | Hypothesis | Warning + Medium if a memory rule above also fired; otherwise Info + Low | — |
 | `gpu.utilization.sustained` | Per GPU: busiest engine ≥ 95 % (sustained) | Observation | Info | High |
-| `gpu.vram.high` | Per GPU: dedicated used ≥ 90 % of inventory `dedicated_vram_bytes` (sustained) | Observation | Warning | High |
+| `gpu.vram.high` | Per GPU: dedicated used ≥ 90 % of inventory `dedicated_vram_bytes` (sustained). Not evaluated (coverage partial) when the inventory size is unavailable: "unified memory" for Apple GPUs that report it as not supported, "total unknown" otherwise | Observation | Warning | High |
 | `gpu.driver.problem` | Driver inventory device, category `Gpu`, health `ProblemDetected` or `DriverMissing` | Confirmed | Critical | High (Medium if no problem code) |
 | `storage.volume.low_space` | Fixed volume: free < 5 % gives Critical. Free < 10 %, or free < 15 GiB on a volume ≥ 30 GiB, gives Warning | Confirmed | Warning / Critical | High |
-| `storage.disk.health` | `MSFT_PhysicalDisk.HealthStatus` Warning (gives Warning) or Unhealthy (gives Critical) | Confirmed | Warning / Critical | High |
+| `storage.disk.health` | Windows: `MSFT_PhysicalDisk.HealthStatus`. macOS: the NVMe SMART / Health Information log read through the NVMeSMARTLib plug-in without privileges (`platform::macos::nvme_smart`): Critical Warning bits 2, 3, 5 give Unhealthy; bits 0, 1, 4, Available Spare below the drive's threshold or Percentage Used ≥ 100 give Warning; non-NVMe disks are not evaluated. Warning gives Warning, Unhealthy gives Critical | Confirmed | Warning / Critical | High |
 | `storage.benchmark.result` | Latest completed run per storage kind: values only | Observation | Info | High |
 | `storage.benchmark.drop` | That run versus `find_previous_comparable`: any metric worse by ≥ 25 % (lower for higher-is-better, higher otherwise) | Hypothesis | Warning | Medium (Low if the comparison has caveats, which are appended as limitations) |
 | `drivers.device.problem` | Non-GPU device with `ProblemDetected` | Confirmed | Critical for StorageController, Disk, Ethernet, Wifi; Warning otherwise | High (Medium if no problem code) |

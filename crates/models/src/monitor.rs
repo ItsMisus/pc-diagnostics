@@ -39,6 +39,49 @@ pub struct MemorySample {
     pub commit_limit_bytes: Metric<f64>,
     /// Hard page faults resolved from disk (`\Memory\Pages/sec`).
     pub pages_per_sec: Metric<f64>,
+    /// Swap space in use and its current size (macOS `vm.swapusage`). macOS grows and
+    /// shrinks the swap files on demand, so the total is not a fixed limit. Not reported
+    /// on Windows, where the page file is part of the commit limit.
+    pub swap_used_bytes: Metric<f64>,
+    pub swap_total_bytes: Metric<f64>,
+    /// The kernel's own memory-pressure level (macOS
+    /// `kern.memorystatus_vm_pressure_level`, the "Memory Pressure" of Activity Monitor).
+    /// Not reported on Windows.
+    pub pressure: Metric<MemoryPressure>,
+}
+
+/// Memory-pressure level as the macOS kernel reports it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum MemoryPressure {
+    /// Memory is used efficiently; no action from the system.
+    Normal,
+    /// The system is compressing and swapping memory to keep up.
+    Warning,
+    /// Memory is short: apps may slow down or be asked to quit.
+    Critical,
+}
+
+impl MemoryPressure {
+    /// From `kern.memorystatus_vm_pressure_level` (1 normal, 2 warning, 4 critical).
+    pub fn from_kernel_level(level: i32) -> Option<Self> {
+        match level {
+            1 => Some(Self::Normal),
+            2 => Some(Self::Warning),
+            4 => Some(Self::Critical),
+            _ => None,
+        }
+    }
+
+    /// Ordinal for window statistics: 0 normal, 1 warning, 2 critical.
+    pub fn rank(self) -> f64 {
+        match self {
+            Self::Normal => 0.0,
+            Self::Warning => 1.0,
+            Self::Critical => 2.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
