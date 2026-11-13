@@ -104,9 +104,15 @@ pub fn run() {
             performance.start_watcher(control::performance::SUPPLY_POLL);
             app.manage(Arc::clone(&performance));
 
+            // Lighting center.
+            let lighting = Arc::new(control::lighting::LightingController::system(Arc::clone(
+                &store,
+            )));
+            app.manage(Arc::clone(&lighting));
+
             // Gaming: library, game profiles and game mode. A game profile links one profile
             // of each center below (`ProfileDomain`).
-            let domains: Vec<control::SharedDomain> = vec![performance, cooling];
+            let domains: Vec<control::SharedDomain> = vec![performance, cooling, lighting];
             let gaming = Arc::new(control::gaming::GamingController::new(
                 Arc::clone(&store),
                 domains,
@@ -170,6 +176,15 @@ pub fn run() {
             commands::gaming::set_game_profile,
             commands::gaming::set_game_mode,
             commands::gaming::stop_game_session,
+            commands::lighting::lighting_get_state,
+            commands::lighting::lighting_refresh,
+            commands::lighting::lighting_apply_profile,
+            commands::lighting::lighting_apply_setup,
+            commands::lighting::lighting_preview_setup,
+            commands::lighting::lighting_set_brightness,
+            commands::lighting::lighting_save_profile,
+            commands::lighting::lighting_delete_profile,
+            commands::lighting::lighting_restore,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -193,6 +208,11 @@ pub fn run() {
                 handle.try_state::<Arc<control::performance::PerformanceController>>()
             {
                 performance.shutdown();
+            }
+            // Lighting: stop the effect engine, hand LampArray devices back.
+            if let Some(lighting) = handle.try_state::<Arc<control::lighting::LightingController>>()
+            {
+                lighting.shutdown();
             }
         }
     });

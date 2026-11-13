@@ -45,6 +45,16 @@ export type CommandName =
   | "save_cooling_profile"
   | "delete_cooling_profile"
   | "restore_cooling"
+  // Lighting center
+  | "lighting_get_state"
+  | "lighting_refresh"
+  | "lighting_apply_profile"
+  | "lighting_apply_setup"
+  | "lighting_preview_setup"
+  | "lighting_set_brightness"
+  | "lighting_save_profile"
+  | "lighting_delete_profile"
+  | "lighting_restore"
   // Gaming center
   | "get_gaming_state"
   | "get_game_art"
