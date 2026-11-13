@@ -36,7 +36,7 @@ export function formFactorIcon(formFactor: Metric<FormFactor>): IconName {
     case "mini":
       return "miniPc";
     case "allInOne":
-      return "display";
+      return "allInOne";
     case "other":
       return "hardware";
   }

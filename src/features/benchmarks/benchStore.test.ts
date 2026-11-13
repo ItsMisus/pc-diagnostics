@@ -52,6 +52,15 @@ function setup(patch: Partial<BenchDeps> = {}) {
 }
 
 describe("bench store", () => {
+  it("seeds the latest stored result of every kind once the tests are known", async () => {
+    const stored = result("stored-1", { kind: "cpuSingleCore" });
+    const t = setup({ getLatestResult: async (k) => (k === "cpuSingleCore" ? stored : null) });
+    t.store.getState().ensureCapabilities();
+    await flush();
+    await flush();
+    expect(t.store.getState().lastResultByKind.cpuSingleCore?.runId).toBe("stored-1");
+  });
+
   it("seeds the active run from the backend status", async () => {
     const t = setup({ getStatus: async () => progress("seeded", { fraction: 0.3 }) });
     t.store.getState().start();

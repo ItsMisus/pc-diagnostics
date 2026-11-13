@@ -3,6 +3,12 @@ import type { Translation } from "../types";
 
 /** English texts for the "benchmarks" namespace (also used by History). */
 export default {
+  noResultYet: "No result for this test yet",
+  noResultYetDesc: "Start the test: the measured value, its trend and the comparison with earlier runs will appear here.",
+  recentResults: "Latest results",
+  howStep1: "Pick a component: processor, graphics, memory or disk.",
+  howStep2: "Adjust the duration if you like, then start the test. You can stop it at any time.",
+  howStep3: "The result is saved: you find it here and in History, ready to compare.",
   // Test kinds, run states, power sources.
   kind_cpuSingleCore: "CPU single-core",
   kind_cpuMultiCore: "CPU multi-core",

@@ -84,7 +84,7 @@ export function SettingsPage() {
 
           <SettingsGroup title={t("appearance")}>
             {/* The page's focal panel: the settings people change most. */}
-            <RowsPanel variant="primary">
+            <RowsPanel>
               <Row label={t("theme")}>
                 <Segmented
                   label={t("theme")}
@@ -212,7 +212,7 @@ function SettingsSkeleton() {
       {[3, 1, 2].map((rows, g) => (
         <div key={g} className="flex flex-col gap-2.5">
           <Skeleton className="ml-1 h-4 w-28" />
-          <div className={g === 0 ? "surface-primary p-5" : "surface-secondary p-4"}>
+          <div className="surface-secondary p-4">
             {Array.from({ length: rows }, (_, r) => (
               <div key={r} className="flex items-center justify-between gap-6 border-t border-line py-3.5 first:border-t-0 first:pt-0 last:pb-0">
                 <span className="flex flex-1 flex-col gap-1.5">

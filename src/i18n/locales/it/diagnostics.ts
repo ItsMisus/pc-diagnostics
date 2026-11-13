@@ -1,5 +1,7 @@
 /** Italian (reference) texts for the "diagnostics" namespace. */
 export default {
+  coverageCount: "{done} di {total} aree controllate per intero",
+  coverageWhyPartial: "Cosa non è stato possibile controllare",
   // Page and run states
   run: "Esegui diagnosi",
   running: "Diagnosi in corso…",

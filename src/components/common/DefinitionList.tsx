@@ -34,7 +34,7 @@ export function DefinitionList({
             <dt className="shrink-0 text-fg-muted">{item.label}</dt>
             <dd className="tabular min-w-0 text-right text-fg">
               <span className="break-words">{item.value}</span>
-              {item.caption && <span className="ml-2">{item.caption}</span>}
+              {item.caption && <span className="ml-2 empty:hidden">{item.caption}</span>}
             </dd>
           </div>
         ))}
@@ -49,7 +49,7 @@ export function DefinitionList({
           <dt className="text-fg-muted">{item.label}</dt>
           <dd className="tabular min-w-0 text-fg">
             <span className="break-words">{item.value}</span>
-            {item.caption && <span className="ml-2">{item.caption}</span>}
+            {item.caption && <span className="ml-2 empty:hidden">{item.caption}</span>}
           </dd>
         </div>
       ))}

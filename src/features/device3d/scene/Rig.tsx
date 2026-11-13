@@ -6,10 +6,8 @@ import { keyAction, OrbitController } from "../orbit";
 import { cameraPosition, frameFor, PRESETS } from "../presets";
 import { QualityMonitor } from "../quality";
 import type { DeviceKind, StageTheme } from "../types";
-import { Laptop } from "./Laptop";
-import { MiniPc } from "./MiniPc";
 import { FloorShadow } from "./Studio";
-import { Tower } from "./Tower";
+import { MODELS } from "./models";
 
 export interface RigProps {
   kind: DeviceKind;
@@ -235,11 +233,12 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
     }
   });
 
+  const Model = MODELS[shown];
   return (
     <group ref={turntable}>
       <FloorShadow preset={preset} theme={theme} />
       <group ref={lift}>
-        {shown === "tower" ? <Tower key="tower" /> : shown === "laptop" ? <Laptop key="laptop" /> : <MiniPc key="mini" />}
+        <Model key={shown} />
       </group>
     </group>
   );

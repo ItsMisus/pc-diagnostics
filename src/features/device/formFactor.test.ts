@@ -32,7 +32,8 @@ describe("shapeForFormFactor", () => {
     expect(shapeForFormFactor("desktop")).toBe("tower");
     expect(shapeForFormFactor("laptop")).toBe("laptop");
     expect(shapeForFormFactor("mini")).toBe("mini");
-    expect(shapeForFormFactor("allInOne")).toBeNull();
+    expect(shapeForFormFactor("allInOne")).toBe("allInOne");
+    expect(shapeForFormFactor("other")).toBeNull();
     expect(shapeForFormFactor("other")).toBeNull();
   });
 });
@@ -86,14 +87,16 @@ describe("resolveDeviceShape", () => {
   });
 
   it("asks the user for form factors without a model", () => {
-    const imac = detected(ok<FormFactor>("allInOne"), { productName: "iMac (24-inch, 2024)", internalBattery: ok(false) });
-    expect(resolveDeviceShape(null, imac)).toEqual({
+    const rack = detected(ok<FormFactor>("other"), { productName: null, internalBattery: ok(false) });
+    expect(resolveDeviceShape(null, rack)).toEqual({
       origin: "unknown",
       shape: null,
-      why: { kind: "noModel", formFactor: "allInOne" },
+      why: { kind: "noModel", formFactor: "other" },
     });
     // The user's choice still wins.
-    expect(resolveDeviceShape("tower", imac).shape).toBe("tower");
+    expect(resolveDeviceShape("tower", rack).shape).toBe("tower");
+    const imac = detected(ok<FormFactor>("allInOne"), { productName: "iMac (24-inch, 2024)", internalBattery: ok(false) });
+    expect(resolveDeviceShape(null, imac).shape).toBe("allInOne");
   });
 
   it("ignores an unknown stored value", () => {

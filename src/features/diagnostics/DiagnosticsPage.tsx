@@ -6,7 +6,7 @@ import { Panel, Surface } from "@/components/common/Panel";
 import { Readout } from "@/components/common/Readout";
 import { Skeleton, SkeletonLines } from "@/components/common/Skeleton";
 import { Spinner, StateView } from "@/components/common/StateView";
-import { StatusBadge, type Tone } from "@/components/common/StatusBadge";
+import type { Tone } from "@/components/common/StatusBadge";
 import { Switch } from "@/components/common/Switch";
 import { toast } from "@/components/common/Toast";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -15,6 +15,7 @@ import { useIsSimple } from "@/hooks/useViewMode";
 import { stateKindForError } from "@/lib/errors";
 import { formatDateTime, formatDuration, formatStorageBytes } from "@/lib/format";
 import { usePlatform } from "@/lib/platform";
+import type { ComponentKind } from "@/types/generated/ComponentKind";
 import type { CoverageItem } from "@/types/generated/CoverageItem";
 import type { DiagnosticReport } from "@/types/generated/DiagnosticReport";
 import type { Finding } from "@/types/generated/Finding";
@@ -28,7 +29,6 @@ import {
   coverageLabel,
   coverageSentence,
   coverageSummary,
-  coverageTone,
   groupFindings,
   overallHeadline,
   overallState,
@@ -215,22 +215,23 @@ function SimpleReportView({ report }: { report: DiagnosticReport }) {
         </section>
       )}
 
-      <DetailsGroup
-        coverage={<CoverageCard items={coverage} simple />}
-        limitations={
-          report.limitations.length > 0 && (
-            <Panel>
-              <Disclosure summary={t("simpleLimitations")}>
-                <ul className={`${LIST} mt-2 text-sm text-fg-muted`}>
+      <DetailsGroup>
+        <CoverageCard
+          items={coverage}
+          simple
+          limitations={
+            report.limitations.length > 0 && (
+              <Disclosure variant="row" summary={t("simpleLimitations")}>
+                <ul className={`${LIST} pb-2 text-sm text-fg-muted`}>
                   {report.limitations.map((l) => (
                     <li key={l}>{l}</li>
                   ))}
                 </ul>
               </Disclosure>
-            </Panel>
-          )
-        }
-      />
+            )
+          }
+        />
+      </DetailsGroup>
     </>
   );
 }
@@ -280,32 +281,32 @@ function ReportView({ report }: { report: DiagnosticReport }) {
         );
       })}
 
-      <DetailsGroup
-        coverage={<CoverageCard items={coverage} simple={false} />}
-        limitations={
-          report.limitations.length > 0 && (
-            <Panel title={t("limitationsTitle")}>
-              <ul className={`${LIST} text-sm text-fg-muted`}>
-                {report.limitations.map((l) => (
-                  <li key={l}>{l}</li>
-                ))}
-              </ul>
-            </Panel>
-          )
-        }
-      />
+      <DetailsGroup>
+        <CoverageCard
+          items={coverage}
+          simple={false}
+          limitations={
+            report.limitations.length > 0 && (
+              <Disclosure variant="row" summary={t("limitationsTitle")}>
+                <ul className={`${LIST} pb-2 text-sm text-fg-muted`}>
+                  {report.limitations.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+              </Disclosure>
+            )
+          }
+        />
+      </DetailsGroup>
     </>
   );
 }
 
-/** Coverage and limitations side by side when there is room, then the export panel. */
-function DetailsGroup({ coverage, limitations }: { coverage: ReactNode; limitations: ReactNode }) {
+/** Coverage (with the limitations folded inside), then the export panel. */
+function DetailsGroup({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className={`grid items-start gap-4 ${limitations ? "@4xl:grid-cols-2" : ""}`}>
-        {coverage}
-        {limitations}
-      </div>
+    <div className="@container flex flex-col gap-4">
+      {children}
       <ExportPanel />
     </div>
   );
@@ -448,12 +449,29 @@ function useReportCoverage(report: DiagnosticReport): readonly CoverageItem[] {
   return useMemo(() => platformCoverage(report.coverage, platform), [report.coverage, platform]);
 }
 
+const COMPONENT_ICON: Record<ComponentKind, IconName> = {
+  cpu: "cpu",
+  gpu: "gpu",
+  memory: "memory",
+  storage: "storage",
+  drivers: "drivers",
+  processes: "processes",
+  system: "hardware",
+};
+
+const COVERAGE_GLYPH: Record<CoverageItem["status"], { icon: IconName; className: string }> = {
+  evaluated: { icon: "success", className: "text-fg-muted" },
+  partial: { icon: "warning", className: "text-warn" },
+  notEvaluated: { icon: "minus", className: "text-fg-subtle" },
+};
+
 /**
- * Coverage at a glance: one badge per component, and a note only for the components that
- * were not fully evaluated (the note says what is missing). In "Avanzata" the summary line
- * is in the summary panel, so it is not repeated here.
+ * Coverage at a glance: one small tile per area (icon, name, "completo" / "in parte" with a
+ * glyph) and a one-line summary ("4 di 6 aree controllate in parte"). What is missing in
+ * each partial area is folded into a disclosure, so the first look stays readable; the
+ * limitations of the method sit in a second disclosure in the same panel.
  */
-function CoverageCard({ items, simple }: { items: readonly CoverageItem[]; simple: boolean }) {
+function CoverageCard({ items, simple, limitations }: { items: readonly CoverageItem[]; simple: boolean; limitations?: ReactNode }) {
   const t = useT("diagnostics");
   const summary = useMemo(() => coverageSummary(items), [items]);
   const name = (c: CoverageItem) => (simple ? simpleComponentName(c.component) : componentKindLabel(c.component));
@@ -462,34 +480,48 @@ function CoverageCard({ items, simple }: { items: readonly CoverageItem[]; simpl
     .filter((x) => x.note !== "");
 
   return (
-    <Panel title={simple ? t("whatWasChecked") : t("coverageTitle")}>
+    <Panel
+      title={simple ? t("whatWasChecked") : t("coverageTitle")}
+      aside={items.length > 0 && <span className="text-xs text-fg-muted tabular">{t("coverageCount", { done: summary.evaluated, total: summary.total })}</span>}
+    >
       {items.length === 0 ? (
         <p className="text-sm text-fg-muted">{t("coverageNotReported")}</p>
       ) : (
-        <>
-          <ul className="flex flex-wrap gap-1.5">
-            {items.map((c, i) => (
-              <li key={`${c.component}-${i}`} className="max-w-full">
-                <StatusBadge
-                  tone={coverageTone(c.status)}
-                  label={t("coverageBadge", {
-                    name: name(c),
-                    status: simple ? simpleCoverageLabel(c.status) : coverageLabel(c.status),
-                  })}
-                />
-              </li>
-            ))}
-          </ul>
-          {notes.length > 0 && (
-            <ul className="mt-3 flex flex-col gap-1 border-t border-line pt-3 text-xs text-fg-muted">
-              {notes.map(({ c, note }, i) => (
-                <li key={`${c.component}-${i}`} className="break-words">
-                  <span className="font-medium text-fg">{name(c)}</span>: {note}
+        <div className="flex flex-col gap-4">
+          <ul className="grid grid-cols-2 gap-2 @2xl:grid-cols-3 @5xl:grid-cols-6">
+            {items.map((c, i) => {
+              const glyph = COVERAGE_GLYPH[c.status];
+              return (
+                <li key={`${c.component}-${i}`} className="surface-inset flex min-w-0 flex-col gap-2 p-3">
+                  <Icon name={COMPONENT_ICON[c.component]} size={18} className="text-fg-muted" />
+                  <span className="truncate text-sm font-medium text-fg" title={name(c)}>
+                    {name(c)}
+                  </span>
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs text-fg-muted">
+                    <Icon name={glyph.icon} size={13} className={`shrink-0 ${glyph.className}`} />
+                    <span className="truncate">{simple ? simpleCoverageLabel(c.status) : coverageLabel(c.status)}</span>
+                  </span>
                 </li>
-              ))}
-            </ul>
+              );
+            })}
+          </ul>
+          {(notes.length > 0 || limitations) && (
+            <div className="flex flex-col border-t border-line">
+              {notes.length > 0 && (
+                <Disclosure variant="row" summary={t("coverageWhyPartial")}>
+                  <ul className="flex flex-col gap-2 pb-2 text-sm text-fg-muted">
+                    {notes.map(({ c, note }, i) => (
+                      <li key={`${c.component}-${i}`} className="break-words">
+                        <span className="font-medium text-fg">{name(c)}</span>: {note}
+                      </li>
+                    ))}
+                  </ul>
+                </Disclosure>
+              )}
+              {limitations}
+            </div>
           )}
-        </>
+        </div>
       )}
     </Panel>
   );

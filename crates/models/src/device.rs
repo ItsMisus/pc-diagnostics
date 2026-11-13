@@ -27,14 +27,15 @@ pub enum FormFactor {
 }
 
 impl FormFactor {
-    /// The 3D model that represents this form factor, if there is one. `AllInOne` and
-    /// `Other` have none: the UI asks the user instead of picking a look-alike.
+    /// The 3D model that represents this form factor, if there is one. `Other` has none:
+    /// the UI asks the user instead of picking a look-alike.
     pub fn shape(self) -> Option<DeviceShape> {
         match self {
             Self::Desktop => Some(DeviceShape::Tower),
             Self::Laptop => Some(DeviceShape::Laptop),
             Self::Mini => Some(DeviceShape::Mini),
-            Self::AllInOne | Self::Other => None,
+            Self::AllInOne => Some(DeviceShape::AllInOne),
+            Self::Other => None,
         }
     }
 }
@@ -48,6 +49,8 @@ pub enum DeviceShape {
     Tower,
     Laptop,
     Mini,
+    /// A display with the computer built in.
+    AllInOne,
 }
 
 /// Which signal decided `FormFactorInfo::form_factor`.
@@ -101,7 +104,7 @@ mod tests {
         assert_eq!(FormFactor::Desktop.shape(), Some(DeviceShape::Tower));
         assert_eq!(FormFactor::Laptop.shape(), Some(DeviceShape::Laptop));
         assert_eq!(FormFactor::Mini.shape(), Some(DeviceShape::Mini));
-        assert_eq!(FormFactor::AllInOne.shape(), None);
+        assert_eq!(FormFactor::AllInOne.shape(), Some(DeviceShape::AllInOne));
         assert_eq!(FormFactor::Other.shape(), None);
     }
 

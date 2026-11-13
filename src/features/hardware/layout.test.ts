@@ -63,7 +63,7 @@ describe("formFactorIcon", () => {
     expect(formFactorIcon(available("desktop"))).toBe("desktop");
     expect(formFactorIcon(available("laptop"))).toBe("laptop");
     expect(formFactorIcon(available("mini"))).toBe("miniPc");
-    expect(formFactorIcon(available("allInOne"))).toBe("display");
+    expect(formFactorIcon(available("allInOne"))).toBe("allInOne");
     expect(formFactorIcon(available("other"))).toBe("hardware");
   });
 

@@ -20,7 +20,7 @@ import {
   overrideForChoice,
 } from "./deviceShape";
 
-const SHAPE_ICONS: Record<DeviceShape, IconName> = { tower: "desktop", laptop: "laptop", mini: "miniPc" };
+const SHAPE_ICONS: Record<DeviceShape, IconName> = { tower: "desktop", laptop: "laptop", mini: "miniPc", allInOne: "allInOne" };
 
 /**
  * "Modello del dispositivo": Automatico (follow detection) or a fixed model for the Overview's

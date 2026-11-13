@@ -1,7 +1,10 @@
 /** Italian (reference) texts for the "overview" namespace (the dashboard). */
 export default {
+  componentsTitle: "Componenti",
+  trendAria: "{label}, ultimi due minuti",
+  notOnThisDevice: "Non rilevabili su questo computer: {list}.",
+  volumeFree: "{free} liberi su {total}",
   monitoringCard: "Monitoraggio",
-  recentTrend: "Andamento recente",
 
   // Panels.
   load: "Carico",
@@ -77,6 +80,7 @@ export default {
   shape_tower: "PC fisso",
   shape_laptop: "Portatile",
   shape_mini: "Mini PC",
+  shape_allInOne: "All-in-one",
   shapeAuto: "Automatico",
   shapeDetected_productName: "Rilevato dal nome del prodotto",
   shapeDetected_modelIdentifier: "Rilevato dall'identificativo del modello",
@@ -105,7 +109,6 @@ export default {
   chipTemp: "Temp. CPU",
 
   // Essential metrics.
-  essentialsTitle: "Risorse",
   sparkAria: "{label}, ultimo minuto",
   cpuLoad: "Carico CPU",
   gpuLoad: "Carico GPU",
@@ -117,6 +120,5 @@ export default {
 
   // Groups.
   findingsTitle: "Segnalazioni",
-  detailsTitle: "Dettagli",
   findingsNeverRun: "Le segnalazioni compaiono dopo la prima diagnosi.",
 } satisfies Record<string, string>;

@@ -80,8 +80,11 @@ export function ResultView({
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-fg">{t("chartsTitle")}</h3>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {charted.map((s) => (
-              <SeriesChart key={s.id} series={s} />
+            {/* An odd chart count would leave a hole: the first chart takes the whole row. */}
+            {charted.map((s, i) => (
+              <div key={s.id} className={`min-w-0 ${i === 0 && charted.length % 2 === 1 ? "lg:col-span-2" : ""}`}>
+                <SeriesChart series={s} first={i === 0} />
+              </div>
             ))}
           </div>
         </section>
@@ -180,16 +183,17 @@ function ResultMetrics({ metrics }: { metrics: readonly ResultMetric[] }) {
   const [head, ...rest] = metrics;
   if (!head) return <StateView compact kind="empty" title={t("noMetrics")} />;
   const headValue = splitUnitValue(formatUnitValue(head.value, head.unit));
+  // Headline and the other measures share a row when there is room: no tall empty column.
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid grid-cols-1 items-end gap-x-10 gap-y-5 lg:grid-cols-[auto_minmax(0,1fr)]">
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-sm text-fg-muted">{head.label}</span>
         <Readout size="xl" value={headValue.value} {...(headValue.unit ? { unit: headValue.unit } : {})} className="break-words" />
         <span className="text-xs text-fg-subtle">{direction(head)}</span>
       </div>
       {rest.length > 0 && (
-        <section aria-labelledby={otherId} className="flex flex-col gap-3">
-          <h3 id={otherId} className="text-sm font-semibold text-fg">
+        <section aria-labelledby={otherId} className="flex min-w-0 flex-col gap-2">
+          <h3 id={otherId} className="eyebrow">
             {t("otherMeasures")}
           </h3>
           <MetricList metrics={rest} />
@@ -237,7 +241,7 @@ export function MetricsGrid({ metrics, interim = false }: { metrics: readonly Re
   return <MetricList metrics={metrics} />;
 }
 
-const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSeries }) {
+const SeriesChart = memo(function SeriesChart({ series, first = false }: { series: BenchmarkSeries; first?: boolean }) {
   // Byte labels follow the view mode (lib/format.ts).
   const viewMode = useViewMode();
   const t = useT("benchmarks");
@@ -249,8 +253,9 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
     return { points: pts, xDomain: [0, maxT] as const, yDomain: [0, niceCeil(maxV * 1.05) || 1] as const };
   }, [series]);
   const chartSeries = useMemo(
-    () => [{ id: series.id, label: series.label, points, tone: "primary" as const }],
-    [series.id, series.label, points],
+    // The first chart is the run's main trace: the one accent series on the screen.
+    () => [{ id: series.id, label: series.label, points, tone: first ? ("accent" as const) : ("primary" as const) }],
+    [series.id, series.label, points, first],
   );
   const formatY = useMemo(() => (v: number) => formatUnitValue(v, series.unit), [series.unit, viewMode]);
 
@@ -263,7 +268,7 @@ const SeriesChart = memo(function SeriesChart({ series }: { series: BenchmarkSer
         yDomain={yDomain}
         formatY={formatY}
         formatX={formatElapsed}
-        height={140}
+        height={first ? 180 : 140}
         ariaLabel={t("seriesAria", { label: series.label })}
       />
     </figure>

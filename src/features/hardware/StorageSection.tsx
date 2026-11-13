@@ -50,7 +50,7 @@ function Disks({ disks }: { disks: Metric<PhysicalDiskInfo[]> }) {
   return (
     <>
       <div className="@container">
-        <div className="grid grid-cols-1 gap-x-10 gap-y-5 @2xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-5 @2xl:grid-cols-2 @4xl:grid-cols-3">
           {disks.value.map((d) => (
             <DiskBlock key={d.id} disk={d} />
           ))}

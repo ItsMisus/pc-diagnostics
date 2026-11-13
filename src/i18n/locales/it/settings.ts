@@ -97,6 +97,7 @@ export default {
   shape_tower: "Torre",
   shape_laptop: "Portatile",
   shape_mini: "Mini",
+  shape_allInOne: "All-in-one",
   detecting: "Rilevamento del dispositivo in corso…",
   detectedAs: "Rilevato: {shape} ({basis})",
   detectedAsNoBasis: "Rilevato: {shape}",

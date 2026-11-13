@@ -6,7 +6,7 @@ import type { FormFactorInfo } from "@/types/generated/FormFactorInfo";
 import type { Unavailability } from "@/types/generated/Unavailability";
 
 /**
- * Which 3D device model the Overview shows: tower, laptop or mini PC.
+ * Which 3D device model the Overview shows: tower, laptop, mini PC or all-in-one.
  *
  * Order: the user's choice in Settings (`AppSettings.deviceShape`) > the detected form
  * factor (`HardwareInventory.formFactor`) > "unknown", in which case the UI asks the user
@@ -14,13 +14,13 @@ import type { Unavailability } from "@/types/generated/Unavailability";
  */
 
 /** Every model, in the order a picker lists them. */
-export const DEVICE_SHAPES: readonly DeviceShape[] = ["tower", "laptop", "mini"];
+export const DEVICE_SHAPES: readonly DeviceShape[] = ["tower", "laptop", "mini", "allInOne"];
 
 export function isDeviceShape(value: unknown): value is DeviceShape {
   return typeof value === "string" && (DEVICE_SHAPES as readonly string[]).includes(value);
 }
 
-/** The model for a detected form factor; null for all-in-one and "other" (no model). */
+/** The model for a detected form factor; null for "other" (no model). */
 export function shapeForFormFactor(formFactor: FormFactor): DeviceShape | null {
   switch (formFactor) {
     case "desktop":
@@ -30,13 +30,14 @@ export function shapeForFormFactor(formFactor: FormFactor): DeviceShape | null {
     case "mini":
       return "mini";
     case "allInOne":
+      return "allInOne";
     case "other":
       return null;
   }
 }
 
 export type UnknownShapeReason =
-  /** Detection worked, but there is no 3D model for it (all-in-one, rack, ...). */
+  /** Detection worked, but there is no 3D model for it (rack, handheld, ...). */
   | { kind: "noModel"; formFactor: FormFactor }
   /** Detection could not decide: sources disagree, none is decisive, a read failed, or the inventory failed to load. */
   | { kind: "unavailable"; reason: Unavailability };

@@ -15,11 +15,12 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionHeading } from "@/components/layout/SectionHeading";
 import { useT } from "@/i18n";
 import { stateKindForError } from "@/lib/errors";
-import { formatUnitValue } from "@/lib/format";
+import { formatDateTime, formatUnitValue } from "@/lib/format";
 import { duration, ease, pageVariants } from "@/lib/motion";
 import { useInventory } from "@/features/monitoring/inventoryStore";
 import type { BenchmarkCapability } from "@/types/generated/BenchmarkCapability";
 import type { BenchmarkKind } from "@/types/generated/BenchmarkKind";
+import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 import { benchStore, useBench } from "./benchStore";
 import { ComparisonPanel } from "./ComparisonPanel";
 import { componentSummary, DetectedComponent, useEnsureInventory } from "./DetectedComponent";
@@ -39,6 +40,7 @@ import {
   stateTone,
 } from "./model";
 import { ResultMeta, ResultView } from "./ResultView";
+import { BenchIllustration } from "./Illustration";
 import { TestPanel } from "./TestPanel";
 import { COMPONENT_ICON } from "./ui";
 import { useBenchView } from "./viewStore";
@@ -48,7 +50,11 @@ const NO_CAPS: readonly BenchmarkCapability[] = [];
 /** Entrance of a block that appears in response to a run starting or finishing. */
 const panelIn = {
   initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0, transition: { duration: duration.component, ease: ease.out } },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: duration.component, ease: ease.out },
+  },
 } as const;
 
 /**
@@ -186,6 +192,7 @@ function ComponentGrid() {
           </li>
         ))}
       </ul>
+      <RecentResults />
     </section>
   );
 }
@@ -203,24 +210,26 @@ function ComponentTile({ component }: { component: BenchComponent }) {
     <button
       type="button"
       onClick={() => open(component)}
-      className="group surface-secondary pressable flex min-h-44 w-full min-w-0 flex-col items-stretch gap-3 p-4 text-left transition-colors duration-150 hover:border-line-strong hover:bg-surface-2"
+      className="group widget pressable relative flex w-full min-w-0 flex-col items-stretch gap-3 p-5 text-left transition-[border-color,box-shadow] duration-200 hover:border-line-strong hover:shadow-lg focus-visible:outline-none"
     >
-      <span className="flex items-start justify-between gap-3">
-        <span aria-hidden="true" className="satin grid size-9 shrink-0 place-items-center rounded-full text-fg-muted">
-          <Icon name={COMPONENT_ICON[component]} size={18} />
-        </span>
-        <span className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-          {running ? (
-            <StatusBadge tone="neutral" label={t("runningKind", { kind: kindLabel(running, t) })} />
-          ) : (
-            availability.status !== "available" && (
-              <StatusBadge
-                tone="neutral"
-                label={availability.status === "unavailable" && availability.reason?.kind === "notSupported" ? t("unsupportedShort") : t("notAvailable")}
-              />
-            )
-          )}
-        </span>
+      <span aria-hidden="true" className="-mx-1 -mt-1 block h-32">
+        <BenchIllustration component={component} label="" active={running !== null} />
+      </span>
+      <span className="absolute top-4 right-4 flex min-w-0 flex-wrap items-center justify-end gap-2">
+        {running ? (
+          <StatusBadge tone="neutral" label={t("runningKind", { kind: kindLabel(running, t) })} />
+        ) : (
+          availability.status !== "available" && (
+            <StatusBadge
+              tone="neutral"
+              label={
+                availability.status === "unavailable" && availability.reason?.kind === "notSupported"
+                  ? t("unsupportedShort")
+                  : t("notAvailable")
+              }
+            />
+          )
+        )}
       </span>
 
       <span className="flex min-w-0 flex-col gap-0.5">
@@ -281,12 +290,89 @@ function LastHeadline({ component }: { component: BenchComponent }) {
   );
 }
 
+/**
+ * The latest result of every test kind, newest first: one row each with the component's art,
+ * the headline value and when it ran. Opens that component's screen. Before any run, a short
+ * explanation of how the tests work takes the place of the list.
+ */
+function RecentResults() {
+  const t = useT("benchmarks");
+  const headingId = useId();
+  const open = useBenchView((s) => s.open);
+  const byKind = useBench((s) => s.lastResultByKind);
+  const results = useMemo(
+    () =>
+      Object.values(byKind)
+        .filter((r): r is BenchmarkResult => r !== undefined)
+        .sort((a, b) => b.startedAt - a.startedAt),
+    [byKind],
+  );
+  return (
+    <section aria-labelledby={headingId} className="mt-6 flex flex-col gap-4">
+      <SectionHeading id={headingId}>{t("recentResults")}</SectionHeading>
+      {results.length === 0 ? (
+        <div className="widget grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+          {(["howStep1", "howStep2", "howStep3"] as const).map((k, i) => (
+            <div key={k} className="flex min-w-0 gap-3">
+              <span className="satin grid size-8 shrink-0 place-items-center rounded-full text-sm font-semibold text-fg tabular">
+                {i + 1}
+              </span>
+              <p className="text-sm text-fg-muted">{t(k)}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="widget flex flex-col p-2">
+          {results.map((r) => {
+            const component = componentOfKind(r.kind);
+            const head = headlineMetric(r);
+            const value = head ? splitUnitValue(formatUnitValue(head.value, head.unit)) : null;
+            return (
+              <li key={r.runId}>
+                <button
+                  type="button"
+                  onClick={() => open(component)}
+                  className="group grid w-full grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-4 rounded-xl px-3 py-2 text-left transition-colors duration-150 hover:bg-control-hover"
+                >
+                  <span aria-hidden="true" className="block h-10">
+                    <BenchIllustration component={component} label="" />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm font-medium text-fg">{kindLabel(r.kind, t)}</span>
+                    <span className="truncate text-xs text-fg-subtle tabular">{formatDateTime(r.startedAt)}</span>
+                  </span>
+                  <span className="flex min-w-0 items-center gap-3">
+                    {head && value ? (
+                      <span className="flex flex-col items-end">
+                        <Readout size="sm" value={value.value} {...(value.unit ? { unit: value.unit } : {})} />
+                        <span className="truncate text-2xs text-fg-subtle">{head.label}</span>
+                      </span>
+                    ) : (
+                      <StatusBadge tone={stateTone(r.state)} label={stateLabel(r.state, t)} glyph size="sm" />
+                    )}
+                    <Icon name="chevronRight" size={14} className="text-fg-subtle" />
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** On a component screen: the same four components as one segmented control. */
 function ComponentPicker({ value }: { value: BenchComponent }) {
   const t = useT("benchmarks");
   const open = useBenchView((s) => s.open);
   const options = useMemo(
-    () => BENCH_COMPONENTS.map((c) => ({ value: c.id, label: c.label, icon: COMPONENT_ICON[c.id] })),
+    () =>
+      BENCH_COMPONENTS.map((c) => ({
+        value: c.id,
+        label: c.label,
+        icon: COMPONENT_ICON[c.id],
+      })),
     [],
   );
   return (
@@ -305,9 +391,7 @@ function ComponentScreen({ component }: { component: BenchComponent }) {
   const caps = useComponentCaps(component);
   const activeKind = useBench((s) => s.activeRun?.kind ?? null);
   // Primitive: stable for the whole run, so progress events do not re-render this screen.
-  const liveRunId = useBench((s) =>
-    s.activeRun && componentOfKind(s.activeRun.kind) === component ? s.activeRun.runId : null,
-  );
+  const liveRunId = useBench((s) => (s.activeRun && componentOfKind(s.activeRun.kind) === component ? s.activeRun.runId : null));
   const [kind, setKind] = useState<BenchmarkKind | null>(
     () =>
       (activeKind && componentOfKind(activeKind) === component ? activeKind : null) ??
@@ -357,6 +441,9 @@ function ComponentScreen({ component }: { component: BenchComponent }) {
         )}
 
         <Panel title={t("detectedTitle")} icon={COMPONENT_ICON[component]} className="min-w-0">
+          <div aria-hidden="true" className="-mx-2 mb-4 h-36">
+            <BenchIllustration component={component} label="" active={liveRunId !== null} />
+          </div>
           <DetectedComponent component={component} />
         </Panel>
       </div>
@@ -372,17 +459,20 @@ function LatestResult({ kind }: { kind: BenchmarkKind }) {
   const result = useBench((s) => s.lastResultByKind[kind] ?? null);
   const runningThis = useBench((s) => s.activeRun?.kind === kind);
   const visible = result && !runningThis ? result : null;
+  if (!result && !runningThis) {
+    return (
+      <Panel title={t("result")} eyebrow={kindLabel(kind, t)}>
+        <StateView kind="empty" title={t("noResultYet")} description={t("noResultYetDesc")} />
+      </Panel>
+    );
+  }
   return (
     <AnimatePresence initial={false}>
       {visible && (
         <m.div key={visible.runId} {...panelIn}>
           {/* Secondary: the test panel above stays the screen's one focal (primary) panel. */}
           <Panel title={t("result")} eyebrow={kindLabel(visible.kind, t)} aside={<ResultMeta result={visible} />}>
-            <ResultView
-              result={visible}
-              meta={false}
-              comparison={<ComparisonPanel key={visible.runId} currentRunId={visible.runId} />}
-            />
+            <ResultView result={visible} meta={false} comparison={<ComparisonPanel key={visible.runId} currentRunId={visible.runId} />} />
           </Panel>
         </m.div>
       )}

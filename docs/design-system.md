@@ -265,26 +265,29 @@ No other icon set, no emoji. A new icon is drawn on the same grid in `iconPaths.
 
 ## Screens
 
-Each page starts with `PageHeader` (title + at most one primary action) and is built from
-primitives only. One focal element per screen.
+Each page starts with `PageHeader`: a 34 px large title with one line under it saying what the
+page is for (`shell:subtitle_<section>`), at most one primary action. When content scrolls
+under it the title settles to 20 px and the line folds away. Built from primitives only. One
+focal element per screen; no column ends early leaving a hole (spec rows split evenly, panels
+in a row share their height).
 
 ### Overview (start page)
 
 1. **Hero** (focal, `rounded-2xl` stage, solid or very subtle glass): the procedural 3D model
-   of the device's form factor (tower / laptop / mini PC, `src/features/device3d`), with the
+   of the device's form factor (tower / laptop / mini PC / all-in-one, `src/features/device3d`; how to add a model: `types.ts`), with the
    **device identity** next to it (model or OS name, CPU, GPU, memory, form factor as
    reported; unknown parts are omitted, not guessed) and the **overall state**: a sentence
    derived from the latest diagnosis ("Nessun problema rilevato" / "2 avvisi" with the
    highest severity tone and the time of the run), or "Diagnosi non ancora eseguita" with a
    Run action. No score, no percentage of health.
-2. **Essential metrics**: one row of 3–4 primary readings (CPU load, memory in use, GPU load,
-   storage free), each a `Stat` or `RingGauge` with a compact `Sparkline` of the last minute;
-   warn/bad tones only from `levels.ts`.
-3. **Detected problems**: the top findings (severity badge, one-line headline, link to
-   Diagnostics). Empty: `StateView kind="empty"` inline, not a big box.
-4. **Quick actions**: Run diagnosis (primary if none recent), Run a benchmark, Export report.
-5. **Compact trend charts** below (CPU, memory, disk, network), `LineChart` at ~120 px, no
-   current values in their headers; top processes as a short `Table` linking to Processes.
+2. **Components** as widgets (`ComponentWidgets.tsx`, `widget` material: dense frosted glass,
+   24 px radius): CPU, memory, GPU, disk activity. Each has its value large, the last two
+   minutes as an area trend next to it, and its secondary readings in a grid. A reading the
+   platform cannot provide at all (`notSupported`) leaves the grid and is named once in a
+   footnote ("Non rilevabili su questo computer: …"), so a widget never shows a column of
+   "n/d". Storage follows full width (volumes, disk health).
+3. **Findings and processes** side by side; no findings: a centered empty state.
+4. **Per-core grid** (folded).
 
 ### Hardware
 
@@ -295,7 +298,11 @@ inventory time once in the toolbar area. No live values.
 ### Benchmarks
 
 1. **Selection**: four component tiles (CPU, GPU, RAM, SSD) as a selectable group, each with
-   the detected device and availability (unsupported shows why).
+   an isometric illustration of the part (`Illustration.tsx`, theme tokens `--art-*`; it lifts
+   on hover, fans spin and RAM chips light while that component's test runs; nothing moves with
+   reduced motion), the detected device and availability (unsupported shows why). Below,
+   the latest result of every test (seeded from storage at start), or a three-step "how it
+   works" before the first run.
 2. **Configuration** of the selected component: test type (`Segmented`), duration / size
    options, the start button (primary). One heavy benchmark at a time.
 3. **Progress**: the floating running strip (global) plus interim readings on the page;

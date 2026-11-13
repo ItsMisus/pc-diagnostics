@@ -4,4 +4,4 @@
  * Device model shown in the Overview. Also the user's manual choice in Settings
  * (`AppSettings::device_shape`), which wins over detection.
  */
-export type DeviceShape = "tower" | "laptop" | "mini";
+export type DeviceShape = "tower" | "laptop" | "mini" | "allInOne";

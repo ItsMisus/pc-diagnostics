@@ -84,7 +84,8 @@ function Inventory({ data }: { data: HardwareInventory }) {
         <div className="@container">
           <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-2">
             {arranged.map(({ key, span }) => (
-              <div key={key} className={`min-w-0 ${span === "full" ? "@3xl:col-span-2" : ""}`}>
+              // Panels in a row share its height (`*:flex-1`), so their edges line up.
+              <div key={key} className={`flex min-w-0 *:min-w-0 *:flex-1 ${span === "full" ? "@3xl:col-span-2" : ""}`}>
                 {panels[key]}
               </div>
             ))}

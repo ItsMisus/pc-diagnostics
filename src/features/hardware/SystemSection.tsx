@@ -28,18 +28,9 @@ export function SystemSection({ formFactor }: { formFactor: FormFactorInfo }) {
   return (
     <Panel variant="primary" title={t("systemTitle")} titleId={titleId}>
       <Identity info={formFactor} />
-      {/* Its own size container: the two groups go side by side only when the panel has the room. */}
-      <div className="@container mt-5">
-        <div className="grid grid-cols-1 gap-x-10 gap-y-6 @2xl:grid-cols-2">
-          <div className="min-w-0">
-            <h3 className="eyebrow mb-2">{t("deviceGroup")}</h3>
-            <DeviceRows info={formFactor} />
-          </div>
-          <div className="min-w-0">
-            <h3 className="eyebrow mb-2">{t("softwareGroup")}</h3>
-            <SystemRows />
-          </div>
-        </div>
+      {/* One spec sheet (device evidence, then the system) split in two even columns. */}
+      <div className="@container mt-6">
+        <SpecRows deviceItems={useDeviceItems(formFactor)} />
       </div>
     </Panel>
   );
@@ -89,7 +80,7 @@ function Identity({ info }: { info: FormFactorInfo }) {
 }
 
 /** Spec rows of the device: evidence (model identifier, chassis codes), battery. */
-function DeviceRows({ info }: { info: FormFactorInfo }) {
+function useDeviceItems(info: FormFactorInfo): DefinitionItem[] {
   const t = useT("hardware");
   const simple = useIsSimple();
   const yesNo = (v: boolean) => (v ? t("yes") : t("no"));
@@ -104,11 +95,24 @@ function DeviceRows({ info }: { info: FormFactorInfo }) {
     items.push({ label: t("chassisTypes"), value: <span className="font-mono text-xs">{info.chassisTypes.join(", ")}</span> });
   }
   items.push(metricItem(t("internalBattery"), info.internalBattery, yesNo));
-
-  return <DefinitionList divided items={items} />;
+  return items;
 }
 
-function SystemRows() {
+/**
+ * The rows in two columns of equal length (the left one takes the odd row), so neither
+ * column ends early and leaves a hole. One column when the panel is narrow.
+ */
+function TwoColumns({ items }: { items: DefinitionItem[] }) {
+  const half = Math.ceil(items.length / 2);
+  return (
+    <div className="grid grid-cols-1 gap-x-12 @2xl:grid-cols-2">
+      <DefinitionList divided items={items.slice(0, half)} />
+      <DefinitionList divided items={items.slice(half)} className="max-@2xl:mt-2 max-@2xl:border-t max-@2xl:border-line max-@2xl:pt-2" />
+    </div>
+  );
+}
+
+function SpecRows({ deviceItems }: { deviceItems: DefinitionItem[] }) {
   const [state, reload] = useAsync(commands.getSystemInfo);
   const t = useT("hardware");
   const tc = useT("common");
@@ -123,7 +127,12 @@ function SystemRows() {
   }
   if (state.status === "error") {
     const kind = state.error.code === "notSupported" ? "unsupported" : "error";
-    return <StateView compact kind={kind} error={state.error} onRetry={reload} />;
+    return (
+      <div className="flex flex-col gap-3">
+        <TwoColumns items={deviceItems} />
+        <StateView compact kind={kind} error={state.error} onRetry={reload} />
+      </div>
+    );
   }
 
   const s = state.data;
@@ -137,5 +146,5 @@ function SystemRows() {
     [t("uptime"), s.uptimeS !== null ? formatDuration(s.uptimeS) : na],
   ];
 
-  return <DefinitionList divided items={rows.map(([label, value]) => ({ label, value }))} />;
+  return <TwoColumns items={[...deviceItems, ...rows.map(([label, value]) => ({ label, value }))]} />;
 }

@@ -3,8 +3,11 @@ import type { Translation } from "../types";
 
 /** English texts for the "overview" namespace (the dashboard). */
 export default {
+  componentsTitle: "Components",
+  trendAria: "{label}, last two minutes",
+  notOnThisDevice: "Not measurable on this computer: {list}.",
+  volumeFree: "{free} free of {total}",
   monitoringCard: "Monitoring",
-  recentTrend: "Recent activity",
 
   // Panels.
   load: "Load",
@@ -80,6 +83,7 @@ export default {
   shape_tower: "Desktop",
   shape_laptop: "Laptop",
   shape_mini: "Mini PC",
+  shape_allInOne: "All-in-one",
   shapeAuto: "Automatic",
   shapeDetected_productName: "Detected from the product name",
   shapeDetected_modelIdentifier: "Detected from the model identifier",
@@ -108,7 +112,6 @@ export default {
   chipTemp: "CPU temp.",
 
   // Essential metrics.
-  essentialsTitle: "Resources",
   sparkAria: "{label}, last minute",
   cpuLoad: "CPU load",
   gpuLoad: "GPU load",
@@ -120,6 +123,5 @@ export default {
 
   // Groups.
   findingsTitle: "Findings",
-  detailsTitle: "Details",
   findingsNeverRun: "Findings appear after the first diagnosis.",
 } satisfies Translation<typeof it>;

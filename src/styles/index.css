@@ -86,6 +86,20 @@
   --elev-2: 0 6px 16px -6px rgb(16 24 40 / 0.14), 0 2px 4px -2px rgb(16 24 40 / 0.08);
   --elev-3: 0 16px 36px -10px rgb(16 24 40 / 0.22), 0 4px 10px -4px rgb(16 24 40 / 0.1);
   --elev-4: 0 32px 72px -16px rgb(16 24 40 / 0.3), 0 8px 20px -8px rgb(16 24 40 / 0.14);
+  /* Benchmark illustrations (features/benchmarks/Illustration.tsx): isometric faces. */
+  --art-metal-top: #e9ecf1;
+  --art-metal-left: #c4c9d1;
+  --art-metal-right: #a8aeb8;
+  --art-dark-top: #4a4f58;
+  --art-dark-left: #2f333a;
+  --art-dark-right: #24272d;
+  --art-board-top: #3c4a44;
+  --art-board-left: #2a352f;
+  --art-board-right: #222b26;
+  --art-gold: #c9a24a;
+  --art-fan: #1d2025;
+  --art-edge: rgb(255 255 255 / 0.18);
+  --art-shadow: rgb(16 24 40 / 0.22);
   color-scheme: light;
 }
 
@@ -147,6 +161,19 @@
     --elev-2: 0 8px 20px -6px rgb(0 0 0 / 0.5), 0 2px 5px -2px rgb(0 0 0 / 0.35);
     --elev-3: 0 18px 40px -10px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
     --elev-4: 0 36px 80px -16px rgb(0 0 0 / 0.7), 0 10px 24px -8px rgb(0 0 0 / 0.45);
+    --art-metal-top: #c9cdd4;
+    --art-metal-left: #8e949d;
+    --art-metal-right: #6f747c;
+    --art-dark-top: #3a3e46;
+    --art-dark-left: #25282e;
+    --art-dark-right: #1b1d22;
+    --art-board-top: #2f3b36;
+    --art-board-left: #202925;
+    --art-board-right: #19201c;
+    --art-gold: #b8913e;
+    --art-fan: #111316;
+    --art-edge: rgb(255 255 255 / 0.12);
+    --art-shadow: rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
@@ -208,6 +235,19 @@
   --elev-2: 0 8px 20px -6px rgb(0 0 0 / 0.5), 0 2px 5px -2px rgb(0 0 0 / 0.35);
   --elev-3: 0 18px 40px -10px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
   --elev-4: 0 36px 80px -16px rgb(0 0 0 / 0.7), 0 10px 24px -8px rgb(0 0 0 / 0.45);
+  --art-metal-top: #c9cdd4;
+  --art-metal-left: #8e949d;
+  --art-metal-right: #6f747c;
+  --art-dark-top: #3a3e46;
+  --art-dark-left: #25282e;
+  --art-dark-right: #1b1d22;
+  --art-board-top: #2f3b36;
+  --art-board-left: #202925;
+  --art-board-right: #19201c;
+  --art-gold: #b8913e;
+  --art-fan: #111316;
+  --art-edge: rgb(255 255 255 / 0.12);
+  --art-shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -693,6 +733,31 @@
   }
 }
 
+/*
+ * Widget material (Overview components, benchmark tiles): frosted glass over the ambient
+ * canvas, like a macOS widget. The fill stays dense (≥ 80 %) so numbers and charts read as
+ * on a solid surface; the sheen, edge and top highlight make it glass. Not for repeated
+ * rows: a handful per screen.
+ */
+@utility widget {
+  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  background-image:
+    linear-gradient(180deg, var(--glass-sheen), transparent 36%),
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-1);
+  -webkit-backdrop-filter: blur(var(--blur-thin)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-thin)) saturate(var(--glass-saturate));
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 /* Toolbar band: translucent canvas with blur, no border (a hairline appears once content scrolls under it). */
 @utility glass-bar {
   background-color: color-mix(in srgb, var(--canvas) 72%, transparent);
@@ -747,11 +812,137 @@
   [data-scrolled="true"] .page-toolbar::before {
     opacity: 1;
   }
+  /* Large title (34 px) that settles to toolbar size once content scrolls under it. */
+  .page-title {
+    font-size: var(--text-4xl);
+    line-height: 1.12;
+    letter-spacing: -0.022em;
+    transition: font-size var(--dur-panel) var(--ease-out);
+  }
+  .page-subtitle {
+    display: grid;
+    max-height: 3rem;
+    margin-top: 4px;
+    overflow: hidden;
+    transition:
+      max-height var(--dur-panel) var(--ease-out),
+      opacity var(--dur-component) var(--ease-out),
+      margin-top var(--dur-panel) var(--ease-out);
+  }
+  .page-toolbar {
+    transition:
+      padding var(--dur-panel) var(--ease-out),
+      background-color var(--dur-component) var(--ease-out),
+      box-shadow var(--dur-component) var(--ease-out);
+  }
+  [data-scrolled="true"] .page-toolbar {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  [data-scrolled="true"] .page-title {
+    font-size: var(--text-xl);
+  }
+  [data-scrolled="true"] .page-subtitle {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-title,
+    .page-subtitle,
+    .page-toolbar {
+      transition: none;
+    }
+  }
   @media (prefers-reduced-transparency: reduce) {
     .page-toolbar::before {
       background-color: var(--canvas);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
+  }
+}
+
+/* ---------------------------------------------------------------- Benchmark illustrations */
+
+@layer components {
+  .bench-art-body,
+  .bench-art-shadow {
+    transition:
+      transform var(--dur-panel) var(--ease-out),
+      opacity var(--dur-panel) var(--ease-out);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .bench-art-glow {
+    opacity: 0.55;
+    transition: opacity var(--dur-panel) var(--ease-out);
+  }
+  .bench-art-chip polygon {
+    transition: fill var(--dur-component) var(--ease-out);
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-body,
+  .bench-art-wrap.is-active .bench-art-body {
+    transform: translateY(-5px);
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-shadow,
+  .bench-art-wrap.is-active .bench-art-shadow {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-glow,
+  .bench-art-wrap.is-active .bench-art-glow {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :where(.group:hover, .group:focus-visible) .bench-art-spin,
+    .bench-art-wrap.is-active .bench-art-spin {
+      animation: bench-spin 0.9s linear infinite;
+    }
+    :where(.group:hover, .group:focus-visible) .bench-art-chip > polygon:last-child,
+    .bench-art-wrap.is-active .bench-art-chip > polygon:last-child {
+      animation: bench-chip 1.6s var(--ease-in-out) infinite;
+    }
+    .bench-art-chip-1 > polygon:last-child {
+      animation-delay: 0.2s !important;
+    }
+    .bench-art-chip-2 > polygon:last-child {
+      animation-delay: 0.4s !important;
+    }
+    .bench-art-chip-3 > polygon:last-child {
+      animation-delay: 0.6s !important;
+    }
+    .bench-art-wrap.is-active .bench-art-glow {
+      animation: bench-pulse 1.4s var(--ease-in-out) infinite;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bench-art-body,
+    .bench-art-shadow,
+    .bench-art-glow {
+      transition: none;
+    }
+  }
+}
+
+@keyframes bench-spin {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@keyframes bench-chip {
+  0%,
+  100% {
+    fill: var(--art-dark-top);
+  }
+  40% {
+    fill: color-mix(in srgb, var(--accent) 75%, var(--art-dark-top));
+  }
+}
+
+@keyframes bench-pulse {
+  50% {
+    opacity: 0.55;
   }
 }

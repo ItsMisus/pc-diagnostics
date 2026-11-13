@@ -72,6 +72,18 @@ export const PRESETS: Record<DeviceKind, DevicePreset> = {
     shadow: { width: 1.27, depth: 1.27, z: 0 },
     floatAmplitude: 0.012,
   },
+  allInOne: {
+    size: [5.4, 4.15, 1.4],
+    heroYaw: deg(28),
+    heroElevation: deg(10),
+    yawLimit: deg(50),
+    elevationRange: [deg(-6), deg(12)],
+    fov: 26,
+    padding: 0.08,
+    aimHeight: 0.5,
+    shadow: { width: 2.2, depth: 1.5, z: 0 },
+    floatAmplitude: 0.02,
+  },
 };
 
 export function presetFor(kind: DeviceKind): DevicePreset {

@@ -186,13 +186,28 @@ function drawMini(d: Drawing): void {
   d.dot(f.front, "light", 0.86, 0.5, 0.018, 0.05);
 }
 
+function drawAllInOne(d: Drawing): void {
+  const [w, h] = PRESETS.allInOne.size;
+  // Foot, arm (as a box leaning back), then the display body with screen and chin.
+  d.box(boxFaces([-0.9, 0, -0.7], [0.9, 0.05, 0.7]));
+  d.box(boxFaces([-0.7, 0.05, -0.4], [0.7, 1.3, -0.33], 0.45, [0, 0.05, -0.36]));
+  const body = d.box(boxFaces([-w / 2, 0.75, 0.24], [w / 2, h, 0.36]), { front: "dark" });
+  d.rect(body.front, "screen", 0.022, 0.12, 0.978, 0.965);
+  d.dot(body.front, "light", 0.94, 0.06, 0.006, 0.01);
+}
+
+const DRAW: Record<DeviceKind, (d: Drawing) => void> = {
+  tower: drawTower,
+  laptop: drawLaptop,
+  mini: drawMini,
+  allInOne: drawAllInOne,
+};
+
 /** Polygons for a kind, already sorted back to front, and a viewBox with the preset padding. */
 export function illustrationFor(kind: DeviceKind): Illustration {
   const p = PRESETS[kind];
   const d = new Drawing(new Projector(p.heroYaw, p.heroElevation));
-  if (kind === "tower") drawTower(d);
-  else if (kind === "laptop") drawLaptop(d);
-  else drawMini(d);
+  DRAW[kind](d);
   const shapes = d.shapes.sort((a, b) => a.depth - b.depth);
   let minX = Infinity;
   let minY = Infinity;

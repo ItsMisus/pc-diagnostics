@@ -32,8 +32,8 @@ const windowsTower: FormFactorInfo = {
 };
 
 describe("shape choice", () => {
-  it("lists Automatico first, then the three models", () => {
-    expect(SHAPE_CHOICES).toEqual(["auto", "tower", "laptop", "mini"]);
+  it("lists Automatico first, then the models", () => {
+    expect(SHAPE_CHOICES).toEqual(["auto", "tower", "laptop", "mini", "allInOne"]);
   });
 
   it("maps no stored choice to Automatico and back", () => {
@@ -65,9 +65,11 @@ describe("detectionResult", () => {
     if (r.origin === "unknown") expect(r.why.kind).toBe("unavailable");
   });
 
-  it("asks the user for an all-in-one (no 3D model)", () => {
-    const r = detectionResult({ ...macBookAir, formFactor: ok<FormFactor>("allInOne") }, null);
-    expect(r).toEqual({ origin: "unknown", shape: null, why: { kind: "noModel", formFactor: "allInOne" } });
+  it("shows the all-in-one model and asks the user for \"other\" (no 3D model)", () => {
+    const aio = detectionResult({ ...macBookAir, formFactor: ok<FormFactor>("allInOne") }, null);
+    expect(aio.shape).toBe("allInOne");
+    const r = detectionResult({ ...macBookAir, formFactor: ok<FormFactor>("other") }, null);
+    expect(r).toEqual({ origin: "unknown", shape: null, why: { kind: "noModel", formFactor: "other" } });
   });
 });
 

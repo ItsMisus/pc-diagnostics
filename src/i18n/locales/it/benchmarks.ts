@@ -1,5 +1,11 @@
 /** Italian (reference) texts for the "benchmarks" namespace (also used by History). */
 export default {
+  noResultYet: "Nessun risultato per questo test",
+  noResultYetDesc: "Avvia il test: qui compariranno il valore misurato, il suo andamento e il confronto con le esecuzioni precedenti.",
+  recentResults: "Ultimi risultati",
+  howStep1: "Scegli un componente: processore, scheda video, memoria o disco.",
+  howStep2: "Regola la durata se vuoi, poi avvia il test. Puoi fermarlo in qualsiasi momento.",
+  howStep3: "Il risultato resta salvato: lo trovi qui e nella Cronologia, pronto per il confronto.",
   // Test kinds, run states, power sources.
   kind_cpuSingleCore: "CPU single-core",
   kind_cpuMultiCore: "CPU multi-core",

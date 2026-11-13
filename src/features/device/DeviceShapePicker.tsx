@@ -11,7 +11,7 @@ import { useDeviceShape } from "./useDeviceShape";
 type PickerValue = DeviceShape | "auto";
 
 /** Glyph of each device model, from the one icon family. */
-export const SHAPE_ICON: Record<DeviceShape, IconName> = { tower: "desktop", laptop: "laptop", mini: "miniPc" };
+export const SHAPE_ICON: Record<DeviceShape, IconName> = { tower: "desktop", laptop: "laptop", mini: "miniPc", allInOne: "allInOne" };
 
 /**
  * Which 3D device model to show: "Automatico" (follow the detected form factor, i.e. no saved

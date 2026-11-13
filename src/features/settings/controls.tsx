@@ -63,7 +63,7 @@ export function SettingsGroup({ title, children }: { title: string; children: Re
   const id = useId();
   return (
     <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2.5">
-      <h2 id={id} className="px-1 font-display text-md font-semibold text-fg">
+      <h2 id={id} className="font-display text-lg font-semibold text-fg">
         {title}
       </h2>
       <div className="flex min-w-0 flex-col gap-4">{children}</div>

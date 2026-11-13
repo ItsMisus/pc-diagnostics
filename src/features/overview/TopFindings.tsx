@@ -77,7 +77,7 @@ function FindingList({ report }: { report: DiagnosticReport }) {
   if (top.length === 0) {
     return (
       <StateView
-        compact
+        layout="hero"
         kind="empty"
         title={simple ? simpleNothingFound() : noFindingsCopy()}
         {...(simple ? { description: simpleNotAGuarantee() } : { description: td("insightsCoverage", { sentence: coverageSentence(coverage) }) })}

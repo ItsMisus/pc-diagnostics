@@ -3,6 +3,8 @@ import type { Translation } from "../types";
 
 /** English texts for the "diagnostics" namespace. */
 export default {
+  coverageCount: "{done} of {total} areas fully checked",
+  coverageWhyPartial: "What could not be checked",
   // Page and run states
   run: "Run diagnostics",
   running: "Running diagnostics…",

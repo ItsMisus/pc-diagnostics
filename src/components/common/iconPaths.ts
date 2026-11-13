@@ -120,6 +120,7 @@ export const ICON_PATHS = {
   // Device types (form factors)
   desktop: `${rect(4.5, 1.75, 7, 12.5, 1.5)}M6.75 4.5h2.5M6.75 6.5h2.5M8 11.25v.01`,
   laptop: `${rect(3, 3, 10, 7.25, 1.25)}M1.5 12.75h13`,
+  allInOne: `${rect(1.75, 1.75, 12.5, 9.5, 1.5)}M1.75 8.75h12.5M6.5 11.25l-.75 3h4.5l-.75-3`,
   miniPc: `${rect(2, 5.5, 12, 5, 1.75)}M4.5 8h.01M4.25 12.75h7.5`,
   // Appearance and language
   sun: `${circle(8, 8, 2.75)}${sunRays}`,

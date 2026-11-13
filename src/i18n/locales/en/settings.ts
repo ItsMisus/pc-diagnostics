@@ -100,6 +100,7 @@ export default {
   shape_tower: "Tower",
   shape_laptop: "Laptop",
   shape_mini: "Mini",
+  shape_allInOne: "All-in-one",
   detecting: "Detecting the device…",
   detectedAs: "Detected: {shape} ({basis})",
   detectedAsNoBasis: "Detected: {shape}",
