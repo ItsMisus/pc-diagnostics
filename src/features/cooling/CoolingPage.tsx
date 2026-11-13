@@ -20,7 +20,7 @@ import type { CoolingState } from "@/types/generated/CoolingState";
 import { coolingApi } from "./api";
 import { CurvePanel } from "./CurvePanel";
 import { type Draft, draftFromProfile, newDraft, profileName, profileOptions, toProfileDraft, userProfiles } from "./model";
-import { CoolingGallery, CoolingHero, FansPanel, PolicyPanel } from "./Panels";
+import { CoolingHero, FansPanel } from "./Panels";
 
 /** Fan speeds are re-read this often while fans with a measured speed are shown. */
 const FAN_REFRESH_MS = 2000;
@@ -29,11 +29,11 @@ type Load = { status: "loading" } | { status: "ready"; data: CoolingState } | { 
 
 /**
  * Cooling center (docs/control-centers.md). Composition like the Overview:
- * 1. the hero, the focal element: this computer's cooling system in 3D, what it is and what
- *    the app can change here;
+ * 1. the hero, the focal element: this computer's cooling system in 3D (the other kinds can be
+ *    shown there as examples, marked as not present), what it is, what the app can change
+ *    here and the cooling policy in effect;
  * 2. the profiles (applied at once when the system allows it);
- * 3. the fans the system reports, the fan curve editor and the cooling policy;
- * 4. the other kinds of cooling as types, never as detected hardware.
+ * 3. the fans the system reports and the fan curve editor.
  * Nothing changes without a user action; "Ripristina" puts back what was found first.
  */
 export function CoolingPage() {
@@ -175,23 +175,18 @@ export function CoolingPage() {
 
           <div className="flex flex-col gap-4">
             {data.fans.length > 0 && <FansPanel fans={data.fans} target={target} onTarget={setTarget} />}
-            <div className="grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-              <CurvePanel
-                state={data}
-                draft={draft}
-                onDraft={setDraft}
-                target={target}
-                onTarget={setTarget}
-                onEdit={edit}
-                onSave={(a) => void save(a)}
-                onDelete={remove}
-                busy={busy}
-              />
-              <PolicyPanel state={data} className="self-start" />
-            </div>
+            <CurvePanel
+              state={data}
+              draft={draft}
+              onDraft={setDraft}
+              target={target}
+              onTarget={setTarget}
+              onEdit={edit}
+              onSave={(a) => void save(a)}
+              onDelete={remove}
+              busy={busy}
+            />
           </div>
-
-          <CoolingGallery state={data} />
         </div>
       )}
 

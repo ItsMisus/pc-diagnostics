@@ -4,6 +4,7 @@ import type { PerformanceSupplySettings } from "@/types/generated/PerformanceSup
 import {
   anyAdvancedSupported,
   controlList,
+  CONTROLS,
   coreLook,
   copySupply,
   displayedMode,
@@ -75,10 +76,13 @@ const windowsCaps = {
 };
 
 describe("performance model", () => {
-  it("lists every control with its support, in order", () => {
+  it("lists every control with its support: available, then unsupported, then read-only", () => {
     const list = controlList(macState().capabilities);
-    expect(list.map((c) => c.control)).toEqual(["mode", "keepAwake", "processorState", "boostMode", "displayTimeout", "sleepTimeout"]);
-    expect(list[1]?.support.state).toBe("supported");
+    expect(list.map((c) => c.control).sort()).toEqual([...CONTROLS].sort());
+    const ranks = list.map((c) => ({ supported: 0, unsupported: 1, readOnly: 2 })[c.support.state]);
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    expect(list[0]?.support.state).toBe("supported");
+    expect(controlList(windowsCaps).map((c) => c.control)).toEqual([...CONTROLS]);
     expect(anyAdvancedSupported(macState().capabilities)).toBe(false);
     expect(anyAdvancedSupported(windowsCaps)).toBe(true);
   });

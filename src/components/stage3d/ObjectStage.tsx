@@ -39,6 +39,11 @@ export interface ObjectStageProps<P extends object> {
   paused?: boolean;
   /** Drag to orbit around the object (default true), within a limited arc. */
   orbit?: boolean;
+  /**
+   * The object turns slowly on itself (a turntable, one turn in about 24 s). Drag still turns
+   * it by hand. Off with reduced motion, and stops while hidden or off screen like the rest.
+   */
+  autoRotate?: boolean;
   /** Camera distance and height (scene units); the camera looks at the origin. */
   camera?: { distance?: number; height?: number; fov?: number };
   /** Shown without WebGL, after a context loss, or if the 3D bundle fails. */
@@ -78,6 +83,7 @@ export function ObjectStage<P extends object>({
   animate = false,
   paused = false,
   orbit = true,
+  autoRotate = false,
   camera,
   fallback,
   aspectRatio = "4 / 3",
@@ -116,8 +122,9 @@ export function ObjectStage<P extends object>({
                 theme={theme}
                 reducedMotion={reducedMotion}
                 active={active}
-                continuous={animate && !reducedMotion}
+                continuous={(animate || autoRotate) && !reducedMotion}
                 orbit={orbit}
+                autoRotate={autoRotate && !reducedMotion}
                 camera={camera}
                 onReady={() => setReady(true)}
                 onContextLost={() => setFailed(true)}

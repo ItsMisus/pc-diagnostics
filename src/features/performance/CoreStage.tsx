@@ -56,6 +56,7 @@ export function CoreStage({
       loadScene={loadCoreScene}
       sceneProps={sceneProps}
       animate={mode !== null}
+      autoRotate
       paused={paused}
       camera={{ distance: 8.2, height: 2.4, fov: 30 }}
       fallback={<CoreFallback mode={mode} />}

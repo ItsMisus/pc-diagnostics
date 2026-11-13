@@ -19,7 +19,7 @@ const POSE: Record<CoolingType, { position: [number, number, number]; rotation: 
   fan: { position: [0, 0, 0], rotation: [-0.12, -0.5, 0], scale: 2 },
   tower: { position: [0, -1.05, 0], rotation: [0, -0.62, 0], scale: 1.05 },
   aio: { position: [0, -0.55, 0], rotation: [0.1, -0.5, 0], scale: 1 },
-  passive: { position: [0, -0.2, 0.1], rotation: [0.42, 0, 0], scale: 1.05 },
+  passive: { position: [0, -0.95, 0], rotation: [0, -0.55, 0], scale: 1.05 },
 };
 
 /**
@@ -39,7 +39,7 @@ export default function CoolingScene({ type, speed, theme, reducedMotion }: Cool
         {type === "fan" && <AxialFan size={1.2} speed={spin} />}
         {type === "tower" && <TowerCooler speed={spin} />}
         {type === "aio" && <AioRadiator speed={spin} />}
-        {type === "passive" && <PassiveChassis reducedMotion={reducedMotion} />}
+        {type === "passive" && <PassiveChassis theme={theme} reducedMotion={reducedMotion} />}
       </group>
     </CoolingMaterialsContext.Provider>
   );

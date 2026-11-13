@@ -23,15 +23,28 @@ export function GameCover({ game, size = "md", className = "" }: { game: GameEnt
   );
 }
 
+/**
+ * A game without box art. With the app's icon: the icon itself, crisp in the middle, over a
+ * deep blurred copy of it (its own colours fill the cover, like a store tile). Without one:
+ * a smooth two-tone gradient from the title with a soft light from the top and the initials.
+ */
 function GeneratedCover({ title, icon, size, label }: { title: string; icon: string | null; size: "sm" | "md" | "lg"; label: string }) {
   const text = size === "sm" ? "text-md" : size === "lg" ? "text-2xl" : "text-lg";
   return (
-    <div className="absolute inset-0 flex flex-col justify-between p-3" style={{ backgroundImage: coverBackground(title) }} title={label}>
-      {/* Fine diagonal grain so the placeholder reads as a printed label, not as missing art. */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:repeating-linear-gradient(135deg,rgb(255_255_255/0.5)_0_1px,transparent_1px_7px)]" />
+    <div className="absolute inset-0 flex flex-col justify-between p-3" style={icon ? undefined : { backgroundImage: coverBackground(title) }} title={label}>
+      {icon ? (
+        <>
+          <img src={icon} alt="" draggable={false} className="pointer-events-none absolute inset-0 size-full scale-[1.6] object-cover blur-2xl saturate-150" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35" />
+        </>
+      ) : (
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_0%,rgb(255_255_255/0.22),transparent_60%)]" />
+      )}
+      {/* Bottom shade so the title reads on any colour. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 to-transparent" />
       <div className="relative flex flex-1 items-center justify-center">
         {icon ? (
-          <img src={icon} alt="" draggable={false} className="w-1/2 max-w-32 drop-shadow-[0_8px_18px_rgb(0_0_0/0.35)]" />
+          <img src={icon} alt="" draggable={false} className="w-1/2 max-w-32 drop-shadow-[0_10px_22px_rgb(0_0_0/0.45)]" />
         ) : (
           <span className="font-display text-4xl font-bold tracking-tight text-white/85">{coverMonogram(title)}</span>
         )}

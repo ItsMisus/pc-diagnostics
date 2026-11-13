@@ -15,10 +15,15 @@ export interface ObjectCanvasProps<P extends object> {
   active: boolean;
   continuous: boolean;
   orbit: boolean;
+  /** Turntable spin (OrbitControls' auto-rotate); needs `continuous`. */
+  autoRotate?: boolean;
   camera?: { distance?: number; height?: number; fov?: number } | undefined;
   onReady: () => void;
   onContextLost: () => void;
 }
+
+/** OrbitControls units: 2 = one turn per 30 s at 60 fps; 2.5 ≈ one turn in 24 s. */
+const AUTO_ROTATE_SPEED = 2.5;
 
 /** Reports the first rendered frame. */
 function FirstFrame({ onReady }: { onReady: () => void }) {
@@ -41,7 +46,7 @@ function FirstFrame({ onReady }: { onReady: () => void }) {
  * the local studio environment. `continuous` switches the frame loop from on-demand to every
  * frame; inactive stages render nothing.
  */
-export default function ObjectCanvas<P extends object>({ Scene, sceneProps, theme, reducedMotion, active, continuous, orbit, camera, onReady, onContextLost }: ObjectCanvasProps<P>) {
+export default function ObjectCanvas<P extends object>({ Scene, sceneProps, theme, reducedMotion, active, continuous, orbit, autoRotate = false, camera, onReady, onContextLost }: ObjectCanvasProps<P>) {
   const [dpr] = useState(() => initialDpr(typeof window !== "undefined" ? window.devicePixelRatio : 1));
   const mounted = useRef(true);
   useLayoutEffect(() => {
@@ -88,6 +93,8 @@ export default function ObjectCanvas<P extends object>({ Scene, sceneProps, them
           rotateSpeed={0.6}
           minPolarAngle={Math.PI * 0.18}
           maxPolarAngle={Math.PI * 0.55}
+          autoRotate={autoRotate}
+          autoRotateSpeed={AUTO_ROTATE_SPEED}
         />
       )}
       <FirstFrame onReady={onReady} />

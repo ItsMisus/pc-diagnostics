@@ -13,14 +13,14 @@ const CAMERA: Record<CoolingType, { distance: number; height: number }> = {
   fan: { distance: 9, height: 1.6 },
   tower: { distance: 9.5, height: 2.6 },
   aio: { distance: 10, height: 3.4 },
-  passive: { distance: 9, height: 3.6 },
+  passive: { distance: 10, height: 3.4 },
 };
 
 /**
  * One cooling model on the shared 3D stage. `rpm` is the measured speed (fans spin only with a
- * real reading); the passive chassis animates its heat glow. Paused while another page is
- * shown or a benchmark runs; no motion with reduced motion (the stage and the scene both
- * check it).
+ * real reading); the fanless laptop animates its heat. Every model turns slowly on itself
+ * (drag still turns it by hand). Paused while another page is shown or a benchmark runs; no
+ * motion with reduced motion (the stage and the scene both check it).
  */
 export function CoolingStage({
   type,
@@ -46,6 +46,7 @@ export function CoolingStage({
       loadScene={loadScene}
       sceneProps={sceneProps}
       animate={speed > 0 || type === "passive"}
+      autoRotate
       paused={!pageVisible || benchmarkRunning}
       camera={CAMERA[type]}
       fallback={<CoolingIllustration type={type} />}

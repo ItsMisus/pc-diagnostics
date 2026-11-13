@@ -1,4 +1,5 @@
 import type { IconName } from "@/components/common/Icon";
+import { bySupport } from "@/components/control/support";
 import type { PerformanceBoostMode } from "@/types/generated/PerformanceBoostMode";
 import type { PerformanceCapabilities } from "@/types/generated/PerformanceCapabilities";
 import type { PerformanceControl } from "@/types/generated/PerformanceControl";
@@ -51,8 +52,12 @@ export function supportOf(caps: PerformanceCapabilities, control: PerformanceCon
   return caps[CAP_KEY[control]];
 }
 
+/** Every control with its support, grouped available → unsupported → read-only (stable within a group). */
 export function controlList(caps: PerformanceCapabilities): { control: PerformanceControl; support: Support }[] {
-  return CONTROLS.map((control) => ({ control, support: supportOf(caps, control) }));
+  return bySupport(
+    CONTROLS.map((control) => ({ control, support: supportOf(caps, control) })),
+    (c) => c.support,
+  );
 }
 
 /** The advanced (Windows) controls: the editor shows their group only when one is usable. */

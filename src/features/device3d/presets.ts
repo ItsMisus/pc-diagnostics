@@ -101,14 +101,24 @@ export interface Frame {
 export interface FrameOptions {
   /** Extra horizontal padding (fraction of the half width), e.g. for side indicators. */
   extraPadX?: number;
+  /** The model turns all the way round on its own: every yaw must fit, not just the drag arc. */
+  fullTurn?: boolean;
+  /** What must stay in frame when larger than the model (e.g. the airflow around it). */
+  bounds?: Box;
 }
+
+/** An axis-aligned box in model space: [minX, minY, minZ, maxX, maxY, maxZ]. */
+export type Box = readonly [number, number, number, number, number, number];
+
+/** The model's own bounding box (centred on x/z, standing on the floor). */
+export const boxOf = (size: readonly [number, number, number]): Box => [-size[0] / 2, 0, -size[2] / 2, size[0] / 2, size[1], size[2] / 2];
 
 /**
  * Camera distance needed so that the box, turned by `yaw` and seen from `elevation`, fits
  * the viewport with the given padding on each axis. Exact for the 8 corners of the box.
  */
 export function fitDistance(
-  size: readonly [number, number, number],
+  size: readonly [number, number, number] | Box,
   aimY: number,
   yaw: number,
   elevation: number,
@@ -117,7 +127,7 @@ export function fitDistance(
   padX: number,
   padY: number,
 ): number {
-  const [w, h, d] = size;
+  const box: Box = size.length === 3 ? boxOf(size) : size;
   const tanV = Math.tan((fovDeg * Math.PI) / 360);
   const tanH = tanV * Math.max(aspect, 0.05);
   const limX = tanH * Math.max(1 - padX, 0.05);
@@ -127,9 +137,9 @@ export function fitDistance(
   const ce = Math.cos(elevation);
   const se = Math.sin(elevation);
   let distance = 0;
-  for (const x of [-w / 2, w / 2]) {
-    for (const y of [0, h]) {
-      for (const z of [-d / 2, d / 2]) {
+  for (const x of [box[0], box[3]]) {
+    for (const y of [box[1], box[4]]) {
+      for (const z of [box[2], box[5]]) {
         // Turntable yaw (rotation about +y).
         const rx = x * cy + z * sy;
         const rz = -x * sy + z * cy;
@@ -154,12 +164,15 @@ export function fitDistance(
 export function frameFor(kind: DeviceKind, aspect: number, options: FrameOptions = {}): Frame {
   const p = PRESETS[kind];
   const aimY = p.size[1] * p.aimHeight;
+  const box = options.bounds ?? boxOf(p.size);
   const padX = Math.min(p.padding + (options.extraPadX ?? 0), 0.6);
-  let distance = fitDistance(p.size, aimY, p.heroYaw, p.heroElevation, p.fov, aspect, padX, p.padding);
+  let distance = fitDistance(box, aimY, p.heroYaw, p.heroElevation, p.fov, aspect, padX, p.padding);
   const [eMin, eMax] = p.elevationRange;
-  for (const dy of [-1, -0.5, 0, 0.5, 1]) {
+  const yaws = options.fullTurn ? Array.from({ length: 24 }, (_, i) => (i * Math.PI) / 12) : [-1, -0.5, 0, 0.5, 1].map((dy) => p.heroYaw + dy * p.yawLimit);
+  const pad = options.fullTurn ? 0.06 : 0.02;
+  for (const yaw of yaws) {
     for (const e of [eMin, 0, eMax]) {
-      const pose = fitDistance(p.size, aimY, p.heroYaw + dy * p.yawLimit, p.heroElevation + e, p.fov, aspect, 0.02 + (options.extraPadX ?? 0), 0.02);
+      const pose = fitDistance(box, aimY, yaw, p.heroElevation + e, p.fov, aspect, pad + (options.extraPadX ?? 0), pad);
       distance = Math.max(distance, pose);
     }
   }
