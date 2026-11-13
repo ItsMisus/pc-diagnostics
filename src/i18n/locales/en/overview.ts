@@ -3,8 +3,11 @@ import type { Translation } from "../types";
 
 /** English texts for the "overview" namespace (the dashboard). */
 export default {
+  componentsTitle: "Components",
+  trendAria: "{label}, last two minutes",
+  notOnThisDevice: "Not measurable on this computer: {list}.",
+  volumeFree: "{free} free of {total}",
   monitoringCard: "Monitoring",
-  recentTrend: "Recent activity",
 
   // Panels.
   load: "Load",
@@ -52,4 +55,73 @@ export default {
   perCoreTitle: "Logical processors",
   perCoreUsage: "Usage per logical processor",
   logicalProcessor: "Logical processor {n}",
+
+  // Hero: device identity.
+  heroLabel: "Your computer",
+  thisComputer: "This computer",
+  identityCpu: "Processor",
+  identityGpu: "Graphics",
+  identityMemory: "Memory",
+  identitySystem: "System",
+  cores: "{count} cores",
+  coresThreads: "{physical} cores, {logical} threads",
+
+  // Hero: overall state, from the latest diagnosis (no score).
+  stateEyebrow: "Status",
+  stateClear: "No problems found",
+  stateFrom: "From the latest diagnosis, {date}",
+  stateNotAScore: "This is the result of the latest diagnosis, not a health score.",
+  stateNeverRunHint: "Run it to find out whether anything needs fixing.",
+  stateLoading: "Reading the status…",
+  stateUnavailable: "Status unavailable",
+  runBenchmark: "Run a benchmark",
+  benchmarkRunning: "Benchmark running",
+  quickActions: "Quick actions",
+
+  // Hero: device model shown by the 3D stage.
+  shapeTitle: "Device model",
+  shape_tower: "Desktop",
+  shape_laptop: "Laptop",
+  shape_mini: "Mini PC",
+  shape_allInOne: "All-in-one",
+  shapeAuto: "Automatic",
+  shapeDetected_productName: "Detected from the product name",
+  shapeDetected_modelIdentifier: "Detected from the model identifier",
+  shapeDetected_chassisType: "Detected from the chassis type",
+  shapeDetected_unknownBasis: "Detected automatically",
+  shapeOverride: "Chosen by you",
+  shapePending: "Detecting the model…",
+  shapeUnknown: "Model not detected",
+  shapeChange: "Change",
+  shapeChangeAria: "Change the device model",
+  shapeReset: "Use detection",
+  shapeChooseTitle: "What kind of computer is this?",
+  shapeChooseHint: "It could not be detected reliably. Choose the model to show: you can change it at any time.",
+  shapeNoModel_allInOne: "This is an all-in-one computer, which has no dedicated model: choose the closest one.",
+  shapeNoModel_other: "There is no dedicated model for this kind of computer: choose the closest one.",
+  shapeChooseOption: "Show as {shape}",
+  shapeSaveFailed: "Choice not saved",
+  shapeEvidenceProduct: "Product: {value}",
+  shapeEvidenceModel: "Identifier: {value}",
+  shapeEvidenceChassis: "SMBIOS chassis type: {value}",
+
+  // Chips around the device (live values).
+  chipCpu: "CPU",
+  chipRam: "RAM",
+  chipGpu: "GPU",
+  chipTemp: "CPU temp.",
+
+  // Essential metrics.
+  sparkAria: "{label}, last minute",
+  cpuLoad: "CPU load",
+  gpuLoad: "GPU load",
+  memoryUsed: "Memory in use",
+  storageFree: "Free space",
+  freeOf: "free of {total}",
+  temperatureValue: "Temperature {value}",
+  noGpu: "No GPU",
+
+  // Groups.
+  findingsTitle: "Findings",
+  findingsNeverRun: "Findings appear after the first diagnosis.",
 } satisfies Translation<typeof it>;

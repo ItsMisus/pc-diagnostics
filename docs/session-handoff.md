@@ -24,6 +24,27 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
 - Build the app: `npx tauri build` (`.app` + `.dmg`, ad-hoc signed, `src-tauri/tauri.macos.conf.json`).
   Data: `~/Library/Application Support/com.pcdiagnostics.desktop/`.
 
+## UI redesign (2026-11-12, branch `feat/ui-redesign`)
+
+- Liquid Glass redesign of the whole frontend on top of the macOS port branch: tokens, materials
+  and motion (`src/styles/index.css`, `src/lib/motion.ts`, `docs/design-system.md`), rebuilt
+  primitives in `src/components/common`, glass shell with a macOS overlay title bar, every page
+  redone (Overview, Hardware, Benchmarks, Diagnostics + Risolvi, Processes, History, Settings,
+  Drivers).
+- Overview focal point: procedural 3D device, four models today (tower, laptop, mini PC,
+  all-in-one; the user wants more over time: steps in `src/features/device3d/types.ts`)
+  (`src/features/device3d`, three.js + fiber + drei,
+  lazy chunk, SVG fallback without WebGL, paused while hidden or during a benchmark, no idle
+  motion with reduced motion).
+- Device model: form factor detected in the backend (`platform::form_factor`, macOS product
+  name / model id + battery, Windows SMBIOS chassis types + battery; never from window size),
+  manual override saved as `settings.deviceShape` (Overview "Cambia" and Settings > Dispositivo).
+- Visual QA was done in the running app with window-only captures (dark/light, the three
+  models, override, small window). WKWebView pauses animations while the window is hidden or
+  covered: captures taken then look stuck mid-transition; that is not an app bug.
+- Worktree subagents: `.gitignore` has `node_modules` without the trailing slash, because a
+  worktree's `node_modules` is a symlink and was once committed.
+
 ## Direction
 
 PC Diagnostics is an open-source app (MIT) for everyone, on Windows and now macOS. The "Risolvi"

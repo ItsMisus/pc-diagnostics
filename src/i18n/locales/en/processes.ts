@@ -22,6 +22,18 @@ export default {
   summaryProtected_one: "{count} protected",
   summaryProtected_other: "{count} protected",
   summaryShown: "top {shown} by Impact Score",
+  summaryVisible: "{visible} shown",
+  panelTitle: "Running",
+  filterLabel: "Category",
+  filter_all: "All",
+  filter_application: "Apps",
+  filter_background: "Background",
+  filter_system: "System",
+  filterSystemNote: "“System” includes operating system processes and services.",
+  noMatchCategory: "No ranked process is in this category.",
+  noMatchCategoryQuery: "No process in this category matches “{query}”.",
+  noMatchHint: "The ranking contains only the processes with the highest Impact Score.",
+  clearFilters: "Show all",
 
   // ProcessTable
   protectedNote:
@@ -38,7 +50,6 @@ export default {
   noMatch: "No process matches “{query}”.",
   tableCaption: "Processes sorted by {column}",
   rowShowDetails: "{name}, PID {pid}: show details",
-  rowHideDetails: "{name}, PID {pid}: hide details",
   protectedShort: "protected",
   impactOf: "Impact Score of {name}",
   outOf100: "{value} out of 100",
@@ -51,8 +62,14 @@ export default {
   category_unknown: "Unclassified",
 
   // ProcessDetail
-  detailTitle: "Details",
-  detailEmpty: "Select a process in the table to see its recent trend.",
+  impactScale: "out of 100",
+  peakValue: "peak {value}",
+  nowSection: "Current values",
+  ioReadNow: "I/O read",
+  "ioReadNow@macos": "Disk read",
+  ioWriteNow: "I/O write",
+  "ioWriteNow@macos": "Disk write",
+  historySection: "Recent trend",
   protectedDetail: "Protected process: executable path not readable without elevated privileges (real metrics from the kernel)",
   "protectedDetail@macos":
     "System process or another user's process: executable path not readable without elevated privileges",

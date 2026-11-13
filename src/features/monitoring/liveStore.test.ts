@@ -76,6 +76,26 @@ describe("live store", () => {
     expect(store.getState().latest?.seq).toBe(5);
   });
 
+  it("flags a stalled stream as lost and clears it with the next sample", async () => {
+    const h = harness();
+    const store = createLiveStore({ ...h.deps, stallMs: 40 });
+    const stopLive = store.getState().start();
+    await flush();
+    h.resolveHistory([sample(1)]);
+    await flush();
+    expect(store.getState().stalled).toBe(false);
+
+    await new Promise((r) => setTimeout(r, 60));
+    expect(store.getState()).toMatchObject({ status: "live", stalled: true });
+
+    h.emit(sample(2));
+    expect(store.getState().stalled).toBe(false);
+
+    stopLive();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(store.getState()).toMatchObject({ status: "idle", stalled: false });
+  });
+
   it("maps notSupported to the unsupported state and shows no data", async () => {
     const h = harness();
     const store = createLiveStore(h.deps);

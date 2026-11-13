@@ -95,7 +95,7 @@ struct PlugInVtbl {
     query_interface:
         unsafe extern "C" fn(this: *mut c_void, iid: CfUuidBytes, out: *mut *mut c_void) -> HResult,
     _add_ref: unsafe extern "C" fn(this: *mut c_void) -> u32,
-    release: unsafe extern "C" fn(this: *mut c_void) -> u32,
+    _release: unsafe extern "C" fn(this: *mut c_void) -> u32,
 }
 
 /// `IONVMeSMARTInterface` up to `SMARTReadData` (the fields after it are not used).
@@ -120,6 +120,10 @@ unsafe extern "C" {
         the_interface: *mut *mut *mut PlugInVtbl,
         the_score: *mut i32,
     ) -> IoReturn;
+    /// `Stop` + `Release`: closes the user client. A bare `Release` leaves the
+    /// `AppleNVMeSMARTUserClient` open for the life of the process, and since the drive
+    /// allows one SMART client, every other process then gets `kIOReturnNoResources`.
+    fn IODestroyPlugInInterface(interface: *mut *mut PlugInVtbl) -> IoReturn;
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -205,6 +209,19 @@ impl Drop for Released {
     }
 }
 
+/// Destroys the plug-in created by `IOCreatePlugInInterfaceForService` on drop.
+struct Destroyed(*mut *mut PlugInVtbl);
+
+impl Drop for Destroyed {
+    fn drop(&mut self) {
+        // SAFETY: the pointer is the non-null plug-in returned by
+        // `IOCreatePlugInInterfaceForService`, destroyed exactly once here.
+        unsafe {
+            IODestroyPlugInInterface(self.0);
+        }
+    }
+}
+
 /// True when the block device publishes the SMART plug-in.
 pub fn is_capable(device: &IoObject) -> bool {
     device.boolean("NVMe SMART Capable") == Some(true)
@@ -254,10 +271,8 @@ fn read_once(device: &IoObject) -> Result<SmartLog, (i32, AppError)> {
     }
     // SAFETY: `plugin` is a non-null `IOCFPlugInInterface **` returned above.
     let plugin_vtbl = unsafe { &**plugin };
-    let _plugin = Released {
-        this: plugin.cast(),
-        release: plugin_vtbl.release,
-    };
+    // Declared before `_smart`, so it drops after the interface is released.
+    let _plugin = Destroyed(plugin);
 
     let mut smart: *mut c_void = std::ptr::null_mut();
     // SAFETY: `QueryInterface` of a live plug-in with a valid interface id and out
@@ -362,5 +377,15 @@ mod tests {
             assert!(l.available_spare <= 100, "{l:?}");
             eprintln!("{l:?} -> {:?}", l.health());
         }
+        // The read must close its user client: one left open blocks every other process
+        // (the drive allows a single SMART client) for as long as this one runs.
+        let mine = format!("pid {},", std::process::id());
+        let open: Vec<String> = super::super::iokit::services_of_class(c"AppleNVMeSMARTUserClient")
+            .expect("user client lookup")
+            .iter()
+            .filter_map(|c| c.string("IOUserClientCreator"))
+            .filter(|creator| creator.starts_with(&mine))
+            .collect();
+        assert!(open.is_empty(), "SMART user client left open: {open:?}");
     }
 }

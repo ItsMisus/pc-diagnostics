@@ -30,15 +30,30 @@ pub fn collect_inventory() -> HardwareInventory {
     .map_or(0, |s| s.total_memory());
 
     #[cfg(windows)]
-    let (modules, physical_disks) = match wmi.map(|h| h.join()) {
-        Ok(Ok(w)) => (w.modules, w.physical_disks),
-        _ => {
-            tracing::error!("WMI inventory thread failed");
-            let r =
-                Unavailability::Failed(models::AppError::internal("WMI inventory thread failed"));
-            (Metric::unavailable(r.clone()), Metric::unavailable(r))
-        }
+    let (modules, physical_disks, form_factor) = {
+        let (modules, physical_disks, chassis) = match wmi.map(|h| h.join()) {
+            Ok(Ok(w)) => (w.modules, w.physical_disks, w.chassis_types),
+            _ => {
+                tracing::error!("WMI inventory thread failed");
+                let r = Unavailability::Failed(models::AppError::internal(
+                    "WMI inventory thread failed",
+                ));
+                (
+                    Metric::unavailable(r.clone()),
+                    Metric::unavailable(r.clone()),
+                    Err(r),
+                )
+            }
+        };
+        let battery = crate::windows::bench_env::internal_battery();
+        (
+            modules,
+            physical_disks,
+            crate::form_factor::windows_info(chassis, battery),
+        )
     };
+    #[cfg(not(windows))]
+    let form_factor = crate::form_factor::detect();
     // macOS has no public API for per-module memory facts (size, speed, part number per
     // DIMM): only `system_profiler` prints them, and on Apple Silicon the memory is in the
     // SoC package, not in modules. So the list stays unavailable rather than empty.
@@ -71,6 +86,7 @@ pub fn collect_inventory() -> HardwareInventory {
         },
         physical_disks,
         volumes,
+        form_factor,
     }
 }
 

@@ -1,9 +1,10 @@
 import { m } from "motion/react";
-import { Fragment, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useId, useRef, type ReactNode } from "react";
 import { useAppStore } from "@/app/store";
 import { Button } from "@/components/common/Button";
 import { Disclosure } from "@/components/common/Disclosure";
 import { Icon, type IconName } from "@/components/common/Icon";
+import { MODAL_BODY_CLASS, MODAL_FOOTER_CLASS, Modal } from "@/components/common/Modal";
 import { Spinner, StateView } from "@/components/common/StateView";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useIsSimple } from "@/hooks/useViewMode";
@@ -15,7 +16,9 @@ import { type Translator, useT } from "@/i18n";
 import type { FixPlan } from "@/types/generated/FixPlan";
 import type { FixPreview } from "@/types/generated/FixPreview";
 import type { FixStep } from "@/types/generated/FixStep";
+import { ProgressBar } from "@/components/common/ProgressBar";
 import { canExecuteStep, fixFlowStore, isFlowBusy, useFixFlow, type FixPhase, type StepRun } from "./fixFlow";
+import { FLOW_STAGES, planProgress, stageStates, type StageState } from "./progress";
 import {
   actionRunsOn,
   actionStatesIrreversible,
@@ -31,21 +34,17 @@ import {
   stepRiskTone,
 } from "./model";
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
-
 /**
- * The single "Risolvi" dialog (mounted once in App). Native modal `<dialog>`: the rest of
- * the page is inert; Tab is additionally wrapped inside; Esc closes only when nothing
- * would be lost (no request in flight, no step running).
+ * The single "Risolvi" dialog (mounted once in App), on the shared `Modal` (native modal
+ * `<dialog>`: the rest of the window is inert, Tab wraps inside, focus returns to the
+ * trigger). Esc closes only when nothing would be lost (no request in flight, no step
+ * running); the close button is disabled only while a step runs.
  */
 export function FixDialog() {
   const phase = useFixFlow((s) => s.phase);
   const target = useFixFlow((s) => s.target);
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
   const open = phase.kind !== "closed";
-  // Keep the last open phase on screen while the close animation plays (CSS, ~220 ms).
+  // Keep the last open phase on screen while the close animation plays.
   const lastOpen = useRef<{ phase: FixPhase; target: typeof target }>({ phase, target });
   if (open) lastOpen.current = { phase, target };
   const shown = open ? { phase, target } : lastOpen.current;
@@ -53,78 +52,85 @@ export function FixDialog() {
   const stepRunning = phase.kind === "plan" && busy;
   const t = useT("assistant");
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
   const close = () => fixFlowStore.getState().close();
 
-  const onKeyDown = (e: KeyboardEvent<HTMLDialogElement>) => {
-    if (e.key !== "Tab" || !ref.current) return;
-    const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (!first || !last) return;
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      onKeyDown={onKeyDown}
-      onCancel={(e) => {
-        // Esc: the browser would close the dialog by itself; the store decides.
-        e.preventDefault();
-        if (!isFlowBusy(fixFlowStore.getState().phase)) close();
-      }}
-      onClose={() => {
-        const current = fixFlowStore.getState().phase;
-        if (current.kind === "closed") return;
-        // The browser may force-close on a repeated Esc: keep the dialog while something is in flight.
-        if (isFlowBusy(current)) ref.current?.showModal();
-        else close();
-      }}
-      inert={!open}
-      className="m-auto max-h-[85vh] w-[min(44rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-line-strong bg-surface p-0 text-fg shadow-lg"
+    <Modal
+      open={open}
+      onClose={close}
+      dismissible={!busy}
+      closeDisabled={stepRunning}
+      closeHint={t("waitForStep")}
+      title={t("dialogTitle")}
+      description={shown.target?.title}
+      icon="sparkle"
+      size="lg"
+      bare
     >
       {shown.phase.kind !== "closed" && (
-        <div className="flex max-h-[85vh] flex-col">
-          <header className="flex items-start gap-2.5 border-b border-line px-5 py-3.5">
-            <Icon name="sparkle" className="mt-0.5 shrink-0 text-fg-muted" />
-            <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="text-[15px] leading-5 font-semibold">
-                {t("dialogTitle")}
-              </h2>
-              {shown.target && <p className="mt-0.5 truncate text-xs text-fg-muted">{shown.target.title}</p>}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={t("close")}
-              title={stepRunning ? t("waitForStep") : t("close")}
-              onClick={close}
-              disabled={stepRunning}
-              className="-mr-2 w-7 px-0"
-            >
-              <Icon name="close" />
-            </Button>
-          </header>
-          {/* Each phase renders its own scrolling body and, when it has actions, a footer. */}
+        <>
+          {/* Fixed under the header; then each phase renders its own scrolling body and, when it has actions, a footer. */}
+          <FlowProgress phase={shown.phase} />
           <PhaseBody phase={shown.phase} onClose={close} />
           {shown.phase.kind === "plan" && <PlanFooter plan={shown.phase.plan} />}
-        </div>
+        </>
       )}
-    </dialog>
+    </Modal>
+  );
+}
+
+const STAGE_MARKER: Record<StageState, string> = {
+  done: "border-transparent bg-accent-soft text-accent-text",
+  current: "border-transparent bg-accent-solid text-accent-fg",
+  blocked: "border-warn/30 bg-warn-soft text-warn",
+  failed: "border-bad/30 bg-bad-soft text-bad",
+  upcoming: "border-line bg-surface-2 text-fg-subtle",
+};
+
+/**
+ * The four stages of the flow (Verifica → Anteprima → Proposta → Passaggi), fixed under the
+ * header. Each stage's state is a shape (number, check, lock, cross) and is read out in
+ * words; color only reinforces it. Not interactive: the flow moves only by its own buttons.
+ */
+function FlowProgress({ phase }: { phase: FixPhase }) {
+  const t = useT("assistant");
+  const states = stageStates(phase);
+  if (states.length === 0) return null;
+  return (
+    <ol aria-label={t("progressAria")} className="flex shrink-0 items-center gap-2 border-b border-line px-6 py-3">
+      {FLOW_STAGES.map((stage, i) => {
+        const state = states[i] ?? "upcoming";
+        const active = state === "current" || state === "blocked" || state === "failed";
+        return (
+          <li key={stage} aria-current={active ? "step" : undefined} className="flex min-w-0 flex-1 items-center gap-2 last:flex-none">
+            <span
+              aria-hidden="true"
+              className={`grid size-5 shrink-0 place-items-center rounded-full border text-2xs font-semibold tabular transition-colors duration-200 ${STAGE_MARKER[state]}`}
+            >
+              {state === "done" ? (
+                <Icon name="check" size={12} strokeWidth={2} />
+              ) : state === "failed" ? (
+                <Icon name="close" size={10} strokeWidth={2.25} />
+              ) : state === "blocked" ? (
+                <Icon name="lock" size={11} strokeWidth={1.75} />
+              ) : (
+                i + 1
+              )}
+            </span>
+            <span className="sr-only">
+              {t("stageOf", { n: i + 1, total: FLOW_STAGES.length, stage: t(`stage_${stage}`), state: t(`stageState_${state}`) })}
+            </span>
+            <span
+              aria-hidden="true"
+              className={`min-w-0 truncate text-xs ${active ? "font-medium text-fg" : state === "done" ? "text-fg-muted" : "text-fg-subtle"}`}
+            >
+              {t(`stage_${stage}`)}
+            </span>
+            {i < FLOW_STAGES.length - 1 && <span aria-hidden="true" className="h-px min-w-3 flex-1 bg-line" />}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -176,7 +182,7 @@ function renderPhase(phase: FixPhase, onClose: () => void, t: Translator<"assist
 /** Scrolling content area of a phase. */
 function Body({ children }: { children: ReactNode }) {
   return (
-    <m.div {...phaseFade} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+    <m.div {...phaseFade} className={MODAL_BODY_CLASS}>
       {children}
     </m.div>
   );
@@ -187,7 +193,7 @@ function Actions({ children }: { children: ReactNode }) {
   return (
     <m.div
       {...phaseFade}
-      className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-surface-2/40 px-5 py-3"
+      className={MODAL_FOOTER_CLASS}
     >
       {children}
     </m.div>
@@ -197,7 +203,7 @@ function Actions({ children }: { children: ReactNode }) {
 /** Warning-toned note. Text first; the icon only reinforces it. */
 function Callout({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <div role="note" className="mt-4 flex items-start gap-2 rounded-md border border-warn/25 bg-warn-soft px-3 py-2.5 text-[13px] text-fg">
+    <div role="note" className="mt-4 flex items-start gap-2 rounded-lg border border-warn/25 bg-warn-soft px-3 py-2.5 text-sm text-fg">
       <Icon name="alert" size={14} className="mt-0.5 shrink-0 text-warn" />
       <div className="min-w-0 flex-1">
         {title && <p className="font-medium">{title}</p>}
@@ -224,13 +230,13 @@ function NotReady({ reason, onClose }: { reason: "disabled" | "noKey"; onClose: 
           <h3 className="text-sm font-medium">{text.title}</h3>
         </div>
         <p className="mt-1.5 max-w-prose text-sm text-fg-muted">{text.explanation}</p>
-        <h3 className="mt-5 text-[13px] font-semibold">{t("howToEnable")}</h3>
+        <h3 className="mt-5 text-sm font-semibold">{t("howToEnable")}</h3>
         <ol className="mt-2 flex flex-col gap-2">
           {text.steps.map((s, i) => (
             <li key={s} className="flex items-start gap-2.5 text-sm">
               <span
                 aria-hidden="true"
-                className="mt-px grid size-5 shrink-0 place-items-center rounded-sm border border-line bg-surface-2 text-2xs font-medium text-fg-muted tabular"
+                className="mt-px grid size-5 shrink-0 place-items-center rounded-full border border-line bg-surface-2 text-2xs font-medium text-fg-muted tabular"
               >
                 {i + 1}
               </span>
@@ -267,10 +273,10 @@ function PreviewView({ preview, refreshed, onClose }: { preview: FixPreview; ref
   return (
     <>
       <Body>
-        <h3 className="text-[13px] font-semibold">{t("whatWillBeSent")}</h3>
+        <h3 className="text-sm font-semibold">{t("whatWillBeSent")}</h3>
         <p className="mt-1 max-w-prose text-sm text-fg-muted">{t("previewIntro")}</p>
         {refreshed && <Callout>{t("previewRefreshed")}</Callout>}
-        <dl className="mt-4 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2 rounded-md border border-line px-3 py-2.5 text-[13px]">
+        <dl className="surface-inset mt-4 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2 px-3 py-2.5 text-sm">
           <dt className="text-fg-muted">{t("destination")}</dt>
           <dd className="break-words">{preview.destination}</dd>
           <dt className="text-fg-muted">{t("model")}</dt>
@@ -290,7 +296,7 @@ function PreviewView({ preview, refreshed, onClose }: { preview: FixPreview; ref
             <Disclosure summary={t("showExactData")}>{payload}</Disclosure>
           ) : (
             <>
-              <h3 className="mb-1.5 text-[13px] font-semibold">{t("exactData")}</h3>
+              <h3 className="mb-1.5 text-sm font-semibold">{t("exactData")}</h3>
               {payload}
             </>
           )}
@@ -377,9 +383,11 @@ function PlanView({
 }) {
   const stepsLabelId = useId();
   const t = useT("assistant");
+  const platform = usePlatform();
+  const progress = planProgress(plan, steps, manualDone, platform);
   return (
     <Body>
-      <h3 className="text-[13px] font-semibold">{t("proposal")}</h3>
+      <h3 className="text-sm font-semibold">{t("proposal")}</h3>
       <p className="mt-1.5 text-sm">{plan.summary}</p>
       <p className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
         <StatusBadge tone="neutral" label={planConfidenceShort(plan.confidence)} />
@@ -400,10 +408,26 @@ function PlanView({
         <p className="mt-5 text-sm text-fg-muted">{t("noSteps")}</p>
       ) : (
         <>
-          <h3 id={stepsLabelId} className="mt-5 text-[13px] font-semibold">
-            {t("proposedSteps")}
-          </h3>
-          <ol className="mt-2 flex flex-col gap-2.5" aria-labelledby={stepsLabelId}>
+          <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h3 id={stepsLabelId} className="text-sm font-semibold">
+              {t("proposedSteps")}
+            </h3>
+            {progress.total > 0 && (
+              <p className="text-xs text-fg-muted tabular">
+                {t.plural("stepsProgress", progress.total, { done: progress.done })}
+                {progress.failed > 0 && <> · {t.plural("stepsFailed", progress.failed)}</>}
+              </p>
+            )}
+          </div>
+          {progress.total > 0 && (
+            <ProgressBar
+              className="mt-2"
+              tone="accent"
+              fraction={progress.done / progress.total}
+              label={t.plural("stepsProgress", progress.total, { done: progress.done })}
+            />
+          )}
+          <ol className="mt-3 flex flex-col gap-2.5" aria-labelledby={stepsLabelId}>
             {plan.steps.map((step, i) => (
               <StepItem
                 key={step.id}
@@ -466,7 +490,7 @@ function StepMarker({ index, state }: { index: number; state: StepState }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-6 shrink-0 place-items-center rounded-sm border text-2xs font-semibold tabular transition-colors duration-200 ${MARKER[state]}`}
+      className={`grid size-6 shrink-0 place-items-center rounded-full border text-2xs font-semibold tabular transition-colors duration-200 ${MARKER[state]}`}
     >
       {state === "running" ? (
         <Spinner size={14} />
@@ -510,8 +534,8 @@ function StepItem({
   const runsHere = step.action === null || actionRunsOn(step.action, platform);
   return (
     <li
-      className={`flex gap-3 rounded-md border p-3.5 transition-colors duration-200 ${
-        state === "confirming" ? "border-line-strong bg-surface-2/30" : "border-line"
+      className={`flex gap-3 rounded-lg border bg-surface p-3.5 transition-colors duration-200 ${
+        state === "confirming" ? "border-line-strong" : "border-line"
       }`}
     >
       <StepMarker index={index} state={state} />
@@ -528,7 +552,7 @@ function StepItem({
             {!runsHere && <Chip>{t("windowsOnly")}</Chip>}
           </div>
         </div>
-        <p className="mt-1 text-[13px]">{step.explanation}</p>
+        <p className="mt-1 text-sm">{step.explanation}</p>
         {step.validationNote && (
           <p className="mt-2 flex items-start gap-1.5 text-xs text-fg-muted">
             <Icon name="info" size={14} className="mt-px shrink-0 text-fg-subtle" />
@@ -539,7 +563,7 @@ function StepItem({
         {step.action && !runsHere ? (
           <div className="mt-3">
             {!simple && <p className="mb-2 font-mono text-2xs break-all text-fg-subtle">{actionTechnicalLabel(step.action)}</p>}
-            <p className="text-[13px] text-fg-muted">{describeAction(step.action)}</p>
+            <p className="text-sm text-fg-muted">{describeAction(step.action)}</p>
           </div>
         ) : step.action ? (
           <div className="mt-3">
@@ -551,15 +575,15 @@ function StepItem({
                   aria-label={t("confirmStepAria", { n: index })}
                   className="rounded-md border border-line-strong bg-surface p-3"
                 >
-                  <p className="text-[13px]">
+                  <p className="text-sm">
                     <span className="font-medium">{t("whatWillHappen")} </span>
                     {describeAction(step.action)}
                   </p>
                   {step.requiresAdmin && step.action.kind !== "runSystemFileCheck" && (
-                    <p className="mt-1 text-[13px] text-fg-muted">{t("mayAskAdmin")}</p>
+                    <p className="mt-1 text-sm text-fg-muted">{t("mayAskAdmin")}</p>
                   )}
                   {!step.reversible && !actionStatesIrreversible(step.action) && (
-                    <p className="mt-1 text-[13px] text-fg-muted">{t("cannotUndo")}</p>
+                    <p className="mt-1 text-sm text-fg-muted">{t("cannotUndo")}</p>
                   )}
                   <div className="mt-3 flex flex-wrap justify-end gap-2">
                     <Button onClick={() => flow().cancelConfirm(step.id)} autoFocus>
@@ -571,12 +595,12 @@ function StepItem({
                   </div>
                 </div>
               ) : run.status === "running" ? (
-                <p role="status" className="flex items-center gap-2 text-[13px] text-fg-muted">
+                <p role="status" className="flex items-center gap-2 text-sm text-fg-muted">
                   <Spinner size={14} />
                   {t("runningStep")}
                 </p>
               ) : run.status === "done" ? (
-                <p role="status" className="text-[13px]">
+                <p role="status" className="text-sm">
                   <span className={`font-medium ${run.outcome.ok ? "text-ok" : "text-bad"}`}>
                     {run.outcome.ok ? t("stepDone") : t("stepFailed")}{" "}
                   </span>
@@ -588,15 +612,14 @@ function StepItem({
                     <StateView compact kind={stateKindForError(run.error)} title={t("stepNotRun")} error={run.error} />
                   )}
                   {(run.status === "idle" || executable) && (
-                    <Button
-                      size="sm"
-                      onClick={() => flow().askConfirm(step.id)}
-                      disabled={!executable}
-                      title={executable ? undefined : t("waitForStep")}
-                    >
-                      <Icon name="play" size={12} className="text-fg-muted" />
-                      {t("runStep")}
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Button size="sm" onClick={() => flow().askConfirm(step.id)} disabled={!executable}>
+                        <Icon name="play" size={12} className="text-fg-muted" />
+                        {t("runStep")}
+                      </Button>
+                      {/* A disabled button gets no hover or focus: the reason is written out. */}
+                      {!executable && <span className="text-xs text-fg-muted">{t("waitForStep")}</span>}
+                    </div>
                   )}
                 </div>
               )}
@@ -605,12 +628,12 @@ function StepItem({
         ) : (
           <div className="mt-3 flex flex-col items-start gap-2.5">
             {step.manualInstructions && (
-              <div className="w-full rounded-md border border-line bg-surface-2/50 p-3 text-[13px] whitespace-pre-line">
+              <div className="w-full rounded-md border border-line bg-surface-2/50 p-3 text-sm whitespace-pre-line">
                 <span className="font-medium">{t("manualStep")} </span>
                 {step.manualInstructions}
               </div>
             )}
-            <label htmlFor={checkId} className="flex cursor-pointer items-center gap-2 text-[13px] select-none">
+            <label htmlFor={checkId} className="flex cursor-pointer items-center gap-2 text-sm select-none">
               <input id={checkId} type="checkbox" checked={done} onChange={() => flow().toggleManualDone(step.id)} />
               {t("manualDone")}
             </label>
@@ -627,7 +650,7 @@ function PlanFooter({ plan }: { plan: FixPlan }) {
   // Same rule as the header's close button: not while a step is running.
   const stepRunning = useFixFlow((s) => s.phase.kind === "plan" && isFlowBusy(s.phase));
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-line bg-surface-2/40 px-5 py-3">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-line px-6 py-4">
       <div className="min-w-0 flex-1 text-xs">
         <p className="font-medium text-fg">{t("aiDisclaimer")}</p>
         <p className="mt-0.5 text-2xs text-fg-muted tabular">
@@ -635,11 +658,8 @@ function PlanFooter({ plan }: { plan: FixPlan }) {
           {!simple && <span className="font-mono"> ({plan.servedBy})</span>} · {formatTokenUsage(plan.usage)}
         </p>
       </div>
-      <Button
-        onClick={() => fixFlowStore.getState().close()}
-        disabled={stepRunning}
-        title={stepRunning ? t("waitForStep") : undefined}
-      >
+      {stepRunning && <span className="text-xs text-fg-muted">{t("waitForStep")}</span>}
+      <Button onClick={() => fixFlowStore.getState().close()} disabled={stepRunning}>
         {t("close")}
       </Button>
     </footer>

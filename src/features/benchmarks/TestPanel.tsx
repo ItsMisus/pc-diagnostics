@@ -1,6 +1,5 @@
 import { useId, useMemo, useState } from "react";
 import { Button } from "@/components/common/Button";
-import { Icon } from "@/components/common/Icon";
 import { UnavailableReason, useUnavailabilityText } from "@/components/common/MetricValue";
 import { StateView } from "@/components/common/StateView";
 import { useT } from "@/i18n";
@@ -16,6 +15,7 @@ import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 import { useBench } from "./benchStore";
 import {
   buildRequest,
+  componentOfKind,
   defaultDraft,
   DURATION_PRESETS,
   durationBounds,
@@ -30,17 +30,22 @@ import {
   type RunDraft,
   resolvedFileMib,
   resolveGpuTarget,
+  stateKindForReason,
   storageConsentCopy,
   threadLimit,
 } from "./model";
-import { INSET, PANEL, PANEL_TITLE } from "./ui";
+import { INSET } from "./ui";
 
 const EMPTY_VOLUMES: readonly VolumeInfo[] = [];
 /** Native selects are styled globally: sizing only. Left padding only, the chevron owns the right. */
-const SELECT = "h-8 pl-2.5 tabular";
+const SELECT = "h-8 w-full min-w-0 pl-2.5 tabular";
 const FIELD = "flex min-w-0 flex-col gap-1.5 text-xs font-medium text-fg-muted";
 
-/** Parameters, description and Start for one test kind. Remount (key) per kind. */
+/**
+ * Description, parameters and Start for one test kind: the body of the test panel. Remount
+ * (key) per kind. While a run of this component is in progress, Start gives way to the run
+ * block the screen renders below (one action at a time).
+ */
 export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
   const t = useT("benchmarks");
   const volumes = useInventory((s) => s.data?.volumes ?? EMPTY_VOLUMES);
@@ -65,10 +70,11 @@ export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
   );
 
   const reasonId = useId();
-  const titleId = useId();
   const reasonText = useUnavailabilityText();
   const available = isAvailable(cap);
   const busy = activeKind !== null;
+  // The run of this component is shown (with Stop) right below: no Start next to it.
+  const runningHere = activeKind !== null && componentOfKind(activeKind) === componentOfKind(cap.kind);
   const blockedReason = !available
     ? null
     : busy
@@ -81,35 +87,30 @@ export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
     setDraft((d) => ({ ...d, storageVolume: d.storageVolume ?? effective.storageVolume, ...patch }));
 
   return (
-    <section aria-labelledby={titleId} className={`${PANEL} p-4`}>
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-        <h3 id={titleId} className={PANEL_TITLE}>
-          {kindLabel(cap.kind, t)}
-        </h3>
-        <span className="text-2xs text-fg-subtle tabular">{t("methodologyVersion", { version: cap.methodologyVersion })}</span>
-      </header>
-      <p className="mt-1 max-w-prose text-[13px] text-fg-muted">{cap.description}</p>
-      {cap.measures.length > 0 && (
-        <p className="mt-2 text-xs text-fg-subtle">
-          <span className="text-fg-muted">{t("monitoredMeasures")} </span>
-          {cap.measures.join(" · ")}
-        </p>
-      )}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <p className="max-w-prose text-sm text-fg-muted">{cap.description}</p>
+        {cap.measures.length > 0 && (
+          <p className="text-xs text-fg-subtle">
+            <span className="text-fg-muted">{t("monitoredMeasures")} </span>
+            {cap.measures.join(" · ")}
+          </p>
+        )}
+      </div>
 
       {!available && cap.availability.status === "unavailable" && (
-        <div className="mt-4 flex flex-col items-start gap-3 border-t border-line pt-4">
+        <div className="flex flex-col items-start gap-4 border-t border-line pt-5">
           <StateView
             compact
-            kind={cap.availability.reason.kind === "notImplemented" ? "notImplemented" : "unsupported"}
+            kind={stateKindForReason(cap.availability.reason)}
             title={t("testUnavailable")}
             description={reasonText(cap.availability.reason)}
           />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button variant="primary" disabled aria-describedby={reasonId}>
-              <Icon name="play" />
+            <Button variant="primary" size="lg" icon="play" disabled aria-describedby={reasonId}>
               {t("start")}
             </Button>
-            <span id={reasonId} className="text-xs text-fg-subtle">
+            <span id={reasonId} className="min-w-0 text-xs text-fg-subtle">
               {t("startDisabled", { reason: reasonText(cap.availability.reason).toLowerCase() })}
             </span>
           </div>
@@ -117,7 +118,7 @@ export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
       )}
 
       {available && (
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="flex flex-col gap-5 border-t border-line pt-5">
           <Controls
             cap={cap}
             draft={effective}
@@ -126,29 +127,32 @@ export function TestPanel({ cap }: { cap: BenchmarkCapability }) {
             disabled={busy || starting}
             onChange={update}
           />
-          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Button
-              variant="primary"
-              disabled={blockedReason !== null || starting}
-              aria-busy={starting}
-              aria-describedby={blockedReason ? reasonId : undefined}
-              onClick={() => {
-                if (built.ok) void startRun(built.request);
-              }}
-            >
-              <Icon name="play" />
-              {starting ? t("starting") : t("start")}
-            </Button>
-            {blockedReason && (
-              <span id={reasonId} className="min-w-0 text-xs text-fg-muted">
-                {blockedReason}
-              </span>
-            )}
-          </div>
+          {!runningHere && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Button
+                variant="primary"
+                size="lg"
+                icon="play"
+                disabled={blockedReason !== null}
+                loading={starting}
+                aria-describedby={blockedReason ? reasonId : undefined}
+                onClick={() => {
+                  if (built.ok) void startRun(built.request);
+                }}
+              >
+                {starting ? t("starting") : t("start")}
+              </Button>
+              {blockedReason && (
+                <span id={reasonId} className="min-w-0 flex-1 basis-60 text-xs text-fg-muted">
+                  {blockedReason}
+                </span>
+              )}
+            </div>
+          )}
           {startError && <StartError error={startError} />}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -176,102 +180,105 @@ function Controls({
   const limit = threadLimit(cap, Math.max(1, logicalCores));
   const storage = isStorageKind(cap.kind);
   const fileMib = resolvedFileMib(cap, draft);
+  const hasFields = dBounds !== null || limit !== null || storage || fBounds !== null;
 
   return (
     <div className="flex flex-col gap-4">
       {cap.gpuTargets.length > 0 && (
         <GpuTargetSelect targets={cap.gpuTargets} gpuId={draft.gpuId} disabled={disabled} onChange={onChange} />
       )}
-      <div className="flex flex-wrap gap-x-4 gap-y-3">
-        {dBounds && (
-          <label className={FIELD}>
-            {t("duration")}
-            <select
-              className={SELECT}
-              disabled={disabled}
-              value={draft.durationS ?? dBounds.def}
-              onChange={(e) => onChange({ durationS: Number(e.target.value) })}
-            >
-              {presets(dBounds, DURATION_PRESETS).map((v) => (
-                <option key={v} value={v}>
-                  {v === dBounds.def ? t("optionDefault", { value: `${v} s` }) : `${v} s`}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {limit !== null && (
-          <label className={FIELD}>
-            {t("threads")}
-            <select
-              className={SELECT}
-              disabled={disabled}
-              value={draft.threads ?? "all"}
-              onChange={(e) => onChange({ threads: e.target.value === "all" ? null : Number(e.target.value) })}
-            >
-              <option value="all">{t("allLogicalProcessors")}</option>
-              {Array.from({ length: limit }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {storage && (
-          <label className={FIELD}>
-            {t("volume")}
-            <select
-              className={`${SELECT} max-w-full`}
-              disabled={disabled || volumes.length === 0}
-              value={draft.storageVolume ?? ""}
-              onChange={(e) => onChange({ storageVolume: e.target.value, consent: false })}
-            >
-              {volumes.length === 0 && <option value="">{t("noVolumes")}</option>}
-              {volumes.map((v) => (
-                <option key={v.mountPoint} value={v.mountPoint}>
-                  {volumeDisplayName(v)} · {mediaLabel(v.media, tm)} ·{" "}
-                  {t("volumeFree", { size: formatStorageBytes(v.availableBytes) })}
-                  {v.removable ? ` · ${t("removable")}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {fBounds && (
-          <label className={FIELD}>
-            {t("fileSize")}
-            <select
-              className={SELECT}
-              disabled={disabled}
-              value={fileMib ?? fBounds.def}
-              onChange={(e) => onChange({ storageFileMib: Number(e.target.value), consent: false })}
-            >
-              {presets(fBounds, FILE_PRESETS).map((v) => (
-                <option key={v} value={v}>
-                  {v === fBounds.def ? t("optionDefault", { value: formatMib(v) }) : formatMib(v)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
+      {hasFields && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-x-4 gap-y-3">
+          {dBounds && (
+            <label className={FIELD}>
+              {t("duration")}
+              <select
+                className={SELECT}
+                disabled={disabled}
+                value={draft.durationS ?? dBounds.def}
+                onChange={(e) => onChange({ durationS: Number(e.target.value) })}
+              >
+                {presets(dBounds, DURATION_PRESETS).map((v) => (
+                  <option key={v} value={v}>
+                    {v === dBounds.def ? t("optionDefault", { value: `${v} s` }) : `${v} s`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {limit !== null && (
+            <label className={FIELD}>
+              {t("threads")}
+              <select
+                className={SELECT}
+                disabled={disabled}
+                value={draft.threads ?? "all"}
+                onChange={(e) => onChange({ threads: e.target.value === "all" ? null : Number(e.target.value) })}
+              >
+                <option value="all">{t("allLogicalProcessors")}</option>
+                {Array.from({ length: limit }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {storage && (
+            <label className={`${FIELD} col-span-full sm:col-span-2`}>
+              {t("volume")}
+              <select
+                className={SELECT}
+                disabled={disabled || volumes.length === 0}
+                value={draft.storageVolume ?? ""}
+                onChange={(e) => onChange({ storageVolume: e.target.value, consent: false })}
+              >
+                {volumes.length === 0 && <option value="">{t("noVolumes")}</option>}
+                {volumes.map((v) => (
+                  <option key={v.mountPoint} value={v.mountPoint}>
+                    {volumeDisplayName(v)} · {mediaLabel(v.media, tm)} ·{" "}
+                    {t("volumeFree", { size: formatStorageBytes(v.availableBytes) })}
+                    {v.removable ? ` · ${t("removable")}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {fBounds && (
+            <label className={FIELD}>
+              {t("fileSize")}
+              <select
+                className={SELECT}
+                disabled={disabled}
+                value={fileMib ?? fBounds.def}
+                onChange={(e) => onChange({ storageFileMib: Number(e.target.value), consent: false })}
+              >
+                {presets(fBounds, FILE_PRESETS).map((v) => (
+                  <option key={v} value={v}>
+                    {v === fBounds.def ? t("optionDefault", { value: formatMib(v) }) : formatMib(v)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
 
       {storage && (
-        <div className={`${INSET} bg-surface-2/50 p-3`}>
+        <div className={`${INSET} p-3`}>
           <label
             htmlFor={`${idBase}-consent`}
-            className="flex cursor-pointer items-start gap-2.5 text-[13px] text-fg has-[:disabled]:cursor-default"
+            className="flex cursor-pointer items-start gap-2.5 text-sm text-fg has-[:disabled]:cursor-default"
           >
             <input
               id={`${idBase}-consent`}
               type="checkbox"
-              className="mt-0.5"
+              className="mt-0.5 shrink-0"
               checked={draft.consent}
               disabled={disabled}
               onChange={(e) => onChange({ consent: e.target.checked })}
             />
-            <span>{storageConsentCopy(fileMib, t)}</span>
+            <span className="min-w-0">{storageConsentCopy(fileMib, t)}</span>
           </label>
           {cap.maxBytesWritten !== null && (
             <p className="mt-1.5 pl-6.5 text-xs text-fg-muted tabular">
@@ -305,7 +312,7 @@ function GpuTargetSelect({
       <label className={FIELD}>
         {t("gpuToTest")}
         <select
-          className={`${SELECT} max-w-full self-start`}
+          className={`${SELECT} max-w-md`}
           disabled={disabled || selected === null}
           value={selected?.id ?? ""}
           aria-describedby={noteId}
@@ -323,7 +330,7 @@ function GpuTargetSelect({
       <div id={noteId} className="flex flex-col gap-0.5 text-xs">
         {selected && <p className="text-fg-muted tabular">{gpuStopCopy(selected, t)}</p>}
         {unusable.map((g) => (
-          <p key={g.id} className="text-fg-subtle">
+          <p key={g.id} className="break-words text-fg-subtle">
             {g.name}: <TargetReason target={g} />
           </p>
         ))}
@@ -344,28 +351,10 @@ function TargetReason({ target }: { target: BenchmarkGpuTarget }) {
 function StartError({ error }: { error: AppError }) {
   const t = useT("benchmarks");
   if (error.code === "busy") {
-    return (
-      <div className="mt-3">
-        <StateView
-          compact
-          kind="error"
-          title={t("busyTitle")}
-          description={t("busyDesc")}
-          error={error}
-        />
-      </div>
-    );
+    return <StateView compact kind="error" title={t("busyTitle")} description={t("busyDesc")} error={error} />;
   }
   if (error.code === "invalidInput") {
-    return (
-      <div className="mt-3">
-        <StateView compact kind="error" title={t("rejectedTitle")} error={error} />
-      </div>
-    );
+    return <StateView compact kind="error" title={t("rejectedTitle")} error={error} />;
   }
-  return (
-    <div className="mt-3">
-      <StateView compact kind={stateKindForError(error)} title={t("startFailed")} error={error} />
-    </div>
-  );
+  return <StateView compact kind={stateKindForError(error)} title={t("startFailed")} error={error} />;
 }

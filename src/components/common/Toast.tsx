@@ -45,19 +45,19 @@ export const toast = {
 };
 
 const TONE: Record<ToastTone, { icon: IconName; className: string }> = {
-  success: { icon: "check", className: "text-ok" },
+  success: { icon: "success", className: "text-ok" },
   info: { icon: "info", className: "text-accent-text" },
-  error: { icon: "alert", className: "text-bad" },
+  error: { icon: "error", className: "text-bad" },
 };
 
-/** Mounted once in App. Bottom-right stack, polite live region. */
+/** Mounted once in App. Bottom-right stack of thick-glass cards, polite live region. */
 export function Toaster() {
   const items = useToasts((s) => s.items);
   return (
     <div
       aria-live="polite"
       aria-relevant="additions"
-      className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[min(22rem,calc(100vw-2rem))] flex-col items-end gap-2"
+      className="pointer-events-none fixed right-5 bottom-5 z-50 flex w-[min(22rem,calc(100vw-2rem))] flex-col items-end gap-2"
     >
       <AnimatePresence initial={false}>
         {items.map((t) => (
@@ -99,18 +99,18 @@ function ToastView({ item }: { item: ToastItem }) {
       onPointerLeave={start}
       onFocus={stop}
       onBlur={start}
-      className="pointer-events-auto flex w-full items-start gap-3 rounded-md border border-line-strong bg-surface-2 px-3.5 py-3 shadow-lg"
+      className="glass-thick pointer-events-auto flex w-full items-start gap-3 rounded-lg px-4 py-3"
     >
       <Icon name={tone.icon} className={`mt-0.5 shrink-0 ${tone.className}`} />
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-fg">{item.title}</p>
+        <p className="text-sm font-semibold text-fg">{item.title}</p>
         {item.description && <p className="mt-0.5 text-xs break-words text-fg-muted">{item.description}</p>}
       </div>
       <button
         type="button"
         aria-label={t("closeNotification")}
         onClick={() => dismiss(item.id)}
-        className="pressable -mt-0.5 -mr-1 rounded p-1 text-fg-subtle hover:bg-surface-3 hover:text-fg"
+        className="pressable -mt-0.5 -mr-1.5 grid size-6 place-items-center rounded-full text-fg-subtle hover:bg-control-hover hover:text-fg"
       >
         <Icon name="close" size={14} />
       </button>

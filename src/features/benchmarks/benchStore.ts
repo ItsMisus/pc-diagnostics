@@ -140,9 +140,24 @@ export function createBenchStore(deps: BenchDeps): StoreApi<BenchState> {
       try {
         const data = await deps.getCapabilities();
         set({ capabilities: { status: "ready", data } });
+        void seedStoredResults(data.map((c) => c.kind));
       } catch (e) {
         set({ capabilities: { status: "error", error: toAppError(e) } });
       }
+    };
+
+    /**
+     * The latest stored result of every kind, so a component screen shows the last run (and
+     * its comparison) after a restart too. A result that arrives from a live run in the
+     * meantime wins; a failed read leaves that kind empty (History still lists it).
+     */
+    const seedStoredResults = async (kinds: readonly BenchmarkKind[]) => {
+      const stored = await Promise.all(kinds.map((k) => deps.getLatestResult(k).catch(() => null)));
+      const merged = { ...get().lastResultByKind };
+      for (const r of stored) {
+        if (r && !merged[r.kind]) merged[r.kind] = r;
+      }
+      set({ lastResultByKind: merged });
     };
 
     return {

@@ -13,11 +13,13 @@
 //! - [`credentials`]: the assistant's API key in Windows Credential Manager.
 //! - [`remediation`]: validation and native execution of the assistant's whitelisted
 //!   actions (`models::assistant::RemediationAction`).
+//! - [`form_factor`]: tower / laptop / mini PC detection (part of the inventory).
 
 pub mod bench_env;
 pub mod convert;
 pub mod credentials;
 pub mod devices;
+pub mod form_factor;
 pub mod gpu_bench;
 pub mod inventory;
 pub mod live;

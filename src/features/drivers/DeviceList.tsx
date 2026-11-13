@@ -1,6 +1,8 @@
 import { m } from "motion/react";
 import { memo, type MouseEvent, type ReactNode, useId, useMemo, useState } from "react";
-import { Card } from "@/components/common/Card";
+import { Panel } from "@/components/common/Panel";
+import { Segmented } from "@/components/common/Segmented";
+import { StateView } from "@/components/common/StateView";
 import { DefinitionList, type DefinitionItem } from "@/components/common/DefinitionList";
 import { Disclosure } from "@/components/common/Disclosure";
 import { Icon } from "@/components/common/Icon";
@@ -10,7 +12,7 @@ import { NotReported, Table, Td } from "@/components/common/Table";
 import { useIsSimple } from "@/hooks/useViewMode";
 import { type Translator, useT } from "@/i18n";
 import { formatIsoDate } from "@/lib/format";
-import { duration, ease, spring } from "@/lib/motion";
+import { duration, ease } from "@/lib/motion";
 import type { DeviceCategory } from "@/types/generated/DeviceCategory";
 import type { DeviceRecord } from "@/types/generated/DeviceRecord";
 import type { UpdateStatus } from "@/types/generated/UpdateStatus";
@@ -76,17 +78,18 @@ export function DeviceList({ devices }: { devices: readonly DeviceRecord[] }) {
 
   return (
     // The reading notes live here, once: in "Semplice" the plain summary already says them.
-    <Card title={t("devicesTitle")} {...(simple ? {} : { description: t("readingNote") })}>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+    // The page's focal panel.
+    <Panel variant="primary" title={t("devicesTitle")} {...(simple ? {} : { description: t("readingNote") })}>
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         {/* In "Semplice" the plain summary states the counts, so the tabs do not repeat them. */}
-        <FilterGroup value={filter} counts={simple ? null : counts} onChange={setFilter} />
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <FilterTabs value={filter} counts={simple ? null : counts} onChange={setFilter} />
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
           <label>
             <span className="sr-only">{t("categorySelect")}</span>
             <select
               value={category ?? ""}
               onChange={(e) => setCategory(e.target.value === "" ? null : (e.target.value as DeviceCategory))}
-              className="h-8 pl-2.5"
+              className="h-8 max-w-full pl-2.5"
             >
               <option value="">{t("allCategories")}</option>
               {presentCategories.map((c) => (
@@ -101,20 +104,18 @@ export function DeviceList({ devices }: { devices: readonly DeviceRecord[] }) {
             value={search}
             onChange={setSearch}
             placeholder={t("searchPlaceholder")}
-            className="w-52"
+            className="w-full min-w-0 sm:w-56"
           />
         </div>
       </div>
 
       {groups.length === 0 ? (
-        <p role="status" className="py-4 text-sm text-fg-muted">
-          {t("noMatch")}
-        </p>
+        <StateView compact kind="empty" title={t("noMatch")} />
       ) : (
         <div className="flex flex-col gap-6">
           {groups.map((g) => (
             <section key={g.category} aria-label={g.label}>
-              <h3 className="mb-2 flex items-baseline gap-2 text-[13px] font-medium text-fg">
+              <h3 className="mb-2 flex items-baseline gap-2 text-sm font-semibold text-fg">
                 {g.label} <span className="text-xs font-normal text-fg-subtle tabular">{g.devices.length}</span>
               </h3>
               <Table caption={t("groupCaption", { label: g.label })} head={headCells(simple ? SIMPLE_HEADERS : HEADERS, t)}>
@@ -126,16 +127,15 @@ export function DeviceList({ devices }: { devices: readonly DeviceRecord[] }) {
           ))}
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }
 
 /**
- * Status filter: toggle buttons (`aria-pressed`, exactly one pressed) drawn like the
- * `Segmented` control, with the same sliding thumb. The tabs are the page's one home of the
- * counts ("Avanzata"); they are tabular so the labels do not shift when the inventory changes.
+ * Status filter tabs (`Segmented`). In "Avanzata" they are the page's one home of the counts;
+ * the counts are part of each label, tabular so the labels do not shift on a refresh.
  */
-function FilterGroup({
+function FilterTabs({
   value,
   counts,
   onChange,
@@ -146,44 +146,17 @@ function FilterGroup({
   onChange: (filter: DeviceFilter) => void;
 }) {
   const t = useT("drivers");
-  const layoutId = `device-filter-${useId()}`;
+  const options = useMemo(
+    () =>
+      FILTERS.map((f) => ({
+        value: f,
+        label: counts ? `${filterLabel(f, t)} ${counts[f]}` : filterLabel(f, t),
+      })),
+    [counts, t],
+  );
   return (
-    <div
-      role="group"
-      aria-label={t("filterGroupLabel")}
-      className="inline-flex max-w-full flex-wrap rounded-lg border border-line bg-surface-2 p-0.5"
-    >
-      {FILTERS.map((f) => {
-        const selected = value === f;
-        return (
-          <button
-            key={f}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(f)}
-            className={`relative h-7 rounded-md px-3 text-xs font-medium whitespace-nowrap transition-colors duration-150 ${
-              selected ? "text-fg" : "text-fg-muted hover:text-fg"
-            }`}
-          >
-            {selected && (
-              <m.span
-                layoutId={layoutId}
-                transition={spring.indicator}
-                aria-hidden="true"
-                className="absolute inset-0 rounded-md border border-line-strong bg-surface-3"
-              />
-            )}
-            <span className="relative">
-              {filterLabel(f, t)}
-              {counts && (
-                <span className={`ml-1.5 tabular transition-colors duration-150 ${selected ? "text-fg-muted" : "text-fg-subtle"}`}>
-                  {counts[f]}
-                </span>
-              )}
-            </span>
-          </button>
-        );
-      })}
+    <div className="max-w-full overflow-x-auto">
+      <Segmented label={t("filterGroupLabel")} options={options} value={value} onChange={onChange} />
     </div>
   );
 }

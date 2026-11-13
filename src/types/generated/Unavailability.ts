@@ -4,4 +4,4 @@ import type { AppError } from "./AppError";
 /**
  * Why a value is missing. There is no "unknown": every gap has an explanation.
  */
-export type Unavailability = { "kind": "notSupported" } | { "kind": "providerMissing", "detail": string } | { "kind": "permissionDenied" } | { "kind": "notImplemented" } | { "kind": "failed", "detail": AppError };
+export type Unavailability = { "kind": "notSupported" } | { "kind": "providerMissing", "detail": string } | { "kind": "permissionDenied" } | { "kind": "notImplemented" } | { "kind": "failed", "detail": AppError } | { "kind": "inconclusive", "detail": string };

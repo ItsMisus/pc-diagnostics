@@ -1,122 +1,253 @@
 @import "tailwindcss";
 
 /*
- * Design system tokens.
+ * Design system tokens (docs/design-system.md is the reference; keep the two in sync).
  *
- * Monitoring-dashboard palette: neutral dark greys, flat panels with a visible hairline,
- * monochrome meters, gauges and charts (`--meter`). A muted violet accent is kept for focus,
- * the selected option and the one primary action per view; status colours (ok / warn /
- * bad) only where they carry meaning, never as the only signal. `data-theme` on <html>
- * overrides the OS preference; the dark values are declared twice (OS preference and
- * explicit choice) because the WebView target (chrome120) predates `light-dark()`.
- * `src/styles/tokens.test.ts` fails if the two dark blocks ever differ.
+ * Two themes: light (pearl white, cool greys, satin glass) and dark (graphite and soft
+ * black, smoked glass, ivory text). One refined azure accent, used sparingly (focus,
+ * selection, the one primary action, a highlighted chart series). Status colours (ok / warn /
+ * bad) only for health, warnings and errors, never as the only signal.
+ *
+ * Materials: solid surfaces carry data (`surface*`); glass (`glass*`, translucent + blur) is
+ * for navigation, toolbars, controls and surfaces that float over other content.
+ *
+ * `data-theme` on <html> overrides the OS preference (ThemePreference setting, see
+ * `hooks/useThemeSync.ts`). The dark values are declared twice (OS preference and explicit
+ * choice) because the WebView targets (WebView2 Chromium 120, WKWebView on macOS 13.3)
+ * predate `light-dark()`. `src/styles/tokens.test.ts` fails if the two dark blocks ever
+ * differ, if a light token has no dark value, or if a text pair drops below WCAG AA.
  *
  * Motion tokens mirror `src/lib/motion.ts` (the JS side used by Motion for React).
  */
 :root {
-  --canvas: #eeeff1;
-  --sidebar: #e7e8eb;
-  --surface: #fafafb;
-  --surface-2: #f0f1f3;
-  --surface-3: #e3e4e7;
-  --line: #d6d7db;
-  --line-strong: #c3c4c9;
-  --fg: #18191b;
-  --fg-muted: #54565c;
-  --fg-subtle: #66686e;
-  --accent: #5b3fc4;
-  --accent-hover: #4f35b0;
-  --accent-solid: #5b3fc4;
-  --accent-solid-hover: #4f35b0;
+  /* Window and ambient light behind everything. */
+  --canvas: #eceef2;
+  --canvas-wash:
+    radial-gradient(80rem 44rem at 0% 0%, rgb(255 255 255 / 0.85), transparent 62%),
+    radial-gradient(64rem 44rem at 100% 0%, rgb(10 107 224 / 0.05), transparent 60%);
+  /* Solid surfaces (data lives here). */
+  --surface: #f9fafb;
+  --surface-raised: #ffffff;
+  --surface-2: #f0f2f5;
+  --surface-3: #e3e6eb;
+  /* Glass materials. */
+  --sidebar: rgb(250 251 253 / 0.66);
+  --glass: rgb(255 255 255 / 0.62);
+  --glass-thick: rgb(250 251 253 / 0.86);
+  --glass-edge: rgb(16 24 40 / 0.1);
+  --glass-highlight: rgb(255 255 255 / 0.9);
+  --glass-sheen: rgb(255 255 255 / 0.55);
+  --glass-saturate: 180%;
+  /* Controls (buttons, segmented tracks, fields). */
+  --control: #ffffff;
+  --control-hover: #f6f7f9;
+  --control-active: #eceef2;
+  --control-edge: rgb(16 24 40 / 0.13);
+  --control-track: rgb(16 24 40 / 0.06);
+  --control-thumb: #ffffff;
+  --field: #ffffff;
+  /* Lines and text. */
+  --line: rgb(16 24 40 / 0.085);
+  --line-strong: rgb(16 24 40 / 0.15);
+  --fg: #14161a;
+  --fg-muted: #4b505a;
+  --fg-subtle: #656a74;
+  /* Accent (azure). */
+  --accent: #0a6be0;
+  --accent-hover: #075bc2;
+  --accent-solid: #0a6be0;
+  --accent-solid-hover: #075bc2;
   --accent-fg: #ffffff;
-  --accent-soft: rgb(91 63 196 / 0.1);
-  --accent-text: #5b3fc4;
-  --ok: #217a4f;
-  --warn: #9a5f0c;
-  --bad: #b42318;
-  --ok-soft: rgb(33 122 79 / 0.1);
-  --warn-soft: rgb(154 95 12 / 0.1);
-  --bad-soft: rgb(180 35 24 / 0.08);
-  --focus: rgb(91 63 196 / 0.5);
-  --scrollbar: rgb(24 25 27 / 0.2);
-  --scrollbar-hover: rgb(24 25 27 / 0.34);
-  --backdrop: rgb(16 17 19 / 0.35);
-  --chart-fill: rgb(84 86 92 / 0.12);
-  --gauge-track: #e0e1e4;
-  --shadow-color: 220 6% 20%;
-  --meter: #7c7e85;
+  --accent-soft: rgb(10 107 224 / 0.1);
+  --accent-text: #0a5fc8;
+  /* Status. */
+  --ok: #1b7a4a;
+  --warn: #9a5800;
+  --bad: #c02a1d;
+  --ok-soft: rgb(27 122 74 / 0.1);
+  --warn-soft: rgb(154 88 0 / 0.1);
+  --bad-soft: rgb(192 42 29 / 0.08);
+  /* Meters and charts (monochrome unless a status applies). */
+  --meter: #7a7f88;
+  --gauge-track: #e2e5ea;
+  --chart-1: #4b505a;
+  --chart-2: #8a8f98;
+  --chart-accent: #0a6be0;
+  --chart-grid: rgb(16 24 40 / 0.07);
+  --chart-fill: rgb(75 80 90 / 0.12);
+  /* Misc. */
+  --focus: rgb(10 107 224 / 0.55);
+  --scrollbar: rgb(20 22 26 / 0.2);
+  --scrollbar-hover: rgb(20 22 26 / 0.34);
+  --backdrop: rgb(20 24 32 / 0.28);
+  /* Elevation: 0 hairline lift, 1 resting panel, 2 floating control, 3 popover/toast, 4 modal. */
+  --elev-0: 0 1px 1px rgb(16 24 40 / 0.04);
+  --elev-1: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px -1px rgb(16 24 40 / 0.06);
+  --elev-2: 0 6px 16px -6px rgb(16 24 40 / 0.14), 0 2px 4px -2px rgb(16 24 40 / 0.08);
+  --elev-3: 0 16px 36px -10px rgb(16 24 40 / 0.22), 0 4px 10px -4px rgb(16 24 40 / 0.1);
+  --elev-4: 0 32px 72px -16px rgb(16 24 40 / 0.3), 0 8px 20px -8px rgb(16 24 40 / 0.14);
+  /* Benchmark illustrations (features/benchmarks/Illustration.tsx): isometric faces. */
+  --art-metal-top: #e9ecf1;
+  --art-metal-left: #c4c9d1;
+  --art-metal-right: #a8aeb8;
+  --art-dark-top: #4a4f58;
+  --art-dark-left: #2f333a;
+  --art-dark-right: #24272d;
+  --art-board-top: #3c4a44;
+  --art-board-left: #2a352f;
+  --art-board-right: #222b26;
+  --art-gold: #c9a24a;
+  --art-fan: #1d2025;
+  --art-edge: rgb(255 255 255 / 0.18);
+  --art-shadow: rgb(16 24 40 / 0.22);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #1b1c1f;
-    --sidebar: #161719;
-    --surface: #222326;
-    --surface-2: #2a2b2f;
-    --surface-3: #323337;
-    --line: #36373b;
-    --line-strong: #46474c;
-    --fg: #ececee;
-    --fg-muted: #aeafb4;
-    --fg-subtle: #939499;
-    --accent: #a78bfa;
-    --accent-hover: #b8a1fb;
-    --accent-solid: #6d4fd6;
-    --accent-solid-hover: #7a5ddd;
+    --canvas: #0e0f11;
+    --canvas-wash:
+      radial-gradient(80rem 44rem at 0% 0%, rgb(84 128 196 / 0.1), transparent 62%),
+      radial-gradient(64rem 44rem at 100% 100%, rgb(255 248 235 / 0.035), transparent 60%);
+    --surface: #17181b;
+    --surface-raised: #1d1e22;
+    --surface-2: #24252a;
+    --surface-3: #2e2f35;
+    --sidebar: rgb(30 31 35 / 0.62);
+    --glass: rgb(34 35 40 / 0.58);
+    --glass-thick: rgb(36 37 42 / 0.84);
+    --glass-edge: rgb(255 255 255 / 0.09);
+    --glass-highlight: rgb(255 255 255 / 0.08);
+    --glass-sheen: rgb(255 255 255 / 0.045);
+    --glass-saturate: 165%;
+    --control: rgb(255 255 255 / 0.075);
+    --control-hover: rgb(255 255 255 / 0.115);
+    --control-active: rgb(255 255 255 / 0.055);
+    --control-edge: rgb(255 255 255 / 0.1);
+    --control-track: rgb(0 0 0 / 0.22);
+    --control-thumb: rgb(255 255 255 / 0.15);
+    --field: rgb(255 255 255 / 0.05);
+    --line: rgb(255 255 255 / 0.075);
+    --line-strong: rgb(255 255 255 / 0.13);
+    --fg: #f3f0e8;
+    --fg-muted: #b4b1a9;
+    --fg-subtle: #8f8c85;
+    --accent: #4ea5ff;
+    --accent-hover: #6cb4ff;
+    --accent-solid: #0a72e0;
+    --accent-solid-hover: #1a7deb;
     --accent-fg: #ffffff;
-    --accent-soft: rgb(167 139 250 / 0.14);
-    --accent-text: #c4b5fd;
-    --ok: #4fbf87;
-    --warn: #dfa543;
-    --bad: #ef6b60;
-    --ok-soft: rgb(79 191 135 / 0.12);
-    --warn-soft: rgb(223 165 67 / 0.12);
-    --bad-soft: rgb(239 107 96 / 0.12);
-    --focus: rgb(167 139 250 / 0.6);
-    --scrollbar: rgb(255 255 255 / 0.12);
-    --scrollbar-hover: rgb(255 255 255 / 0.22);
-    --backdrop: rgb(0 0 0 / 0.6);
-    --chart-fill: rgb(174 175 180 / 0.12);
-    --gauge-track: #323337;
-    --shadow-color: 0 0% 0%;
-    --meter: #8c8d93;
+    --accent-soft: rgb(78 165 255 / 0.16);
+    --accent-text: #72b8ff;
+    --ok: #3ccf8a;
+    --warn: #f2b443;
+    --bad: #ff6f61;
+    --ok-soft: rgb(60 207 138 / 0.13);
+    --warn-soft: rgb(242 180 67 / 0.13);
+    --bad-soft: rgb(255 111 97 / 0.13);
+    --meter: #a19e96;
+    --gauge-track: #2b2c31;
+    --chart-1: #c9c5bc;
+    --chart-2: #8f8c85;
+    --chart-accent: #4ea5ff;
+    --chart-grid: rgb(255 255 255 / 0.06);
+    --chart-fill: rgb(201 197 188 / 0.12);
+    --focus: rgb(78 165 255 / 0.7);
+    --scrollbar: rgb(255 255 255 / 0.14);
+    --scrollbar-hover: rgb(255 255 255 / 0.24);
+    --backdrop: rgb(0 0 0 / 0.5);
+    --elev-0: 0 1px 1px rgb(0 0 0 / 0.3);
+    --elev-1: 0 1px 2px rgb(0 0 0 / 0.35), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+    --elev-2: 0 8px 20px -6px rgb(0 0 0 / 0.5), 0 2px 5px -2px rgb(0 0 0 / 0.35);
+    --elev-3: 0 18px 40px -10px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
+    --elev-4: 0 36px 80px -16px rgb(0 0 0 / 0.7), 0 10px 24px -8px rgb(0 0 0 / 0.45);
+    --art-metal-top: #c9cdd4;
+    --art-metal-left: #8e949d;
+    --art-metal-right: #6f747c;
+    --art-dark-top: #3a3e46;
+    --art-dark-left: #25282e;
+    --art-dark-right: #1b1d22;
+    --art-board-top: #2f3b36;
+    --art-board-left: #202925;
+    --art-board-right: #19201c;
+    --art-gold: #b8913e;
+    --art-fan: #111316;
+    --art-edge: rgb(255 255 255 / 0.12);
+    --art-shadow: rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --canvas: #1b1c1f;
-  --sidebar: #161719;
-  --surface: #222326;
-  --surface-2: #2a2b2f;
-  --surface-3: #323337;
-  --line: #36373b;
-  --line-strong: #46474c;
-  --fg: #ececee;
-  --fg-muted: #aeafb4;
-  --fg-subtle: #939499;
-  --accent: #a78bfa;
-  --accent-hover: #b8a1fb;
-  --accent-solid: #6d4fd6;
-  --accent-solid-hover: #7a5ddd;
+  --canvas: #0e0f11;
+  --canvas-wash:
+    radial-gradient(80rem 44rem at 0% 0%, rgb(84 128 196 / 0.1), transparent 62%),
+    radial-gradient(64rem 44rem at 100% 100%, rgb(255 248 235 / 0.035), transparent 60%);
+  --surface: #17181b;
+  --surface-raised: #1d1e22;
+  --surface-2: #24252a;
+  --surface-3: #2e2f35;
+  --sidebar: rgb(30 31 35 / 0.62);
+  --glass: rgb(34 35 40 / 0.58);
+  --glass-thick: rgb(36 37 42 / 0.84);
+  --glass-edge: rgb(255 255 255 / 0.09);
+  --glass-highlight: rgb(255 255 255 / 0.08);
+  --glass-sheen: rgb(255 255 255 / 0.045);
+  --glass-saturate: 165%;
+  --control: rgb(255 255 255 / 0.075);
+  --control-hover: rgb(255 255 255 / 0.115);
+  --control-active: rgb(255 255 255 / 0.055);
+  --control-edge: rgb(255 255 255 / 0.1);
+  --control-track: rgb(0 0 0 / 0.22);
+  --control-thumb: rgb(255 255 255 / 0.15);
+  --field: rgb(255 255 255 / 0.05);
+  --line: rgb(255 255 255 / 0.075);
+  --line-strong: rgb(255 255 255 / 0.13);
+  --fg: #f3f0e8;
+  --fg-muted: #b4b1a9;
+  --fg-subtle: #8f8c85;
+  --accent: #4ea5ff;
+  --accent-hover: #6cb4ff;
+  --accent-solid: #0a72e0;
+  --accent-solid-hover: #1a7deb;
   --accent-fg: #ffffff;
-  --accent-soft: rgb(167 139 250 / 0.14);
-  --accent-text: #c4b5fd;
-  --ok: #4fbf87;
-  --warn: #dfa543;
-  --bad: #ef6b60;
-  --ok-soft: rgb(79 191 135 / 0.12);
-  --warn-soft: rgb(223 165 67 / 0.12);
-  --bad-soft: rgb(239 107 96 / 0.12);
-  --focus: rgb(167 139 250 / 0.6);
-  --scrollbar: rgb(255 255 255 / 0.12);
-  --scrollbar-hover: rgb(255 255 255 / 0.22);
-  --backdrop: rgb(0 0 0 / 0.6);
-  --chart-fill: rgb(174 175 180 / 0.12);
-  --gauge-track: #323337;
-  --shadow-color: 0 0% 0%;
-  --meter: #8c8d93;
+  --accent-soft: rgb(78 165 255 / 0.16);
+  --accent-text: #72b8ff;
+  --ok: #3ccf8a;
+  --warn: #f2b443;
+  --bad: #ff6f61;
+  --ok-soft: rgb(60 207 138 / 0.13);
+  --warn-soft: rgb(242 180 67 / 0.13);
+  --bad-soft: rgb(255 111 97 / 0.13);
+  --meter: #a19e96;
+  --gauge-track: #2b2c31;
+  --chart-1: #c9c5bc;
+  --chart-2: #8f8c85;
+  --chart-accent: #4ea5ff;
+  --chart-grid: rgb(255 255 255 / 0.06);
+  --chart-fill: rgb(201 197 188 / 0.12);
+  --focus: rgb(78 165 255 / 0.7);
+  --scrollbar: rgb(255 255 255 / 0.14);
+  --scrollbar-hover: rgb(255 255 255 / 0.24);
+  --backdrop: rgb(0 0 0 / 0.5);
+  --elev-0: 0 1px 1px rgb(0 0 0 / 0.3);
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.35), 0 2px 6px -2px rgb(0 0 0 / 0.3);
+  --elev-2: 0 8px 20px -6px rgb(0 0 0 / 0.5), 0 2px 5px -2px rgb(0 0 0 / 0.35);
+  --elev-3: 0 18px 40px -10px rgb(0 0 0 / 0.6), 0 4px 12px -4px rgb(0 0 0 / 0.4);
+  --elev-4: 0 36px 80px -16px rgb(0 0 0 / 0.7), 0 10px 24px -8px rgb(0 0 0 / 0.45);
+  --art-metal-top: #c9cdd4;
+  --art-metal-left: #8e949d;
+  --art-metal-right: #6f747c;
+  --art-dark-top: #3a3e46;
+  --art-dark-left: #25282e;
+  --art-dark-right: #1b1d22;
+  --art-board-top: #2f3b36;
+  --art-board-left: #202925;
+  --art-board-right: #19201c;
+  --art-gold: #b8913e;
+  --art-fan: #111316;
+  --art-edge: rgb(255 255 255 / 0.12);
+  --art-shadow: rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -124,10 +255,23 @@
   --color-canvas: var(--canvas);
   --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
-  --color-gauge-track: var(--gauge-track);
-  --color-meter: var(--meter);
+  --color-surface-raised: var(--surface-raised);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+  --color-glass: var(--glass);
+  --color-glass-thick: var(--glass-thick);
+  --color-glass-edge: var(--glass-edge);
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+  --color-control-active: var(--control-active);
+  --color-control-edge: var(--control-edge);
+  --color-control-track: var(--control-track);
+  --color-field: var(--field);
+  --color-gauge-track: var(--gauge-track);
+  --color-meter: var(--meter);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-accent: var(--chart-accent);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-fg: var(--fg);
@@ -147,37 +291,81 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad-soft: var(--bad-soft);
 
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  /*
+   * System fonts only (offline, no web fonts). macOS: San Francisco through -apple-system
+   * (WebKit switches Text/Display optical sizes by itself). Windows: Segoe UI Variable.
+   */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
-  /* Type scale: 11 / 12 / 13 / 14 / 16 / 20 / 24. `text-2xs` replaces ad-hoc text-[11px]. */
+  /* Type scale (px / line height). 13 is the body size; see docs/design-system.md. */
   --text-2xs: 11px;
-  --text-2xs--line-height: 15px;
+  --text-2xs--line-height: 14px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-md: 15px;
+  --text-md--line-height: 20px;
+  --text-lg: 17px;
+  --text-lg--line-height: 22px;
+  --text-lg--letter-spacing: -0.01em;
+  --text-xl: 20px;
+  --text-xl--line-height: 26px;
+  --text-xl--letter-spacing: -0.012em;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 30px;
+  --text-2xl--letter-spacing: -0.015em;
+  --text-3xl: 28px;
+  --text-3xl--line-height: 34px;
+  --text-3xl--letter-spacing: -0.018em;
+  --text-4xl: 34px;
+  --text-4xl--line-height: 40px;
+  --text-4xl--letter-spacing: -0.02em;
+  --text-5xl: 44px;
+  --text-5xl--line-height: 48px;
+  --text-5xl--letter-spacing: -0.025em;
 
-  --radius-sm: 5px;
-  --radius-md: 7px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
+  /*
+   * Radii, one consistent family. Nested shapes follow `inner = outer - inset` (a 6 px
+   * inset inside an 18 px panel gets 12 px), so corners stay concentric.
+   */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
 
-  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.08), 0 1px 1px hsl(var(--shadow-color) / 0.04);
-  --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.14), 0 2px 4px -2px hsl(var(--shadow-color) / 0.08);
-  --shadow-lg: 0 16px 40px -8px hsl(var(--shadow-color) / 0.3), 0 4px 12px -4px hsl(var(--shadow-color) / 0.16);
+  --shadow-xs: var(--elev-0);
+  --shadow-sm: var(--elev-1);
+  --shadow-md: var(--elev-2);
+  --shadow-lg: var(--elev-3);
+  --shadow-xl: var(--elev-4);
 
   /* Motion. Strong ease-out for anything entering or responding to the user. */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   --animate-skeleton: skeleton 1.6s var(--ease-in-out) infinite;
-  --animate-spin-slow: spin 1.1s linear infinite;
+  --animate-spin-slow: spin 0.9s linear infinite;
 }
 
 :root {
+  --dur-instant: 100ms;
   --dur-micro: 140ms;
-  --dur-component: 220ms;
-  --dur-nav: 280ms;
+  --dur-fast: 180ms;
+  --dur-component: 240ms;
+  --dur-panel: 300ms;
+  --dur-nav: 300ms;
+  --blur-thin: 12px;
+  --blur-regular: 24px;
+  --blur-thick: 36px;
   /* Lets `height: auto` (e.g. <details> content) transition. */
   interpolate-size: allow-keywords;
 }
@@ -185,7 +373,7 @@
 @keyframes skeleton {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
@@ -203,9 +391,10 @@
     background: var(--canvas);
     color: var(--fg);
     font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 13px;
+    line-height: 18px;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     overflow: hidden;
   }
@@ -214,14 +403,13 @@
     background: var(--accent-soft);
   }
 
-  /* One focus treatment everywhere: a soft accent ring, keyboard only. */
+  /* One focus treatment everywhere: an accent ring, keyboard only. It follows each shape's radius. */
   :focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
-    border-radius: var(--radius-sm);
   }
 
-  /* Thin, theme-aware scrollbars (standard properties; Chromium/WebView2 121+). */
+  /* Thin, theme-aware scrollbars (standard properties; WebView2). WKWebView keeps the native overlay bars. */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar) transparent;
@@ -252,12 +440,14 @@
   input[type="search"],
   input[type="password"],
   input[type="number"],
+  textarea,
   select {
-    border: 1px solid var(--line);
-    background-color: var(--surface);
+    border: 1px solid var(--control-edge);
+    background-color: var(--field);
     color: var(--fg);
     border-radius: var(--radius-md);
     font-size: 13px;
+    box-shadow: var(--elev-0);
     transition:
       border-color var(--dur-micro) var(--ease-out),
       box-shadow var(--dur-micro) var(--ease-out),
@@ -267,6 +457,7 @@
   input[type="search"]:hover,
   input[type="password"]:hover,
   input[type="number"]:hover,
+  textarea:hover,
   select:hover:not(:disabled) {
     border-color: var(--line-strong);
   }
@@ -274,12 +465,14 @@
   input[type="search"]:focus-visible,
   input[type="password"]:focus-visible,
   input[type="number"]:focus-visible,
+  textarea:focus-visible,
   select:focus-visible {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
-  input::placeholder {
+  input::placeholder,
+  textarea::placeholder {
     color: var(--fg-subtle);
   }
   input[type="search"]::-webkit-search-cancel-button {
@@ -291,42 +484,48 @@
     background-color: var(--fg-subtle);
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M4.5 4.5l7 7M11.5 4.5l-7 7'/%3E%3C/svg%3E")
       center / 14px no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M4.5 4.5l7 7M11.5 4.5l-7 7'/%3E%3C/svg%3E")
+      center / 14px no-repeat;
   }
 
   select {
     appearance: none;
+    -webkit-appearance: none;
     padding-right: 28px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b8b96' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b8e96' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 6.25L8 3.5l3 2.75M5 9.75l3 2.75 3-2.75'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 14px;
   }
   select:disabled,
-  input:disabled {
+  input:disabled,
+  textarea:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
   option {
-    background: var(--surface);
+    background: var(--surface-raised);
     color: var(--fg);
   }
 
   /* Checkbox: accent fill with an animated check. */
   input[type="checkbox"] {
     appearance: none;
+    -webkit-appearance: none;
     flex-shrink: 0;
     width: 16px;
     height: 16px;
     border: 1px solid var(--line-strong);
-    border-radius: 4px;
-    background: var(--surface);
+    border-radius: var(--radius-xs);
+    background: var(--field);
+    box-shadow: var(--elev-0);
     display: inline-grid;
     place-content: center;
     vertical-align: middle;
     transition:
       background-color var(--dur-micro) var(--ease-out),
       border-color var(--dur-micro) var(--ease-out),
-      transform 100ms var(--ease-out);
+      transform var(--dur-instant) var(--ease-out);
   }
   input[type="checkbox"]::before {
     content: "";
@@ -334,6 +533,8 @@
     height: 10px;
     background: var(--accent-fg);
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.2l2.4 2.3 4.6-5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.2l2.4 2.3 4.6-5'/%3E%3C/svg%3E")
       center / contain no-repeat;
     transform: scale(0.4);
     opacity: 0;
@@ -356,7 +557,7 @@
     opacity: 1;
   }
 
-  /* Disclosure height animation for every native <details> (Chromium 131+). */
+  /* Disclosure height animation for every native <details> (Chromium 131+; instant elsewhere). */
   details::details-content {
     block-size: 0;
     overflow-y: clip;
@@ -374,41 +575,20 @@
     display: none;
   }
 
-  /* Native modal <dialog>: enter/exit with @starting-style, backdrop fades with it. */
+  /*
+   * Native modal <dialog> (used by `Modal`): the element is a transparent full-window layer
+   * in the top layer; `Modal` draws its own backdrop and panel and animates them with Motion,
+   * so the open/close looks the same in both WebViews.
+   */
   dialog {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-    transition:
-      opacity var(--dur-component) var(--ease-out),
-      transform var(--dur-component) var(--ease-out),
-      overlay var(--dur-component) allow-discrete,
-      display var(--dur-component) allow-discrete;
-  }
-  dialog[open] {
-    opacity: 1;
-    transform: none;
-  }
-  @starting-style {
-    dialog[open] {
-      opacity: 0;
-      transform: translateY(8px) scale(0.98);
-    }
+    color: inherit;
   }
   dialog::backdrop {
-    background: var(--backdrop);
-    opacity: 0;
-    transition:
-      opacity var(--dur-component) var(--ease-out),
-      overlay var(--dur-component) allow-discrete,
-      display var(--dur-component) allow-discrete;
+    background: transparent;
   }
-  dialog[open]::backdrop {
-    opacity: 1;
-  }
-  @starting-style {
-    dialog[open]::backdrop {
-      opacity: 0;
-    }
+
+  kbd {
+    font-family: var(--font-sans);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -424,16 +604,18 @@
   }
 }
 
+/* ---------------------------------------------------------------- Utilities */
+
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Section label inside cards and lists ("Evidenze", "Stato Windows"). */
+/* Section label inside panels and lists ("Evidenze", "Stato"). */
 @utility eyebrow {
   font-size: 11px;
-  line-height: 15px;
+  line-height: 14px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--fg-subtle);
 }
@@ -441,12 +623,343 @@
 /* Press feedback for custom clickable surfaces (buttons get it from <Button>). */
 @utility pressable {
   transition:
-    transform 120ms var(--ease-out),
+    transform var(--dur-micro) var(--ease-out),
     background-color var(--dur-micro) var(--ease-out),
     border-color var(--dur-micro) var(--ease-out),
+    box-shadow var(--dur-micro) var(--ease-out),
     color var(--dur-micro) var(--ease-out),
     opacity var(--dur-micro) var(--ease-out);
-  &:active:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled="true"]) {
     transform: scale(0.97);
+  }
+}
+
+/* The window background: canvas plus a faint, fixed ambient light that glass can pick up. */
+@utility ambient-canvas {
+  background-color: var(--canvas);
+  background-image: var(--canvas-wash);
+  background-attachment: fixed;
+}
+
+/* Page content column: one max width and gutter for every page and the running strip. */
+@utility page-gutter {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1200px;
+  padding-inline: 24px;
+  @media (width >= 64rem) {
+    padding-inline: 32px;
+  }
+}
+
+/*
+ * Materials. Solid surfaces carry data; glass is for navigation, toolbars and anything that
+ * floats over other content. Only `glass`, `glass-thick` and `glass-bar` blur (backdrop
+ * filters cost GPU time: never put one on a repeated element such as a table row or button).
+ */
+/*
+ * Primary and secondary panels share the widget look (sheen, luminous edge, top highlight,
+ * 24 px radius) so every page reads as one family; they differ only in elevation. No backdrop
+ * filter: panels repeat (finding cards, settings groups) and sit on the canvas, where a blur
+ * adds nothing but GPU time. The fill stays dense so data reads as on a solid surface.
+ */
+@utility surface-primary {
+  background-color: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  background-image:
+    linear-gradient(180deg, var(--glass-sheen), transparent 36%),
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-1);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+  }
+}
+
+@utility surface-secondary {
+  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 36%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+  }
+}
+
+@utility surface-inset {
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+@utility glass {
+  background-color: var(--glass);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 42%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-2);
+  -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: var(--surface-raised);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@utility glass-thick {
+  background-color: var(--glass-thick);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 40%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-3);
+  -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-thick)) saturate(var(--glass-saturate));
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background-color: var(--surface-raised);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Modal and sheet panels: thick glass, nearly opaque (they hold reading content), top elevation. */
+@utility glass-panel {
+  background-color: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 30%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-4);
+  -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-thick)) saturate(var(--glass-saturate));
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/*
+ * Widget material (Overview components, benchmark tiles): frosted glass over the ambient
+ * canvas, like a macOS widget. The fill stays dense (≥ 80 %) so numbers and charts read as
+ * on a solid surface; the sheen, edge and top highlight make it glass. Not for repeated
+ * rows: a handful per screen.
+ */
+@utility widget {
+  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  background-image:
+    linear-gradient(180deg, var(--glass-sheen), transparent 36%),
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-1);
+  -webkit-backdrop-filter: blur(var(--blur-thin)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-thin)) saturate(var(--glass-saturate));
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Toolbar band: translucent canvas with blur, no border (a hairline appears once content scrolls under it). */
+@utility glass-bar {
+  background-color: color-mix(in srgb, var(--canvas) 72%, transparent);
+  -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Satin control fill (buttons, segmented thumb, chips): translucent, edge + top highlight, no blur. */
+@utility satin {
+  background-color: var(--control);
+  border: 1px solid var(--control-edge);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    var(--elev-0);
+}
+
+/* ---------------------------------------------------------------- Shell pieces */
+
+@layer components {
+  /*
+   * Page toolbar (`PageHeader`): sticky at the top of the scrolling main area. At rest it is
+   * part of the canvas; once content scrolls under it (`data-scrolled` on <main>, set by
+   * AppShell) it turns into a blurred glass band with a hairline.
+   */
+  .page-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    transition:
+      background-color var(--dur-component) var(--ease-out),
+      box-shadow var(--dur-component) var(--ease-out);
+  }
+  .page-toolbar::before {
+    content: "";
+    position: absolute;
+    inset: 0 -24px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity var(--dur-component) var(--ease-out);
+    background-color: color-mix(in srgb, var(--canvas) 72%, transparent);
+    -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--blur-regular)) saturate(var(--glass-saturate));
+    box-shadow: inset 0 -1px 0 0 var(--line);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  }
+  [data-scrolled="true"] .page-toolbar::before {
+    opacity: 1;
+  }
+  /* Large title (34 px) that settles to toolbar size once content scrolls under it. */
+  .page-title {
+    font-size: var(--text-4xl);
+    line-height: 1.12;
+    letter-spacing: -0.022em;
+    transition: font-size var(--dur-panel) var(--ease-out);
+  }
+  .page-subtitle {
+    display: grid;
+    max-height: 3rem;
+    margin-top: 4px;
+    overflow: hidden;
+    transition:
+      max-height var(--dur-panel) var(--ease-out),
+      opacity var(--dur-component) var(--ease-out),
+      margin-top var(--dur-panel) var(--ease-out);
+  }
+  .page-toolbar {
+    transition:
+      padding var(--dur-panel) var(--ease-out),
+      background-color var(--dur-component) var(--ease-out),
+      box-shadow var(--dur-component) var(--ease-out);
+  }
+  [data-scrolled="true"] .page-toolbar {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  [data-scrolled="true"] .page-title {
+    font-size: var(--text-xl);
+  }
+  [data-scrolled="true"] .page-subtitle {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page-title,
+    .page-subtitle,
+    .page-toolbar {
+      transition: none;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .page-toolbar::before {
+      background-color: var(--canvas);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- Benchmark illustrations */
+
+@layer components {
+  .bench-art-body,
+  .bench-art-shadow {
+    transition:
+      transform var(--dur-panel) var(--ease-out),
+      opacity var(--dur-panel) var(--ease-out);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .bench-art-glow {
+    opacity: 0.55;
+    transition: opacity var(--dur-panel) var(--ease-out);
+  }
+  .bench-art-chip polygon {
+    transition: fill var(--dur-component) var(--ease-out);
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-body,
+  .bench-art-wrap.is-active .bench-art-body {
+    transform: translateY(-5px);
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-shadow,
+  .bench-art-wrap.is-active .bench-art-shadow {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  :where(.group:hover, .group:focus-visible) .bench-art-glow,
+  .bench-art-wrap.is-active .bench-art-glow {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :where(.group:hover, .group:focus-visible) .bench-art-spin,
+    .bench-art-wrap.is-active .bench-art-spin {
+      animation: bench-spin 0.9s linear infinite;
+    }
+    :where(.group:hover, .group:focus-visible) .bench-art-chip > polygon:last-child,
+    .bench-art-wrap.is-active .bench-art-chip > polygon:last-child {
+      animation: bench-chip 1.6s var(--ease-in-out) infinite;
+    }
+    .bench-art-chip-1 > polygon:last-child {
+      animation-delay: 0.2s !important;
+    }
+    .bench-art-chip-2 > polygon:last-child {
+      animation-delay: 0.4s !important;
+    }
+    .bench-art-chip-3 > polygon:last-child {
+      animation-delay: 0.6s !important;
+    }
+    .bench-art-wrap.is-active .bench-art-glow {
+      animation: bench-pulse 1.4s var(--ease-in-out) infinite;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bench-art-body,
+    .bench-art-shadow,
+    .bench-art-glow {
+      transition: none;
+    }
+  }
+}
+
+@keyframes bench-spin {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@keyframes bench-chip {
+  0%,
+  100% {
+    fill: var(--art-dark-top);
+  }
+  40% {
+    fill: color-mix(in srgb, var(--accent) 75%, var(--art-dark-top));
+  }
+}
+
+@keyframes bench-pulse {
+  50% {
+    opacity: 0.55;
   }
 }

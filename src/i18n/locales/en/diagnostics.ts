@@ -3,6 +3,8 @@ import type { Translation } from "../types";
 
 /** English texts for the "diagnostics" namespace. */
 export default {
+  coverageCount: "{done} of {total} areas fully checked",
+  coverageWhyPartial: "What could not be checked",
   // Page and run states
   run: "Run diagnostics",
   running: "Running diagnostics…",
@@ -59,14 +61,30 @@ export default {
   meaning: "What it means",
   whatYouCanDo: "What you can do",
   showTechnical: "Show technical details",
+  cause: "Cause",
+  cause_confirmed: "Confirmed cause",
+  cause_possible: "Possible cause",
+  cause_undetermined: "Cause not determined",
+  evidenceBasis_one: "Based on {count} measurement",
+  evidenceBasis_other: "Based on {count} measurements",
+  suggestedActions: "Suggested actions",
+  openSection: "Open {section}",
+  openSectionAria: "Open {section}: {label}",
+  ruleId: "Rule {id}",
+
+  // Summary
+  outcomeEyebrow: "Outcome",
+  noFindingsHeadline: "No problems found",
+  overallCritical_one: "{count} critical problem",
+  overallCritical_other: "{count} critical problems",
+  overallWarning_one: "{count} warning to check",
+  overallWarning_other: "{count} warnings to check",
+  countsAria: "Findings by severity",
 
   // Overview "System Insights" card
   insightsTitle: "System Insights",
   openDiagnostics: "Open Diagnostics",
   insightsUnavailable: "Diagnostic report not available",
-  insightsNeverRunDescription:
-    "No findings are shown because diagnostics haven't been run, not because the system has no problems.",
-  insightsCheckedAt: "Checked on {date}",
   insightsReportAt: "Report from {date}",
   insightsCoverage: "Coverage: {sentence}",
   insightsCritical_one: "{count} critical",

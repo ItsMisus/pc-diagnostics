@@ -3,6 +3,12 @@ import type { Translation } from "../types";
 
 /** English texts for the "benchmarks" namespace (also used by History). */
 export default {
+  noResultYet: "No result for this test yet",
+  noResultYetDesc: "Start the test: the measured value, its trend and the comparison with earlier runs will appear here.",
+  recentResults: "Latest results",
+  howStep1: "Pick a component: processor, graphics, memory or disk.",
+  howStep2: "Adjust the duration if you like, then start the test. You can stop it at any time.",
+  howStep3: "The result is saved: you find it here and in History, ready to compare.",
   // Test kinds, run states, power sources.
   kind_cpuSingleCore: "CPU single-core",
   kind_cpuMultiCore: "CPU multi-core",
@@ -141,7 +147,6 @@ export default {
   removable: "removable",
 
   // Live progress and running bar.
-  runAria: "{kind} run",
   progressAria: "{kind} progress",
   interimTitle: "Interim values",
   stopping: "Stopping…",
@@ -171,7 +176,20 @@ export default {
   notUsable: "not usable",
   notUsableForTest: "Not usable for the test",
   busyTitle: "Another benchmark is already running",
-  busyDesc: "Only one heavy test runs at a time. Wait for it to finish or stop it from the bar at the top.",
+  busyDesc: "Only one heavy test runs at a time. Wait for it to finish or stop it from the bar at the bottom.",
   rejectedTitle: "Parameters rejected by the backend",
   startFailed: "Could not start the benchmark",
+
+  // Redesigned page (selection, run, result).
+  componentsHeading: "Components",
+  chooseHint: "Choose a component to set up and start a test. Nothing starts on its own.",
+  detectedTitle: "Detected",
+  elapsed: "{time} elapsed",
+  otherMeasures: "Other measures",
+  chartsTitle: "Over time",
+  eventsLost: "Benchmark updates not received",
+  eventsLostDesc:
+    "The connection to the test engine dropped: progress and results may not appear. Try connecting again.",
+  liveTitle: "Run",
+  unsupportedShort: "Not supported",
 } satisfies Translation<typeof it>;

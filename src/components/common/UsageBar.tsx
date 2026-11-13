@@ -40,7 +40,7 @@ export function UsageBar({ percent, label, valueText, tone, className = "" }: Us
       aria-valuemax={100}
       aria-valuenow={percent === null ? undefined : Math.round(p)}
       aria-valuetext={valueText}
-      className={`h-1.5 w-full overflow-hidden rounded-[2px] bg-gauge-track ${className}`}
+      className={`h-1.5 w-full overflow-hidden rounded-full bg-gauge-track ${className}`}
     >
       <div
         className="h-full origin-left"

@@ -13,4 +13,12 @@ export default {
   section_diagnostics: "Diagnostics",
   section_history: "History",
   section_settings: "Settings",
+  subtitle_overview: "Lo stato del tuo computer a colpo d'occhio: dispositivo, risorse in uso e segnalazioni.",
+  subtitle_hardware: "I componenti del computer, come li riporta il sistema.",
+  subtitle_benchmarks: "Misura le prestazioni di processore, scheda video, memoria e disco.",
+  subtitle_processes: "I programmi in esecuzione e quanto pesano sul sistema.",
+  subtitle_drivers: "I driver dei dispositivi, con quelli che hanno problemi in cima.",
+  subtitle_diagnostics: "Cerca i problemi del computer e spiega cosa fare.",
+  subtitle_history: "I risultati dei benchmark eseguiti finora.",
+  subtitle_settings: "Aspetto, dispositivo, monitoraggio e privacy dell'app.",
 } satisfies Record<string, string>;

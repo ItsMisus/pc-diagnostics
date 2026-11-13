@@ -1,5 +1,7 @@
 /** Italian (reference) texts for the "diagnostics" namespace. */
 export default {
+  coverageCount: "{done} di {total} aree controllate per intero",
+  coverageWhyPartial: "Cosa non è stato possibile controllare",
   // Page and run states
   run: "Esegui diagnosi",
   running: "Diagnosi in corso…",
@@ -56,14 +58,30 @@ export default {
   meaning: "Cosa significa",
   whatYouCanDo: "Cosa puoi fare",
   showTechnical: "Mostra dettagli tecnici",
+  cause: "Causa",
+  cause_confirmed: "Causa confermata",
+  cause_possible: "Causa possibile",
+  cause_undetermined: "Causa non determinata",
+  evidenceBasis_one: "Basata su {count} misura",
+  evidenceBasis_other: "Basata su {count} misure",
+  suggestedActions: "Azioni suggerite",
+  openSection: "Apri {section}",
+  openSectionAria: "Apri {section}: {label}",
+  ruleId: "Regola {id}",
+
+  // Summary
+  outcomeEyebrow: "Esito",
+  noFindingsHeadline: "Nessun problema rilevato",
+  overallCritical_one: "{count} problema critico",
+  overallCritical_other: "{count} problemi critici",
+  overallWarning_one: "{count} avviso da controllare",
+  overallWarning_other: "{count} avvisi da controllare",
+  countsAria: "Segnalazioni per gravità",
 
   // Overview "System Insights" card
   insightsTitle: "Segnalazioni",
   openDiagnostics: "Apri Diagnostics",
   insightsUnavailable: "Report diagnostico non disponibile",
-  insightsNeverRunDescription:
-    "Nessuna segnalazione è mostrata perché la diagnosi non è stata eseguita, non perché il sistema sia privo di problemi.",
-  insightsCheckedAt: "Controllo del {date}",
   insightsReportAt: "Report del {date}",
   insightsCoverage: "Copertura: {sentence}",
   insightsCritical_one: "{count} critico",

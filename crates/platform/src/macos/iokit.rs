@@ -11,10 +11,10 @@ use objc2_core_foundation::{
 };
 use objc2_io_kit::{
     IOIteratorNext, IOObjectConformsTo, IOObjectGetClass, IOObjectRelease,
-    IORegistryEntryCreateCFProperty, IORegistryEntryGetChildEntry, IORegistryEntryGetName,
-    IORegistryEntryGetParentEntry, IORegistryEntryGetRegistryEntryID, IOServiceGetMatchingServices,
-    IOServiceMatching, io_iterator_t, io_object_t, kIOMainPortDefault, kIOReturnSuccess,
-    kIOServicePlane,
+    IORegistryEntryCreateCFProperty, IORegistryEntryFromPath, IORegistryEntryGetChildEntry,
+    IORegistryEntryGetName, IORegistryEntryGetParentEntry, IORegistryEntryGetRegistryEntryID,
+    IOServiceGetMatchingServices, IOServiceMatching, io_iterator_t, io_object_t,
+    kIOMainPortDefault, kIOReturnSuccess, kIOServicePlane,
 };
 
 /// An owned I/O Kit object reference (one user reference on a Mach port name), released
@@ -172,6 +172,22 @@ fn c_buf_to_string(buf: &[c_char]) -> String {
 
 fn plane_ptr(plane: &CStr) -> *mut [c_char; 128] {
     plane.as_ptr().cast_mut().cast()
+}
+
+/// The registry entry at `path` (e.g. `IODeviceTree:/product`), if it exists.
+pub fn entry_from_path(path: &CStr) -> Option<IoObject> {
+    let bytes = path.to_bytes_with_nul();
+    let mut buf: [c_char; 512] = [0; 512];
+    if bytes.len() > buf.len() {
+        return None;
+    }
+    for (d, s) in buf.iter_mut().zip(bytes) {
+        *d = c_char::from_ne_bytes([*s]);
+    }
+    // SAFETY: `buf` is the NUL-terminated 512-byte `io_string_t` the call reads;
+    // `kIOMainPortDefault` is the immutable default main port. The result is an owned
+    // reference (0 when there is no such entry) that `IoObject` releases.
+    IoObject::from_raw(unsafe { IORegistryEntryFromPath(kIOMainPortDefault, &raw mut buf) })
 }
 
 /// All registered services of `class` (and its subclasses).

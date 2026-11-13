@@ -1,5 +1,5 @@
 import { useShallow } from "zustand/react/shallow";
-import { Card } from "@/components/common/Card";
+import { Surface } from "@/components/common/Panel";
 import { Icon } from "@/components/common/Icon";
 import { useT } from "@/i18n";
 import { formatBytes, formatBytesPerSec, formatPercent } from "@/lib/format";
@@ -36,9 +36,9 @@ export function ScoreExplanation() {
   const share = (w: number) => formatPercent(weightShare(w, weights));
 
   return (
-    <Card flush>
+    <Surface as="section" aria-label={t("scoreTitle")} variant="secondary" flush>
       <details className="group">
-        <summary className="flex items-center gap-2 rounded-md px-4 py-3 text-[13px] font-semibold text-fg-muted transition-colors duration-150 select-none hover:text-fg focus-visible:outline-offset-[-2px]">
+        <summary className="flex items-center gap-2 min-h-11 rounded-lg px-4 py-3 text-sm font-semibold text-fg-muted transition-colors duration-150 select-none hover:text-fg focus-visible:outline-offset-[-2px]">
           <Icon
             name="chevronRight"
             size={14}
@@ -51,7 +51,7 @@ export function ScoreExplanation() {
           <p className="text-fg">{t("scoreDisclaimer")}</p>
           <p>
             {t("scoreIntro")}
-            <span className="mt-2 block w-fit max-w-full rounded-md border border-line bg-surface-2/60 px-2.5 py-1.5 font-mono text-xs text-fg tabular">
+            <span className="mt-2 block w-fit max-w-full surface-inset px-2.5 py-1.5 font-mono text-xs text-fg tabular">
               Impact = {share(m.cpu)} × CPU + {share(m.ram)} × RAM + {share(m.io)} × I/O
             </span>
           </p>
@@ -71,6 +71,6 @@ export function ScoreExplanation() {
           <p className="text-xs text-fg-subtle">{t("scoreMethodology", { version: m.version })}</p>
         </div>
       </details>
-    </Card>
+    </Surface>
   );
 }

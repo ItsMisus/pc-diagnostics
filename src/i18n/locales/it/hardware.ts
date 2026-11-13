@@ -10,6 +10,25 @@ export default {
   manufacturer: "Produttore",
   capacity: "Capacità",
 
+  // Page groups.
+  componentsTitle: "Componenti",
+
+  // Device identity (form factor and its evidence).
+  deviceGroup: "Dispositivo",
+  softwareGroup: "Software",
+  formFactor_desktop: "PC fisso",
+  formFactor_laptop: "Portatile",
+  formFactor_mini: "Mini PC",
+  formFactor_allInOne: "All-in-one",
+  formFactor_other: "Altro tipo di dispositivo",
+  basis_productName: "Rilevato dal nome del prodotto",
+  basis_modelIdentifier: "Rilevato dall'identificativo del modello",
+  basis_chassisType: "Rilevato dal tipo di chassis",
+  deviceUnknown: "Tipo di dispositivo non determinato",
+  modelIdentifier: "Identificativo modello",
+  chassisTypes: "Tipo di chassis (SMBIOS)",
+  internalBattery: "Batteria interna",
+
   // System.
   systemTitle: "Sistema",
   notReported: "Non riportato dal sistema",
@@ -46,6 +65,7 @@ export default {
   slot: "Slot",
   ratedSpeed: "Velocità nominale",
   configuredSpeed: "Velocità configurata",
+  moduleDetails: "Dettaglio moduli",
   partNumber: "Part number",
 
   // Storage.

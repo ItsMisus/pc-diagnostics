@@ -64,16 +64,16 @@ export function DetectedComponent({ component }: { component: BenchComponent }) 
     return (
       <div role="status" aria-busy="true" className="flex flex-col gap-2.5 py-0.5">
         <span className="sr-only">{t("detectingComponent")}</span>
-        {["w-48", "w-36", "w-40"].map((w) => (
-          <span key={w} className="flex items-center gap-6">
-            <Skeleton className="h-3 w-24" />
+        {["w-28", "w-20", "w-24"].map((w) => (
+          <span key={w} className="flex items-center justify-between gap-6">
+            <Skeleton className="h-3 w-20" />
             <Skeleton className={`h-3 ${w}`} />
           </span>
         ))}
       </div>
     );
   }
-  return <DefinitionList items={items(data, component, t, tm)} />;
+  return <DefinitionList items={items(data, component, t, tm)} divided />;
 }
 
 function items(

@@ -90,3 +90,9 @@ export function ticks(domain: Domain, count: number): number[] {
   const step = (b - a) / (count - 1);
   return Array.from({ length: count }, (_, i) => a + step * i);
 }
+
+/** Coordinates of the last point of a `linePath` output, or null when empty. */
+export function lastPoint(path: string): [number, number] | null {
+  const m = /(-?[\d.]+) (-?[\d.]+)\s*$/.exec(path);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}

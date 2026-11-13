@@ -1,5 +1,20 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "title": "PC Diagnostics",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 22, "y": 26 }
+      }
+    ]
+  },
   "bundle": {
     "targets": ["app", "dmg"],
     "shortDescription": "Monitoraggio hardware, benchmark e diagnostica per macOS",

@@ -1,5 +1,6 @@
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
+import { Tooltip } from "@/components/common/Tooltip";
 import { useT } from "@/i18n";
 import type { Finding } from "@/types/generated/Finding";
 import { fixFlowStore } from "./fixFlow";
@@ -25,16 +26,19 @@ export function RisolviButton({
 }) {
   const t = useT("assistant");
   if (findingIndex < 0 || !canShowRisolvi(finding)) return null;
+  // The hint is supplementary (the dialog says the same before anything is sent), so a
+  // tooltip rather than a native `title`, which does not open from the keyboard.
   return (
-    <Button
-      variant="secondary"
-      size={compact ? "sm" : "md"}
-      aria-label={t("buttonAria", { label })}
-      title={t("buttonTitle")}
-      onClick={() => fixFlowStore.getState().start({ findingIndex, ruleId: finding.ruleId, title: label })}
-    >
-      <Icon name="sparkle" size={compact ? 14 : 16} className="text-fg-muted" />
-      {t("button")}
-    </Button>
+    <Tooltip content={t("buttonTitle")} side={compact ? "top-end" : "top"} multiline>
+      <Button
+        variant="secondary"
+        size={compact ? "sm" : "md"}
+        aria-label={t("buttonAria", { label })}
+        onClick={() => fixFlowStore.getState().start({ findingIndex, ruleId: finding.ruleId, title: label })}
+      >
+        <Icon name="sparkle" size={compact ? 14 : 16} className="text-fg-muted" />
+        {t("button")}
+      </Button>
+    </Tooltip>
   );
 }

@@ -6,6 +6,8 @@ import type { BenchmarkResult } from "@/types/generated/BenchmarkResult";
 import type { BenchmarkState } from "@/types/generated/BenchmarkState";
 import type { PowerSource } from "@/types/generated/PowerSource";
 import type { ResultMetric } from "@/types/generated/ResultMetric";
+import type { BenchmarkProgress } from "@/types/generated/BenchmarkProgress";
+import type { Unavailability } from "@/types/generated/Unavailability";
 import type { VolumeInfo } from "@/types/generated/VolumeInfo";
 import { type Translator, translatorFor } from "@/i18n";
 import { formatMib, unavailabilityText } from "@/lib/format";
@@ -289,4 +291,77 @@ export function buildRequest(
 export function storageConsentCopy(fileMib: number | null, t: T = current()): string {
   const size = fileMib === null ? t("consentDefaultSize") : formatMib(fileMib);
   return t("consentCopy", { size });
+}
+
+// ---------------------------------------------------------------------------------------
+// Presentation helpers (pure, so they are unit-tested)
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Splits a formatted value ("12,3 GB/s", "4,56 M", "87 %") into the number and its unit, so
+ * a `Readout` can set the unit smaller. Text without a trailing unit ("950", "—") comes back
+ * whole with `unit` null.
+ */
+export function splitUnitValue(text: string): { value: string; unit: string | null } {
+  const match = /^(.*\d)\s*(%)$/u.exec(text) ?? /^(.*\d)\s+([^\d\s][^\d]*)$/u.exec(text);
+  return match?.[1] && match[2] ? { value: match[1], unit: match[2] } : { value: text, unit: null };
+}
+
+/** How usable a component is, from its capabilities (for the selection tiles). */
+export type ComponentAvailability =
+  | { status: "available"; kinds: BenchmarkKind[] }
+  | { status: "unavailable"; reason: Unavailability | null }
+  | { status: "none" };
+
+export function componentAvailability(caps: readonly BenchmarkCapability[]): ComponentAvailability {
+  if (caps.length === 0) return { status: "none" };
+  const available = caps.filter(isAvailable).map((c) => c.kind);
+  if (available.length > 0) return { status: "available", kinds: available };
+  const first = caps.find((c) => c.availability.status === "unavailable");
+  return { status: "unavailable", reason: first?.availability.status === "unavailable" ? first.availability.reason : null };
+}
+
+/** The state view that explains why a test cannot run on this machine. */
+export function stateKindForReason(
+  reason: Unavailability,
+): "unsupported" | "unavailable" | "permission" | "notImplemented" | "error" {
+  switch (reason.kind) {
+    case "notSupported":
+      return "unsupported";
+    case "permissionDenied":
+      return "permission";
+    case "notImplemented":
+      return "notImplemented";
+    case "failed":
+      return "error";
+    case "providerMissing":
+    case "inconclusive":
+      return "unavailable";
+  }
+}
+
+/** Most recent final result of this session among the component's kinds. */
+export function latestComponentResult(
+  byKind: Partial<Record<BenchmarkKind, BenchmarkResult>>,
+  component: BenchComponent,
+): BenchmarkResult | null {
+  const kinds = BENCH_COMPONENTS.find((c) => c.id === component)?.kinds ?? [];
+  let best: BenchmarkResult | null = null;
+  for (const k of kinds) {
+    const r = byKind[k];
+    if (r && (!best || r.finishedAt > best.finishedAt)) best = r;
+  }
+  return best;
+}
+
+/**
+ * The run's progress is already on screen when the user is on its component's screen: the
+ * floating strip then steps aside so progress and Stop are shown once.
+ */
+export function isRunOnScreen(
+  run: Pick<BenchmarkProgress, "kind"> | null,
+  section: string,
+  openComponent: BenchComponent | null,
+): boolean {
+  return run !== null && section === "benchmarks" && openComponent === componentOfKind(run.kind);
 }

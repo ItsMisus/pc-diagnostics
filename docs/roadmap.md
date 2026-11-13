@@ -181,6 +181,7 @@ for a macOS value with a different meaning.
 | Drivers page and Windows Update driver check | not applicable | No comparable user-visible driver inventory on macOS; drivers ship with the OS |
 | Developer ID signing and notarization | not done | Needs a paid Apple Developer account; until then Gatekeeper blocks the first launch of a downloaded copy |
 | Intel Macs (x86_64) / universal binary | not done | Not built or tested; would need `--target universal-apple-darwin` and an Intel test machine |
+| UI redesign (Liquid Glass) | done | Branch `feat/ui-redesign`: new tokens (pearl light / graphite dark, sparing azure accent), glass shell, every page redone, procedural 3D device on the Overview (tower / laptop / mini, lazy, WebGL fallback), form factor detected in the backend with a saved manual choice. Checked visually on the M5 in both themes; not yet seen on Windows |
 
 ## Out of scope for v1 (by design)
 

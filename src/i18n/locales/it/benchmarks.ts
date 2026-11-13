@@ -1,5 +1,11 @@
 /** Italian (reference) texts for the "benchmarks" namespace (also used by History). */
 export default {
+  noResultYet: "Nessun risultato per questo test",
+  noResultYetDesc: "Avvia il test: qui compariranno il valore misurato, il suo andamento e il confronto con le esecuzioni precedenti.",
+  recentResults: "Ultimi risultati",
+  howStep1: "Scegli un componente: processore, scheda video, memoria o disco.",
+  howStep2: "Regola la durata se vuoi, poi avvia il test. Puoi fermarlo in qualsiasi momento.",
+  howStep3: "Il risultato resta salvato: lo trovi qui e nella Cronologia, pronto per il confronto.",
   // Test kinds, run states, power sources.
   kind_cpuSingleCore: "CPU single-core",
   kind_cpuMultiCore: "CPU multi-core",
@@ -139,7 +145,6 @@ export default {
   removable: "rimovibile",
 
   // Live progress and running bar.
-  runAria: "Esecuzione {kind}",
   progressAria: "Avanzamento {kind}",
   interimTitle: "Valori intermedi",
   stopping: "Interruzione…",
@@ -169,7 +174,20 @@ export default {
   notUsable: "non utilizzabile",
   notUsableForTest: "Non utilizzabile per il test",
   busyTitle: "Un altro benchmark è già in corso",
-  busyDesc: "Si esegue un solo test pesante alla volta. Attendi il termine o interrompilo dalla barra in alto.",
+  busyDesc: "Si esegue un solo test pesante alla volta. Attendi il termine o interrompilo dalla barra in basso.",
   rejectedTitle: "Parametri rifiutati dal backend",
   startFailed: "Avvio non riuscito",
+
+  // Redesigned page (selection, run, result).
+  componentsHeading: "Componenti",
+  chooseHint: "Scegli un componente per configurare e avviare un test. Nessun test parte da solo.",
+  detectedTitle: "Rilevato",
+  elapsed: "{time} trascorsi",
+  otherMeasures: "Altre misure",
+  chartsTitle: "Andamento",
+  eventsLost: "Aggiornamenti dei benchmark non ricevuti",
+  eventsLostDesc:
+    "Il collegamento con il motore dei test si è interrotto: avanzamento e risultati potrebbero non comparire. Riprova a collegarti.",
+  liveTitle: "Esecuzione",
+  unsupportedShort: "Non supportato",
 } satisfies Record<string, string>;
