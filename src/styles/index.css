@@ -657,25 +657,42 @@
  * floats over other content. Only `glass`, `glass-thick` and `glass-bar` blur (backdrop
  * filters cost GPU time: never put one on a repeated element such as a table row or button).
  */
+/*
+ * Primary and secondary panels share the widget look (sheen, luminous edge, top highlight,
+ * 24 px radius) so every page reads as one family; they differ only in elevation. No backdrop
+ * filter: panels repeat (finding cards, settings groups) and sit on the canvas, where a blur
+ * adds nothing but GPU time. The fill stays dense so data reads as on a solid surface.
+ */
 @utility surface-primary {
-  background-color: var(--surface-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  background-color: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  background-image:
+    linear-gradient(180deg, var(--glass-sheen), transparent 36%),
+    radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 60%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
   box-shadow:
     inset 0 1px 0 0 var(--glass-highlight),
     var(--elev-1);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+  }
 }
 
 @utility surface-secondary {
-  background-color: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  background-image: linear-gradient(180deg, var(--glass-sheen), transparent 36%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-2xl);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--surface-raised);
+  }
 }
 
 @utility surface-inset {
   background-color: color-mix(in srgb, var(--surface-2) 70%, transparent);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 
 @utility glass {

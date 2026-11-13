@@ -5,9 +5,10 @@ import { Icon, type IconName } from "./Icon";
  * Surface system. Two questions decide the variant:
  * 1. Does it carry data? Then it is solid (`primary`, `secondary`, `inset`): charts, numbers
  *    and tables stay legible on an opaque background.
- * 2. Is it the focal element of the screen? `primary` (raised, 18 px radius, soft shadow,
- *    20 px padding): one or two per screen. Everything supporting it is `secondary` (flat,
- *    hairline, 14 px radius, 16 px padding). `inset` groups content inside a panel.
+ * 2. Is it the focal element of the screen? `primary` (widget look, soft shadow): one or two
+ *    per screen. Everything supporting it is `secondary` (same look, no shadow). Both have a
+ *    24 px radius and 20 px padding, like the Overview widgets. `inset` groups content inside
+ *    a panel.
  * `glass` is for panels that float over other content (e.g. over the 3D device stage).
  */
 export type SurfaceVariant = "primary" | "secondary" | "inset" | "glass";
@@ -21,7 +22,7 @@ const SURFACE: Record<SurfaceVariant, string> = {
 
 const PADDING: Record<SurfaceVariant, string> = {
   primary: "p-5",
-  secondary: "p-4",
+  secondary: "p-5",
   inset: "p-3",
   glass: "p-4",
 };
@@ -93,7 +94,7 @@ export function Panel({
           aside={aside}
           level={level}
           titleId={titleId}
-          className={flush ? (variant === "primary" ? "px-5 pt-5" : "px-4 pt-4") : ""}
+          className={flush ? "px-5 pt-5" : ""}
           large={variant === "primary"}
         />
       )}
@@ -131,8 +132,15 @@ export function PanelHeader({
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
         {title && (
-          <H id={titleId} className={`flex items-center gap-2 font-display font-semibold text-fg ${large ? "text-lg" : "text-md"}`}>
-            {icon && <Icon name={icon} size={large ? 18 : 16} className="shrink-0 text-fg-subtle" />}
+          <H
+            id={titleId}
+            className={`flex items-center ${icon ? "gap-2.5" : "gap-2"} font-display font-semibold text-fg ${large ? "text-lg" : "text-md"}`}
+          >
+            {icon && (
+              <span aria-hidden="true" className="satin grid size-8 shrink-0 place-items-center rounded-full text-fg-muted">
+                <Icon name={icon} size={16} />
+              </span>
+            )}
             <span className="min-w-0">{title}</span>
           </H>
         )}

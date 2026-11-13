@@ -57,9 +57,9 @@ the theme as a value (the 3D scene) uses `useResolvedTheme()` and `readColorToke
 | Material | Utility / component | Blur | Use |
 | --- | --- | --- | --- |
 | Canvas | `ambient-canvas` (AppShell) | – | Window background. |
-| Primary surface | `surface-primary`, `Panel variant="primary"` | – | The focal panel of a screen: raised, 18 px radius, soft shadow, top highlight, 20 px padding. One or two per screen. |
-| Secondary surface | `surface-secondary`, `Panel` (default), `Card` | – | Supporting panels: flat, hairline, 14 px radius, 16 px padding. |
-| Inset | `surface-inset`, `Panel variant="inset"` | – | Groups inside a panel (metric tiles, code, comparison). 10 px radius. |
+| Primary surface | `surface-primary`, `Panel variant="primary"` | – | The focal panel of a screen: widget look (sheen, luminous edge, top highlight), 24 px radius, soft shadow, 20 px padding. One or two per screen. |
+| Secondary surface | `surface-secondary`, `Panel` (default), `Card` | – | Supporting panels: same widget look without the shadow, 24 px radius, 20 px padding. A panel icon sits in a satin disc, like the Overview widgets. |
+| Inset | `surface-inset`, `Panel variant="inset"` | – | Groups inside a panel (metric tiles, code, comparison). 14 px radius. |
 | Glass | `glass`, `Panel variant="glass"` | 24 px | Sidebar, floating strips, panels over the 3D stage. |
 | Thick glass | `glass-thick` | 36 px | Tooltips, toasts, chart tooltips, popovers. |
 | Glass panel | `glass-panel` (Modal) | 36 px | Modals and sheets: 90 % opaque, they hold reading content. |
@@ -144,10 +144,10 @@ One continuous-looking family; nested shapes are concentric (`inner = outer − 
 | --- | --- | --- |
 | `rounded-xs` | 4 | Checkboxes, kbd, tiny marks. |
 | `rounded-sm` | 6 | Tags, skeleton bars, the brand tile. |
-| `rounded-md` | 10 | Insets, nav rows, inputs, tooltips, chart tooltips. |
-| `rounded-lg` | 14 | Secondary panels, toasts. |
-| `rounded-xl` | 18 | Primary panels, sidebar, modals, sheets. |
-| `rounded-2xl` | 24 | Hero stage (3D device), the floating running strip. |
+| `rounded-md` | 10 | Nav rows, inputs, tooltips, chart tooltips. |
+| `rounded-lg` | 14 | Insets, toasts. |
+| `rounded-xl` | 18 | Sidebar, modals, sheets. |
+| `rounded-2xl` | 24 | Primary and secondary panels, widgets, hero stage, the floating running strip. |
 | `rounded-full` | – | Buttons (capsules), segmented controls, switches, badges, search field, meters, glyph discs. |
 
 ## Elevation
