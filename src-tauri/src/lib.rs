@@ -85,6 +85,9 @@ pub fn run() {
                 control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
             );
             let _ = &store;
+            // Lighting center (its `ProfileDomain` for Gaming: `lighting.clone()`).
+            let lighting = Arc::new(control::lighting::LightingController::system(store.clone()));
+            app.manage(lighting);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -116,6 +119,15 @@ pub fn run() {
             commands::assistant::preview_fix,
             commands::assistant::request_fix,
             commands::assistant::execute_fix_step,
+            commands::lighting::lighting_get_state,
+            commands::lighting::lighting_refresh,
+            commands::lighting::lighting_apply_profile,
+            commands::lighting::lighting_apply_setup,
+            commands::lighting::lighting_preview_setup,
+            commands::lighting::lighting_set_brightness,
+            commands::lighting::lighting_save_profile,
+            commands::lighting::lighting_delete_profile,
+            commands::lighting::lighting_restore,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -127,6 +139,11 @@ pub fn run() {
             state.bench().shutdown();
             state.shutdown_samplers();
             tracing::info!("samplers stopped");
+            // Lighting: stop the effect engine, hand LampArray devices back.
+            if let Some(lighting) = handle.try_state::<Arc<control::lighting::LightingController>>()
+            {
+                lighting.shutdown();
+            }
         }
     });
 }

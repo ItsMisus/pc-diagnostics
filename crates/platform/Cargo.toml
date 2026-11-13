@@ -19,8 +19,11 @@ security-framework = "3"
 # wgpu already use; NSProcessInfo for Low Power Mode.
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFArray", "CFBase", "CFData", "CFDictionary", "CFLocale", "CFNumber", "CFString"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSProcessInfo"] }
-objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "ps"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "ps", "hid"] }
 objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice"] }
+# Lighting: Objective-C messaging (CoreBrightness keyboard backlight) and IOHIDManager
+# (LampArray), at the versions already in the lock file.
+objc2 = "0.6"
 
 [target.'cfg(windows)'.dependencies]
 serde.workspace = true
@@ -53,6 +56,14 @@ windows = { version = "0.62", features = [
     "Win32_System_WindowsProgramming",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
+    # Lighting (Windows.Devices.Lights LampArray, Dynamic Lighting)
+    "Devices_Enumeration",
+    "Devices_Lights",
+    "Foundation",
+    "Foundation_Collections",
+    "Foundation_Numerics",
+    "UI",
+    "Win32_System_WinRT",
 ] }
 
 [lints]
