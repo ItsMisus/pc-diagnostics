@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/models", "crates/platform", "crates/monitor", "crates/processes", "crates/drivers", "crates/bench", "crates/diagnostics", "crates/persistence", "crates/assistant", "src-tauri"]
+members = ["crates/models", "crates/platform", "crates/control", "crates/monitor", "crates/processes", "crates/drivers", "crates/bench", "crates/diagnostics", "crates/persistence", "crates/assistant", "src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -19,6 +19,7 @@ drivers = { path = "crates/drivers" }
 bench = { path = "crates/bench" }
 diagnostics = { path = "crates/diagnostics" }
 persistence = { path = "crates/persistence" }
+control = { path = "crates/control" }
 assistant = { path = "crates/assistant" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

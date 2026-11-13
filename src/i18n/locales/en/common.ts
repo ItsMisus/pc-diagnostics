@@ -26,4 +26,7 @@ export default {
   viewModeSwitchTo: "switch to {mode}",
   viewModeAdvanced: "Advanced",
   viewModeHint: "Simple: explanations in plain words. Advanced: every technical detail. Also available in Settings.",
+  supportSupported: "Available",
+  supportReadOnly: "Read only",
+  supportUnsupported: "Not supported",
 } satisfies Translation<typeof it>;

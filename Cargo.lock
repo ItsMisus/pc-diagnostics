@@ -469,6 +469,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "control"
+version = "0.1.0"
+dependencies = [
+ "models",
+ "platform",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "cookie"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2606,6 +2617,7 @@ version = "0.1.0"
 dependencies = [
  "assistant",
  "bench",
+ "control",
  "diagnostics",
  "drivers",
  "models",

@@ -6,6 +6,8 @@
 //! - v2: `benchmark_results` (benchmark history) and `diagnostic_reports` (latest 20).
 //! - v3: `assistant_events` (audit log of the "Risolvi" assistant, latest 1000; sizes
 //!   and token counts only, never the API key or payload content).
+//! - v4: `control_documents` (control centers: profiles, selections and the original
+//!   system state to restore; one JSON document per key).
 //!
 //! History rows store the full contract as JSON plus a few indexed columns. A row whose
 //! JSON no longer deserializes is skipped with a warning, never fatal.
@@ -70,6 +72,15 @@ const MIGRATIONS_SLICE: &[M<'static>] = &[
     ) STRICT;
     CREATE INDEX assistant_events_at ON assistant_events (at DESC, id DESC);
     CREATE INDEX assistant_events_session ON assistant_events (session_id, at DESC);",
+    ),
+    // v4: control centers (Performance, Cooling, Lighting, Gaming). One JSON document per
+    // key, owned by the center whose name prefixes the key.
+    M::up(
+        "CREATE TABLE control_documents (
+        key        TEXT PRIMARY KEY NOT NULL,
+        json       TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+    ) STRICT;",
     ),
 ];
 const MIGRATIONS: Migrations<'static> = Migrations::from_slice(MIGRATIONS_SLICE);
@@ -463,6 +474,51 @@ impl Database {
             })
             .collect())
     }
+
+    /// A control-center document, or `None` if never saved.
+    pub fn load_control_document(&self, key: &str) -> Result<Option<String>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT json FROM control_documents WHERE key = ?1",
+                params![key],
+                |r| r.get(0),
+            )
+            .optional()?)
+    }
+
+    /// Inserts or replaces a control-center document. Keys are 1–64 ASCII characters.
+    pub fn save_control_document(&self, key: &str, json: &str) -> Result<()> {
+        validate_control_key(key)?;
+        let now = i64::try_from(models::time::now_unix_ms()).unwrap_or(i64::MAX);
+        self.conn.execute(
+            "INSERT INTO control_documents (key, json, updated_at) VALUES (?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at",
+            params![key, json, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_control_document(&self, key: &str) -> Result<()> {
+        self.conn
+            .execute("DELETE FROM control_documents WHERE key = ?1", params![key])?;
+        Ok(())
+    }
+}
+
+fn validate_control_key(key: &str) -> Result<()> {
+    let ok = !key.is_empty()
+        && key.len() <= 64
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'));
+    if ok {
+        Ok(())
+    } else {
+        Err(PersistenceError::Invalid(AppError::invalid_input(
+            "invalid control document key",
+        )))
+    }
 }
 
 fn to_i64(v: u64) -> i64 {
@@ -492,6 +548,35 @@ fn parse_row<T: serde::de::DeserializeOwned>(table: &str, id: &str, json: &str) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_documents_round_trip() {
+        let db = Database::open_in_memory().expect("open");
+        assert_eq!(
+            db.load_control_document("performance.profiles")
+                .expect("load"),
+            None
+        );
+        db.save_control_document("performance.profiles", "[1]")
+            .expect("save");
+        db.save_control_document("performance.profiles", "[2]")
+            .expect("replace");
+        assert_eq!(
+            db.load_control_document("performance.profiles")
+                .expect("load")
+                .as_deref(),
+            Some("[2]")
+        );
+        db.delete_control_document("performance.profiles")
+            .expect("delete");
+        assert_eq!(
+            db.load_control_document("performance.profiles")
+                .expect("load"),
+            None
+        );
+        assert!(db.save_control_document("bad key", "{}").is_err());
+        assert!(db.save_control_document("", "{}").is_err());
+    }
     use models::benchmark::BenchmarkState;
     use models::benchmark_run::{BenchmarkContext, BenchmarkRequest, PowerSource, ResultMetric};
     use models::component::ComponentKind;
@@ -585,7 +670,7 @@ mod tests {
             db.schema_version().expect("version"),
             MIGRATIONS_SLICE.len() as u32
         );
-        assert_eq!(db.schema_version().expect("version"), 3);
+        assert_eq!(db.schema_version().expect("version"), 4);
     }
 
     #[test]
@@ -675,7 +760,7 @@ mod tests {
             .expect("insert v1 settings");
         }
         let db = Database::open(&path).expect("migrate");
-        assert_eq!(db.schema_version().expect("version"), 3);
+        assert_eq!(db.schema_version().expect("version"), 4);
         let s = db.load_settings().expect("load");
         assert_eq!(s.theme, ThemePreference::Light);
         assert_eq!(s.sampling_interval_ms, 3000);
@@ -867,7 +952,7 @@ mod tests {
         )
         .expect("v2 row");
         let db = Database::init(conn).expect("migrate");
-        assert_eq!(db.schema_version().expect("version"), 3);
+        assert_eq!(db.schema_version().expect("version"), 4);
         let n: i64 = db
             .conn
             .query_row("SELECT COUNT(*) FROM diagnostic_reports", [], |r| r.get(0))

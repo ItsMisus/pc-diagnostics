@@ -1,4 +1,5 @@
 mod commands;
+mod control_store;
 mod state;
 
 use std::sync::{Arc, Weak};
@@ -77,6 +78,13 @@ pub fn run() {
             );
 
             app.manage(AppState::new(db, monitor, processes, bench));
+
+            // Control centers (Performance, Cooling, Lighting, Gaming): each one is managed
+            // state of its own, built on a shared document store.
+            let store: Arc<dyn control::DocumentStore> = Arc::new(
+                control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
+            );
+            let _ = &store;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
