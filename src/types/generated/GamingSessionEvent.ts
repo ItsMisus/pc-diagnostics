@@ -4,4 +4,8 @@ import type { GameSessionEndReason } from "./GameSessionEndReason";
 /**
  * Payload of [`GAMING_SESSION_EVENT`]. The page re-reads the full state on it.
  */
-export type GamingSessionEvent = { gameId: string, active: boolean, reason: GameSessionEndReason | null, };
+export type GamingSessionEvent = { gameId: string, 
+/**
+ * The game's name, for the notification.
+ */
+title: string, active: boolean, reason: GameSessionEndReason | null, };

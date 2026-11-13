@@ -1,11 +1,11 @@
 import { AnimatePresence, m } from "motion/react";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { Switch } from "@/components/common/Switch";
 import { SupportBadge } from "@/components/control/SupportBadge";
-import { useT } from "@/i18n";
+import { type Translator, useT } from "@/i18n";
 import { formatDateTime, formatTime } from "@/lib/format";
 import { duration, ease } from "@/lib/motion";
 import type { GameEntry } from "@/types/generated/GameEntry";
@@ -42,10 +42,12 @@ export function GameModeHero({
   const hero = useGameArt(featured?.id ?? null, "hero", Boolean(featured?.hasHero));
   const logo = useGameArt(featured?.id ?? null, "logo", Boolean(featured?.hasLogo));
   const summary = sessionSummary(state);
+  const playing = Boolean(session?.detected);
+  const now = useNow(session ? 30_000 : null);
 
   return (
-    <section aria-labelledby={`${hintId}-title`} className="surface-primary relative isolate mb-8 min-h-[320px] overflow-hidden">
-      {/* Backdrop: the game's hero art, or its generated gradient; fixed, never animated. */}
+    <section aria-labelledby={`${hintId}-title`} className="surface-primary relative isolate mb-8 min-h-[300px] overflow-hidden">
+      {/* Backdrop: the game's hero art, else its own cover or icon blurred into a wash of its colours. */}
       <AnimatePresence initial={false}>
         <m.div
           key={featured?.id ?? "none"}
@@ -58,47 +60,51 @@ export function GameModeHero({
           {hero ? (
             <img src={hero} alt="" className="size-full object-cover" draggable={false} />
           ) : featured ? (
-            <div className="size-full opacity-70" style={{ backgroundImage: coverBackground(featured.title) }} />
+            <Wash game={featured} />
           ) : (
             <div className="ambient-canvas size-full" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/70 to-canvas/5" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/60 to-canvas/10" />
           {/* Second scrim behind the text column, so the eyebrow and lines stay readable over bright art in both themes. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-canvas/80 via-canvas/35 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-canvas/85 via-canvas/40 to-transparent" />
         </m.div>
       </AnimatePresence>
 
-      <div className="flex min-h-[320px] flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
-        {/* Featured game: logo (Steam) or title, cover thumbnail. */}
-        <div className="flex min-w-0 items-end gap-4">
+      <div className="flex min-h-[300px] flex-col justify-end gap-5 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        {/* Featured game: cover, logo (Steam) or title, what is happening. */}
+        <div className="flex min-w-0 items-center gap-5">
           {featured && (
             <button
               type="button"
               onClick={() => onOpen(featured)}
-              className="hidden w-24 shrink-0 overflow-hidden rounded-lg shadow-lg ring-1 ring-line transition-transform duration-200 hover:-translate-y-1 sm:block"
+              className={`relative hidden w-28 shrink-0 rounded-xl transition-transform duration-200 hover:-translate-y-1 sm:block md:w-32 ${playing ? "playing-glow" : ""}`}
               aria-label={featured.title}
             >
-              <GameCover game={featured} size="sm" />
+              <span className={`block overflow-hidden rounded-xl shadow-lg ring-1 ${playing ? "ring-2 ring-ok" : "ring-line"}`}>
+                <GameCover game={featured} size="sm" />
+              </span>
             </button>
           )}
           <div className="min-w-0">
-            <p className="eyebrow mb-2 flex items-center gap-2">
-              {session ? (
-                <>
-                  <span className={`size-2 rounded-full ${session.detected ? "bg-ok" : "bg-warn"}`} aria-hidden="true" />
-                  {session.detected ? t("heroPlaying") : t("heroStarting")}
-                </>
-              ) : (
-                t("gameMode")
-              )}
-            </p>
+            {session ? (
+              <span className="glass mb-3 inline-flex h-7 items-center gap-2 rounded-full px-3 text-xs font-medium text-fg">
+                <span className={`relative flex size-2 ${session.detected ? "text-ok" : "text-warn"}`} aria-hidden="true">
+                  {session.detected && <span className="absolute inset-0 rounded-full bg-current opacity-60 motion-safe:animate-ping" />}
+                  <span className="relative size-2 rounded-full bg-current" />
+                </span>
+                {session.detected ? t("heroPlaying") : t("heroStarting")}
+                {session.detected && <span className="tabular text-fg-muted">· {elapsedText(t, now - session.since)}</span>}
+              </span>
+            ) : (
+              <p className="eyebrow mb-2">{t("gameMode")}</p>
+            )}
             {featured && logo ? (
               <h2 id={`${hintId}-title`}>
                 <span className="sr-only">{session ? session.title : featured.title}</span>
                 <img src={logo} alt="" draggable={false} className="max-h-24 max-w-[min(22rem,60vw)] object-contain object-left drop-shadow-[0_4px_16px_rgb(0_0_0/0.35)]" />
               </h2>
             ) : (
-              <h2 id={`${hintId}-title`} className="truncate font-display text-3xl font-bold text-fg">
+              <h2 id={`${hintId}-title`} className="truncate font-display text-4xl font-bold tracking-tight text-fg">
                 {session ? session.title : featured ? featured.title : t("heroIdle")}
               </h2>
             )}
@@ -183,4 +189,36 @@ export function GameModeHero({
       </div>
     </section>
   );
+}
+
+/** The clock, re-read every `everyMs` (null: read once). */
+function useNow(everyMs: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    setNow(Date.now());
+    if (everyMs === null) return;
+    const id = setInterval(() => setNow(Date.now()), everyMs);
+    return () => clearInterval(id);
+  }, [everyMs]);
+  return now;
+}
+
+/** "da 12 min", "da 1 h 05 min", "da meno di un minuto". */
+function elapsedText(t: Translator<"gaming">, ms: number): string {
+  const min = Math.floor(Math.max(ms, 0) / 60_000);
+  if (min < 1) return t("elapsedNow");
+  if (min < 60) return t("elapsedMin", { min });
+  return t("elapsedHours", { h: Math.floor(min / 60), min: String(min % 60).padStart(2, "0") });
+}
+
+/**
+ * Backdrop for a game without wide art: its cover, else its app icon, blown up and blurred
+ * into a wash of its own colours; the title's gradient when it has neither.
+ */
+function Wash({ game }: { game: GameEntry }) {
+  const cover = useGameArt(game.id, "cover", game.hasCover);
+  const icon = useGameArt(game.id, "icon", !game.hasCover && game.hasIcon);
+  const art = cover ?? icon;
+  if (!art) return <div className="size-full opacity-70" style={{ backgroundImage: coverBackground(game.title) }} />;
+  return <img src={art} alt="" draggable={false} className="size-full scale-125 object-cover opacity-80 blur-3xl saturate-150" />;
 }

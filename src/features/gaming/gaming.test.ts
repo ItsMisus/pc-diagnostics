@@ -52,13 +52,13 @@ function state(over: Partial<GamingState> = {}): GamingState {
       { source: "macApp", support: { state: "supported", reason: null }, found: true, count: 2, location: null },
       { source: "manual", support: { state: "supported", reason: null }, found: false, count: 0, location: null },
     ],
-    profiles: [{ gameId: "steam:1", enabled: true, performance: "perf.max", cooling: null, lighting: "gone" }],
+    profiles: [{ gameId: "steam:1", enabled: true, performance: "perf.max", cooling: "gone", lighting: null }],
     linkable: [
       { domain: "performance", id: "perf.max", name: "Massime", builtin: true, applicable: true },
       { domain: "performance", id: "perf.na", name: "N/A", builtin: true, applicable: false },
-      { domain: "lighting", id: "rgb", name: "RGB", builtin: false, applicable: true },
+      { domain: "cooling", id: "quiet", name: "Quiet", builtin: false, applicable: true },
     ],
-    domains: ["performance", "lighting"],
+    domains: ["performance", "cooling"],
     gameMode: { enabled: false, session: null },
     scannedAt: 0,
     ...over,
@@ -136,12 +136,15 @@ describe("state mapping", () => {
 
   it("builds one choice per center with applicable options and stale links", () => {
     const s = state();
-    const [perf, cool, light] = domainChoices(s, profileFor(s, "steam:1"));
+    const choices = domainChoices(s, profileFor(s, "steam:1"));
+    expect(choices.map((c) => c.domain)).toEqual(["performance", "cooling"]);
+    const [perf, cool] = choices;
     expect(perf?.options.map((o) => o.id)).toEqual(["perf.max"]);
     expect(perf?.stale).toBe(false);
-    expect(cool?.connected).toBe(false);
-    expect(light?.selected).toBe("gone");
-    expect(light?.stale).toBe(true);
+    expect(cool?.connected).toBe(true);
+    expect(cool?.selected).toBe("gone");
+    expect(cool?.stale).toBe(true);
+    expect(domainChoices(state({ domains: ["performance"] }), profileFor(s, "steam:1"))[1]?.connected).toBe(false);
   });
 
   it("features the session game, else the last played", () => {
@@ -157,7 +160,7 @@ describe("state mapping", () => {
           detected: true,
           domains: [
             { domain: "performance", profileId: "perf.max", profileName: "Massime", applied: true, support: { state: "supported", reason: null } },
-            { domain: "lighting", profileId: "gone", profileName: null, applied: false, support: { state: "unsupported", reason: "x" } },
+            { domain: "cooling", profileId: "gone", profileName: null, applied: false, support: { state: "unsupported", reason: "x" } },
           ],
         },
       },

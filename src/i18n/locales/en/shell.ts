@@ -25,7 +25,7 @@ export default {
   subtitle_performance: "Power and performance profiles, on battery and on the power adapter.",
   subtitle_cooling: "Fans, heat dissipation and cooling profiles.",
   subtitle_lighting: "Lighting of compatible devices: colors, effects and profiles.",
-  subtitle_gaming: "Your games, each with its own performance, cooling and lighting profile.",
+  subtitle_gaming: "Your games, each with its own performance and cooling profile.",
   subtitle_hardware: "The computer's components, as the system reports them.",
   subtitle_benchmarks: "Measure the performance of the processor, graphics, memory and disk.",
   subtitle_processes: "The programs running and how much they weigh on the system.",

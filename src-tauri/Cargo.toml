@@ -31,6 +31,9 @@ tracing.workspace = true
 tauri = { version = "2", features = [] }
 # Gaming: native picker for "Aggiungi gioco" (frontend opens it, the backend validates the path).
 tauri-plugin-dialog = "2"
+# Gaming: system notification when game mode switches on or off by itself (Rust side only,
+# nothing exposed to the frontend).
+tauri-plugin-notification = "2"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi"] }
 
 [lints]

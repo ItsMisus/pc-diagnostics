@@ -1,7 +1,8 @@
 //! Gaming controller. Owned by the gaming feature.
 //!
 //! Keeps the game library (scanned on demand), the user's game profiles (links to profiles
-//! of Performance, Cooling and Lighting), manual entries, hidden ids and game mode.
+//! of Performance and Cooling), manual entries, hidden ids and game mode (on by default:
+//! it switches itself on when a library game starts running).
 //!
 //! A *session* is the game being played. It starts when the user presses "Gioca con
 //! profilo" (trigger `Launch`) or when game mode finds a library game running (`Detected`).
@@ -42,7 +43,9 @@ mod tests;
 pub const KEY_PROFILES: &str = "gaming.profiles";
 pub const KEY_MANUAL: &str = "gaming.manual";
 pub const KEY_HIDDEN: &str = "gaming.hidden";
-pub const KEY_MODE: &str = "gaming.mode";
+/// Game mode on/off. A new key since game mode became automatic and on by default: the old
+/// `gaming.mode` (off unless switched on by hand) is not carried over.
+pub const KEY_MODE: &str = "gaming.autoMode";
 
 /// How often the watcher looks at the running processes.
 pub const POLL_INTERVAL: Duration = Duration::from_secs(3);
@@ -51,11 +54,9 @@ pub const LAUNCH_GRACE_MS: u64 = 180_000;
 /// Art kept in memory (data URLs).
 const ART_CACHE_ENTRIES: usize = 64;
 
-const DOMAINS: [ControlDomainId; 3] = [
-    ControlDomainId::Performance,
-    ControlDomainId::Cooling,
-    ControlDomainId::Lighting,
-];
+/// The centers a game profile links. Lighting is left out on purpose: a game profile is
+/// about how the computer runs (performance, cooling), not about the lights.
+const DOMAINS: [ControlDomainId; 2] = [ControlDomainId::Performance, ControlDomainId::Cooling];
 
 /// Library, art and launch access (the OS in the app, fakes in tests).
 pub trait GameLibrary: Send + Sync {
@@ -92,10 +93,17 @@ pub struct ManualGameDoc {
     pub added_at: u64,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ModeDoc {
     enabled: bool,
+}
+
+/// Game mode is on until the user turns it off: it switches itself on when a game starts.
+impl Default for ModeDoc {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -188,8 +196,8 @@ fn domain_name(domain: ControlDomainId, lang: Language) -> &'static str {
 }
 
 impl GamingController {
-    /// The controller of this computer. `domains`: Performance, Cooling and Lighting (any
-    /// subset; a missing one is reported as not connected). `process_lister`: running
+    /// The controller of this computer. `domains`: Performance and Cooling (any subset; a
+    /// missing one is reported as not connected; any other domain is ignored). `process_lister`: running
     /// executables for game detection (`SystemProcessLister` in the app).
     pub fn new(
         store: Arc<dyn DocumentStore>,
@@ -277,6 +285,7 @@ impl GamingController {
         let linkable: Vec<ProfileRef> = self
             .domains
             .iter()
+            .filter(|d| DOMAINS.contains(&d.domain()))
             .flat_map(|d| d.profile_refs(lang))
             .collect();
         let library: Vec<GameEntry> = inner
@@ -330,7 +339,12 @@ impl GamingController {
             sources,
             profiles: inner.profiles.clone(),
             linkable,
-            domains: self.domains.iter().map(|d| d.domain()).collect(),
+            domains: self
+                .domains
+                .iter()
+                .map(|d| d.domain())
+                .filter(|d| DOMAINS.contains(d))
+                .collect(),
             game_mode: GameModeState {
                 enabled: inner.mode,
                 session,
@@ -479,9 +493,11 @@ impl GamingController {
     /// Stores a game profile. Linked ids must be profiles of connected domains.
     pub fn set_profile(
         &self,
-        profile: GameProfile,
+        mut profile: GameProfile,
         lang: Language,
     ) -> Result<GamingState, AppError> {
+        // Game profiles no longer link Lighting (see `DOMAINS`).
+        profile.lighting = None;
         let mut inner = self.lock()?;
         self.ensure_scanned(&mut inner);
         if inner.game(&profile.game_id).is_none() {
@@ -573,6 +589,7 @@ impl GamingController {
             self.begin_session(&mut inner, &game, GameSessionTrigger::Launch, false);
             events.push(GamingSessionEvent {
                 game_id: game.id.clone(),
+                title: game.title.clone(),
                 active: true,
                 reason: None,
             });
@@ -684,6 +701,7 @@ impl GamingController {
         tracing::info!(game = %session.game_id, ?reason, "game session ended");
         Some(GamingSessionEvent {
             game_id: session.game_id,
+            title: session.title,
             active: false,
             reason: Some(reason),
         })
@@ -761,6 +779,7 @@ impl GamingController {
                 self.begin_session(&mut inner, &game, GameSessionTrigger::Detected, true);
                 events.push(GamingSessionEvent {
                     game_id: game.id,
+                    title: game.title,
                     active: true,
                     reason: None,
                 });

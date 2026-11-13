@@ -157,7 +157,7 @@ function Content() {
 
       <div className="grid grid-cols-1 gap-4 @4xl:grid-cols-5">
         <div className="min-w-0 @4xl:col-span-3">
-          <ProfilesPanel profiles={state.profiles} gameOverride={state.gameOverride} />
+          <ProfilesPanel profiles={state.profiles} />
         </div>
         <div className="@container min-w-0 @4xl:col-span-2">
           <DevicesPanel devices={state.devices} setup={draft} onChange={setDraft} platformNote={state.platformNote} />

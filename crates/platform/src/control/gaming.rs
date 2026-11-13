@@ -461,7 +461,65 @@ fn normalize(path: &Path, fold_case: bool) -> String {
     s
 }
 
+/// Words in an executable's name that mark a background helper, not the game: crash
+/// reporters, updaters, installers, menu-bar agents, web helpers, redistributables. Such a
+/// process often outlives the game (Roblox keeps `RobloxMenuBar` running all day), so it must
+/// never count as "the game is running".
+const HELPER_WORDS: &[&str] = &[
+    "crash",
+    "updater",
+    "update",
+    "helper",
+    "menubar",
+    "reporter",
+    "uninstall",
+    "unins0",
+    "installer",
+    "setup",
+    "redist",
+    "dxsetup",
+    "bugsplat",
+    "sentry",
+    "cefsharp",
+    "webview",
+];
+
+/// Bundle folders that hold support code, never the game's own executable.
+const SUPPORT_DIRS: &[&str] = &[
+    "frameworks",
+    "helpers",
+    "xpcservices",
+    "loginitems",
+    "plugins",
+    "library",
+    "sharedsupport",
+];
+
+/// Whether the executable at `rel` (path under the matched folder, `/` or `\\` separated) is a
+/// background helper. `dir_is_app`: the folder is itself an `.app` bundle.
+fn is_helper(rel: &str, dir_is_app: bool) -> bool {
+    let parts: Vec<String> = rel
+        .split(['/', '\\'])
+        .filter(|p| !p.is_empty())
+        .map(str::to_lowercase)
+        .collect();
+    let Some((name, folders)) = parts.split_last() else {
+        return true;
+    };
+    // A second app inside the game's app (`Roblox.app/…/RobloxMenuBar.app/…`) is a helper.
+    let apps = folders.iter().filter(|p| p.ends_with(".app")).count() + usize::from(dir_is_app);
+    if apps > 1 {
+        return true;
+    }
+    if folders.iter().any(|f| SUPPORT_DIRS.contains(&f.as_str())) {
+        return true;
+    }
+    let stem = name.strip_suffix(".exe").unwrap_or(name);
+    HELPER_WORDS.iter().any(|w| stem.contains(w))
+}
+
 /// Whether `exe` matches `rule`. `fold_case`: Windows paths (case-insensitive, `/` = `\`).
+/// Under a folder, background helpers (see [`HELPER_WORDS`]) never match.
 pub fn matches_with(rule: &MatchRule, exe: &Path, fold_case: bool) -> bool {
     let exe = normalize(exe, fold_case);
     match rule {
@@ -473,6 +531,7 @@ pub fn matches_with(rule: &MatchRule, exe: &Path, fold_case: bool) -> bool {
                 && exe.len() > dir.len()
                 && exe.starts_with(dir)
                 && matches!(exe.as_bytes()[dir.len()], b'/' | b'\\')
+                && !is_helper(&exe[dir.len()..], dir.to_lowercase().ends_with(".app"))
         }
     }
 }
@@ -573,6 +632,62 @@ mod tests {
     }
 
     #[test]
+    fn helpers_never_count_as_the_game() {
+        // Real layout of Roblox on macOS: the menu-bar agent runs all day, the crash handler
+        // starts with the player.
+        let roblox = MatchRule::UnderDir(PathBuf::from("/Applications/Roblox.app"));
+        let base = "/Applications/Roblox.app/Contents/MacOS";
+        assert!(matches_with(
+            &roblox,
+            Path::new(&format!("{base}/RobloxPlayer")),
+            false
+        ));
+        for helper in [
+            "RobloxMenuBar.app/Contents/MacOS/RobloxMenuBar",
+            "RobloxCrashHandler",
+            "RobloxPlayerInstaller.app/Contents/MacOS/RobloxPlayerInstaller",
+        ] {
+            assert!(
+                !matches_with(&roblox, Path::new(&format!("{base}/{helper}")), false),
+                "{helper}"
+            );
+        }
+        let app = MatchRule::UnderDir(PathBuf::from("/Applications/Game.app"));
+        for helper in [
+            "/Applications/Game.app/Contents/Frameworks/Game Helper.app/Contents/MacOS/Game Helper",
+            "/Applications/Game.app/Contents/Library/LoginItems/Agent.app/Contents/MacOS/Agent",
+            "/Applications/Game.app/Contents/XPCServices/x.xpc/Contents/MacOS/x",
+            "/Applications/Game.app/Contents/MacOS/Game Updater",
+        ] {
+            assert!(!matches_with(&app, Path::new(helper), false), "{helper}");
+        }
+        // A Steam folder holding the game's own .app still matches the game.
+        let steam = MatchRule::UnderDir(PathBuf::from("/s/steamapps/common/GD"));
+        assert!(matches_with(
+            &steam,
+            Path::new("/s/steamapps/common/GD/GD.app/Contents/MacOS/GD"),
+            false
+        ));
+        // Windows: Unity's crash handler and an uninstaller in the install folder.
+        let win = MatchRule::UnderDir(PathBuf::from("C:\\Games\\Foo"));
+        assert!(matches_with(
+            &win,
+            Path::new("C:\\Games\\Foo\\Foo.exe"),
+            true
+        ));
+        for helper in [
+            "UnityCrashHandler64.exe",
+            "unins000.exe",
+            "_CommonRedist\\vcredist_x64.exe",
+        ] {
+            assert!(
+                !matches_with(&win, Path::new(&format!("C:\\Games\\Foo\\{helper}")), true),
+                "{helper}"
+            );
+        }
+    }
+
+    #[test]
     fn ids_and_mime() {
         assert_eq!(stable_hash("a"), stable_hash("a"));
         assert_ne!(stable_hash("a"), stable_hash("b"));
@@ -647,9 +762,23 @@ mod tests {
             );
         }
         let mut lister = SystemProcessLister::new();
-        println!(
-            "running executables: {}",
-            lister.running_executables().len()
-        );
+        let exes = lister.running_executables();
+        println!("running executables: {}", exes.len());
+        // Which library games count as running right now, and which of their processes
+        // were set aside as helpers.
+        for g in &scan.games {
+            let Some(MatchRule::UnderDir(dir)) = &g.detect else {
+                continue;
+            };
+            for e in exes.iter().filter(|e| e.starts_with(dir)) {
+                let hit = g.detect.as_ref().is_some_and(|r| matches(r, e));
+                println!(
+                    "{} {} <- {}",
+                    if hit { "RUNNING" } else { "helper " },
+                    g.title,
+                    e.display()
+                );
+            }
+        }
     }
 }

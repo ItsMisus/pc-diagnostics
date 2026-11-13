@@ -116,6 +116,4 @@ export default {
   profileName: "Name",
   profileNamePlaceholder: "E.g. Night",
   profileSaveHint: "Saves the current effect, colors, brightness and devices.",
-  gameOverrideActive: "Profile of the running game: {name}. When the game ends your own choice comes back.",
-  gameOverrideNone: "In Games you can link a lighting profile to a game.",
 } satisfies Translation<typeof it>;

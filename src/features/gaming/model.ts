@@ -8,7 +8,8 @@ import type { SourceFilter } from "./library";
 
 /** View-model helpers over `GamingState` (pure, unit-tested). */
 
-export const DOMAINS: readonly ControlDomainId[] = ["performance", "cooling", "lighting"];
+/** The centers a game profile links (Lighting is not part of game profiles). */
+export const DOMAINS: readonly ControlDomainId[] = ["performance", "cooling"];
 
 export const DOMAIN_ICON: Record<ControlDomainId, IconName> = {
   performance: "bolt",

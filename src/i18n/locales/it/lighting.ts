@@ -113,6 +113,4 @@ export default {
   profileName: "Nome",
   profileNamePlaceholder: "Es. Notte",
   profileSaveHint: "Salva effetto, colori, luminosità e dispositivi attuali.",
-  gameOverrideActive: "Profilo del gioco in corso: {name}. Quando il gioco finisce torna la tua scelta.",
-  gameOverrideNone: "Nella sezione Giochi puoi collegare un profilo di illuminazione a un gioco.",
 } satisfies Record<string, string>;

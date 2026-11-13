@@ -22,7 +22,7 @@ export default {
   subtitle_performance: "Profili energetici e prestazionali, per batteria e alimentatore.",
   subtitle_cooling: "Ventole, dissipazione e profili di raffreddamento.",
   subtitle_lighting: "Illuminazione dei dispositivi compatibili: colori, effetti e profili.",
-  subtitle_gaming: "I tuoi giochi, con un profilo di prestazioni, raffreddamento e luci per ciascuno.",
+  subtitle_gaming: "I tuoi giochi, ognuno con il suo profilo di prestazioni e raffreddamento.",
   subtitle_hardware: "I componenti del computer, come li riporta il sistema.",
   subtitle_benchmarks: "Misura le prestazioni di processore, scheda video, memoria e disco.",
   subtitle_processes: "I programmi in esecuzione e quanto pesano sul sistema.",

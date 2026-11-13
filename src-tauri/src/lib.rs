@@ -25,6 +25,7 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Per-user local data dir (%APPDATA%\<identifier>): no admin rights needed.
             let dir = app.path().app_data_dir()?;
@@ -112,7 +113,8 @@ pub fn run() {
 
             // Gaming: library, game profiles and game mode. A game profile links one profile
             // of each center below (`ProfileDomain`).
-            let domains: Vec<control::SharedDomain> = vec![performance, cooling, lighting];
+            // Game profiles link Performance and Cooling only (not Lighting).
+            let domains: Vec<control::SharedDomain> = vec![performance, cooling];
             let gaming = Arc::new(control::gaming::GamingController::new(
                 Arc::clone(&store),
                 domains,
@@ -120,6 +122,7 @@ pub fn run() {
             ));
             let handle = app.handle().clone();
             gaming.start_watcher(move |event| {
+                notify_game_session(&handle, &event);
                 if let Err(e) = handle.emit(models::control::gaming::GAMING_SESSION_EVENT, event) {
                     tracing::warn!(error = %e, "failed to emit gaming session event");
                 }
@@ -216,4 +219,43 @@ pub fn run() {
             }
         }
     });
+}
+
+/// System notification for game mode switching on (a game started) or off (the game was
+/// closed). Nothing for a session the user stopped, or at shutdown.
+fn notify_game_session(
+    app: &tauri::AppHandle,
+    event: &models::control::gaming::GamingSessionEvent,
+) {
+    use models::control::gaming::GameSessionEndReason;
+    use tauri_plugin_notification::NotificationExt;
+    let lang = app.state::<AppState>().language();
+    let (title, body) = if event.active {
+        (
+            lang.pick("Modalità gioco attiva", "Game mode on"),
+            lang.pick(
+                format!("{} è in esecuzione.", event.title),
+                format!("{} is running.", event.title),
+            ),
+        )
+    } else if matches!(
+        event.reason,
+        Some(GameSessionEndReason::Exited | GameSessionEndReason::NotDetected)
+    ) {
+        (
+            lang.pick("Modalità gioco terminata", "Game mode off"),
+            lang.pick(
+                format!(
+                    "{} è stato chiuso: le tue impostazioni sono tornate.",
+                    event.title
+                ),
+                format!("{} was closed: your settings are back.", event.title),
+            ),
+        )
+    } else {
+        return;
+    };
+    if let Err(e) = app.notification().builder().title(title).body(body).show() {
+        tracing::warn!(error = %e, "game mode notification not shown");
+    }
 }

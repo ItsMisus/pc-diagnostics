@@ -13,7 +13,7 @@ export default {
 
   gameMode: "Modalità gioco",
   gameModeSwitch: "Modalità gioco automatica",
-  gameModeHint: "Riconosce i giochi in esecuzione e applica il loro profilo.",
+  gameModeHint: "Si attiva da sola quando apri un gioco della libreria, anche fuori dall'app, e te lo notifica. Applica il profilo del gioco, se c'è.",
   gameModeOn: "Attiva",
   gameModeOff: "Spenta",
   heroIdle: "Nessun gioco in corso",
@@ -22,6 +22,9 @@ export default {
   heroPlaying: "In gioco",
   heroStarting: "In avvio",
   heroStartingHint: "In attesa che il gioco si apra.",
+  elapsedNow: "da meno di un minuto",
+  elapsedMin: "da {min} min",
+  elapsedHours: "da {h} h {min} min",
   since: "dalle {time}",
   triggerLaunch: "Avviato con profilo",
   triggerDetected: "Rilevato dalla modalità gioco",

@@ -16,7 +16,7 @@ export default {
 
   gameMode: "Game mode",
   gameModeSwitch: "Automatic game mode",
-  gameModeHint: "Recognises running games and applies their profile.",
+  gameModeHint: "Switches on by itself when you open a game from the library, even outside the app, and lets you know. Applies the game's profile, if it has one.",
   gameModeOn: "On",
   gameModeOff: "Off",
   heroIdle: "No game running",
@@ -25,6 +25,9 @@ export default {
   heroPlaying: "Playing",
   heroStarting: "Starting",
   heroStartingHint: "Waiting for the game to open.",
+  elapsedNow: "for less than a minute",
+  elapsedMin: "for {min} min",
+  elapsedHours: "for {h} h {min} min",
   since: "since {time}",
   triggerLaunch: "Started with profile",
   triggerDetected: "Detected by game mode",

@@ -246,7 +246,11 @@ fn launch_with_profile_applies_each_domain_and_isolates_failures() {
     );
     let session = s.game_mode.session.expect("session");
     assert_eq!(session.trigger, GameSessionTrigger::Launch);
-    assert_eq!(session.domains.len(), 3);
+    assert_eq!(
+        session.domains.len(),
+        2,
+        "a stored Lighting link is ignored"
+    );
     let by = |d| {
         session
             .domains
@@ -261,14 +265,11 @@ fn launch_with_profile_applies_each_domain_and_isolates_failures() {
     );
     assert!(!by(ControlDomainId::Cooling).applied);
     assert!(by(ControlDomainId::Cooling).support.reason.is_some());
-    let lighting = by(ControlDomainId::Lighting);
-    assert!(!lighting.applied, "lighting is not connected");
     assert!(
-        lighting
-            .support
-            .reason
-            .as_deref()
-            .is_some_and(|t| t.contains("Illuminazione"))
+        !session
+            .domains
+            .iter()
+            .any(|x| x.domain == ControlDomainId::Lighting)
     );
     assert_eq!(r.perf.calls(), vec!["apply:p1"]);
     assert_eq!(r.cool.calls(), vec!["apply:p1"]);
@@ -352,6 +353,15 @@ fn launched_game_never_seen_ends_after_the_grace_period() {
 #[test]
 fn game_mode_detects_running_games_and_respects_stop() {
     let r = rig();
+    assert!(
+        r.ctl
+            .state(Language::English, false)
+            .expect("state")
+            .game_mode
+            .enabled,
+        "game mode is on until the user turns it off"
+    );
+    r.ctl.set_game_mode(false, Language::English).expect("off");
     link_all(&r, "steam:2");
     run(&r, "Beta");
     r.ctl.poll(now_ms());
@@ -367,6 +377,15 @@ fn game_mode_detects_running_games_and_respects_stop() {
     assert_eq!(session.game_id, "steam:2");
     assert_eq!(session.trigger, GameSessionTrigger::Detected);
     assert_eq!(r.perf.calls(), vec!["apply:p1"]);
+    let started = r
+        .events
+        .lock()
+        .expect("lock")
+        .last()
+        .cloned()
+        .expect("event");
+    assert!(started.active);
+    assert_eq!(started.title, "Beta", "the notification names the game");
 
     // Stop while running: cleared and not re-detected until the game exits.
     r.ctl.stop_session(Language::English).expect("stop");
@@ -490,19 +509,18 @@ fn profile_validation() {
             .set_profile(unknown_profile, Language::English)
             .is_err()
     );
-    let not_connected = GameProfile {
+    // Game profiles do not link Lighting: a Lighting link is dropped, not stored.
+    let lighting_link = GameProfile {
         game_id: "steam:1".into(),
         enabled: true,
         lighting: Some("p1".into()),
         ..GameProfile::default()
     };
-    assert_eq!(
-        r.ctl
-            .set_profile(not_connected, Language::English)
-            .map(|_| ())
-            .map_err(|e| e.code),
-        Err(ErrorCode::InvalidInput)
-    );
+    let saved = r
+        .ctl
+        .set_profile(lighting_link, Language::English)
+        .expect("saved");
+    assert!(saved.profiles.iter().all(|p| p.lighting.is_none()));
     // Clearing every link and disabling removes the profile.
     link_all_connected(&r);
     let cleared = GameProfile {

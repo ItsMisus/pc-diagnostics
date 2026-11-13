@@ -216,6 +216,8 @@ pub enum GameSessionEndReason {
 #[ts(export)]
 pub struct GamingSessionEvent {
     pub game_id: String,
+    /// The game's name, for the notification.
+    pub title: String,
     pub active: bool,
     pub reason: Option<GameSessionEndReason>,
 }

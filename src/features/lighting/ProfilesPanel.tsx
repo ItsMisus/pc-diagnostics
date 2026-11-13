@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/common/Button";
-import { Icon, type IconName } from "@/components/common/Icon";
+import type { IconName } from "@/components/common/Icon";
 import { Modal } from "@/components/common/Modal";
 import { Panel } from "@/components/common/Panel";
 import { Tag } from "@/components/common/Tag";
@@ -22,10 +22,10 @@ const EFFECT_ICON: Record<LightingEffect["kind"], IconName> = {
 
 /**
  * Profiles: built-in and the user's own as tiles (choosing one loads it into the editor;
- * "Applica" sends it), save as new, rename or update and delete for the user's profiles, and
- * the game override strip.
+ * "Applica" sends it), save as new, rename or update and delete for the user's profiles.
+ * Lighting is not part of game profiles.
  */
-export function ProfilesPanel({ profiles, gameOverride }: { profiles: readonly LightingProfile[]; gameOverride: string | null }) {
+export function ProfilesPanel({ profiles }: { profiles: readonly LightingProfile[] }) {
   const t = useT("lighting");
   const profileId = useLighting((s) => s.profileId);
   const pickProfile = useLighting((s) => s.pickProfile);
@@ -35,7 +35,6 @@ export function ProfilesPanel({ profiles, gameOverride }: { profiles: readonly L
   const [dialog, setDialog] = useState<null | "new" | "rename" | "delete">(null);
   const current = profiles.find((p) => p.id === profileId) ?? null;
   const own = current && !current.builtin ? current : null;
-  const game = gameOverride ? profiles.find((p) => p.id === gameOverride) : null;
 
   const options: ProfileOption[] = profiles.map((p) => ({
     id: p.id,
@@ -69,10 +68,6 @@ export function ProfilesPanel({ profiles, gameOverride }: { profiles: readonly L
     >
       <div className="flex flex-col gap-4">
         <ProfileSwitcher label={t("profilesTitle")} options={options} value={profileId} onChange={pickProfile} columns={3} />
-        <div className={`flex items-start gap-2 rounded-lg p-3 text-xs ${game ? "bg-accent-soft text-fg" : "bg-surface-2 text-fg-muted"}`}>
-          <Icon name="gamepad" size={16} className={`mt-px shrink-0 ${game ? "text-accent-text" : "text-fg-subtle"}`} />
-          <span>{game ? t("gameOverrideActive", { name: game.name }) : t("gameOverrideNone")}</span>
-        </div>
       </div>
 
       <NameDialog
