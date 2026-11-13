@@ -19,7 +19,7 @@ security-framework = "3"
 # wgpu already use; NSProcessInfo for Low Power Mode.
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFArray", "CFBase", "CFData", "CFDictionary", "CFLocale", "CFNumber", "CFString"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSProcessInfo"] }
-objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "ps"] }
+objc2-io-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "ps", "pwr_mgt"] }
 objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice"] }
 
 [target.'cfg(windows)'.dependencies]
@@ -42,6 +42,7 @@ windows = { version = "0.62", features = [
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_IO",
     "Win32_System_JobObjects",
+    "Win32_System_LibraryLoader",
     "Win32_System_Ioctl",
     "Win32_System_Performance",
     "Win32_System_Power",
