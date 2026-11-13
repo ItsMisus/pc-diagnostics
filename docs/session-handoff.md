@@ -1,11 +1,23 @@
-# Session handoff (2026-11-12)
+# Session handoff (2026-11-13)
 
 Read this first in a new session. User is Italian: reply in Italian. Standing consent:
 never ask before acting. Use worktree subagents with strict file ownership; the
 orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `src/app`,
 `src/components` and `src/i18n/index.ts`.
 
-## macOS port (2026-11-11/12, current focus)
+## Control centers (2026-11-13, branch `feat/control-centers`, current focus)
+
+- Performance, Cooling, Lighting and Gaming (sidebar after Overview). Spec rules, code layout
+  and what each OS allows: `docs/control-centers.md`; status and open items: `docs/roadmap.md`
+  "Control centers". Windows code of these centers is required again (CI verifies it).
+- Built by four worktree agents on top of scaffolding commit e3bd559, merged one by one; the
+  orchestrator wired `src-tauri/src/lib.rs` (Gaming receives the three `SharedDomain`s; exit
+  order: Gaming first, then the centers) and the `CommandName` union in `src/services/ipc.ts`.
+- Visual QA trick: the dev window opens on top of the installed app at the same position, so
+  raise it only for the capture and give focus back (`osascript` System Events), otherwise the
+  user's clicks land in the dev window.
+
+## macOS port (2026-11-11/12)
 
 - Since 2026-11-11 work targets macOS only (Apple Silicon, this Mac: M5, macOS 27.2.1);
   Windows work is paused until the user says otherwise, but `cfg(windows)` code must keep
