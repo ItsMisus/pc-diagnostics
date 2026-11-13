@@ -69,7 +69,7 @@ export function GamingPage() {
   };
 
   return (
-    <div className="page-gutter pb-12">
+    <div className="pb-12">
       <PageHeader
         title={sectionLabel("gaming")}
         actions={

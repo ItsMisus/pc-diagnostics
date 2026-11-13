@@ -62,7 +62,9 @@ export function GameModeHero({
           ) : (
             <div className="ambient-canvas size-full" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/55 to-canvas/5" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/70 to-canvas/5" />
+          {/* Second scrim behind the text column, so the eyebrow and lines stay readable over bright art in both themes. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-canvas/80 via-canvas/35 to-transparent" />
         </m.div>
       </AnimatePresence>
 

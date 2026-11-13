@@ -52,7 +52,7 @@ export function GameCard({
       onClick={onOpen}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
-      className="group flex min-w-0 flex-col gap-2.5 rounded-xl text-start [perspective:900px] focus-visible:outline-none"
+      className="group flex w-full min-w-0 flex-col gap-2.5 rounded-xl text-start [perspective:900px] focus-visible:outline-none"
     >
       <m.div
         {...(reduce ? {} : { style: { rotateX, rotateY, transformStyle: "preserve-3d" as const }, whileHover: { y: -6, scale: 1.015 } })}
