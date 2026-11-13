@@ -31,7 +31,9 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
   primitives in `src/components/common`, glass shell with a macOS overlay title bar, every page
   redone (Overview, Hardware, Benchmarks, Diagnostics + Risolvi, Processes, History, Settings,
   Drivers).
-- Overview focal point: procedural 3D device (`src/features/device3d`, three.js + fiber + drei,
+- Overview focal point: procedural 3D device, four models today (tower, laptop, mini PC,
+  all-in-one; the user wants more over time: steps in `src/features/device3d/types.ts`)
+  (`src/features/device3d`, three.js + fiber + drei,
   lazy chunk, SVG fallback without WebGL, paused while hidden or during a benchmark, no idle
   motion with reduced motion).
 - Device model: form factor detected in the backend (`platform::form_factor`, macOS product
