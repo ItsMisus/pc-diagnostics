@@ -136,6 +136,9 @@ export const ICON_PATHS = {
   // Performance center: Silent and Balanced profiles
   leaf: "M3 13.25C3 7 6.5 3 13.25 2.75 13.25 9.5 9.25 13.25 3 13.25zM3 13.25l5.75-5.75",
   balance: "M8 2.25v11.5M5.25 13.75h5.5M3.25 4.25h9.5M3.25 4.25L1.5 8.75M3.25 4.25L5 8.75M1.5 8.75h3.5a1.75 1.75 0 0 1-3.5 0zM12.75 4.25L11 8.75M12.75 4.25l1.75 4.5M11 8.75h3.5a1.75 1.75 0 0 1-3.5 0z",
+  // Gaming center: hide / show library entries.
+  eye: `M1.75 8S4 3.75 8 3.75 14.25 8 14.25 8 12 12.25 8 12.25 1.75 8 1.75 8z${circle(8, 8, 2)}`,
+  eyeOff: "M6.6 4a6 6 0 0 1 1.4-.25C12 3.75 14.25 8 14.25 8a11 11 0 0 1-1.7 2.2M4.2 5.1A10.6 10.6 0 0 0 1.75 8S4 12.25 8 12.25a5.9 5.9 0 0 0 3.1-.9M6.6 6.6a2 2 0 0 0 2.8 2.8M2.25 2.25l11.5 11.5",
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

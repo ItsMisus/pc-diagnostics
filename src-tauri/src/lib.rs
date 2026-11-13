@@ -24,6 +24,7 @@ pub fn run() {
         .init();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Per-user local data dir (%APPDATA%\<identifier>): no admin rights needed.
             let dir = app.path().app_data_dir()?;
@@ -84,10 +85,9 @@ pub fn run() {
             let store: Arc<dyn control::DocumentStore> = Arc::new(
                 control_store::DbDocumentStore::open(&dir.join(DB_FILE_NAME))?,
             );
-            let _ = &store;
             // Cooling center: CPU temperature for the curve editor from the live monitor (weak).
             let cooling_monitor = Arc::downgrade(&app.state::<AppState>().monitor()?);
-            app.manage(Arc::new(control::cooling::CoolingController::new(
+            let cooling = Arc::new(control::cooling::CoolingController::new(
                 Arc::new(control::cooling::OsCoolingBackend::new(Arc::new(
                     move || {
                         let sample = cooling_monitor.upgrade()?.latest()?;
@@ -95,13 +95,30 @@ pub fn run() {
                     },
                 ))),
                 Arc::clone(&store),
-            )));
+            ));
+            app.manage(Arc::clone(&cooling));
             let performance = Arc::new(control::performance::PerformanceController::system(
                 Arc::clone(&store),
             ));
             performance.resume();
             performance.start_watcher(control::performance::SUPPLY_POLL);
             app.manage(Arc::clone(&performance));
+
+            // Gaming: library, game profiles and game mode. A game profile links one profile
+            // of each center below (`ProfileDomain`).
+            let domains: Vec<control::SharedDomain> = vec![performance, cooling];
+            let gaming = Arc::new(control::gaming::GamingController::new(
+                Arc::clone(&store),
+                domains,
+                Box::new(control::gaming::SystemProcessLister::new()),
+            ));
+            let handle = app.handle().clone();
+            gaming.start_watcher(move |event| {
+                if let Err(e) = handle.emit(models::control::gaming::GAMING_SESSION_EVENT, event) {
+                    tracing::warn!(error = %e, "failed to emit gaming session event");
+                }
+            });
+            app.manage(gaming);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -144,6 +161,15 @@ pub fn run() {
             commands::performance::delete_performance_profile,
             commands::performance::restore_performance_original,
             commands::performance::open_power_settings,
+            commands::gaming::get_gaming_state,
+            commands::gaming::get_game_art,
+            commands::gaming::launch_game,
+            commands::gaming::add_manual_game,
+            commands::gaming::remove_manual_game,
+            commands::gaming::set_game_hidden,
+            commands::gaming::set_game_profile,
+            commands::gaming::set_game_mode,
+            commands::gaming::stop_game_session,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -154,6 +180,10 @@ pub fn run() {
             let state = handle.state::<AppState>();
             state.bench().shutdown();
             state.shutdown_samplers();
+            // Gaming: stop the watcher and clear any game override.
+            if let Some(gaming) = handle.try_state::<Arc<control::gaming::GamingController>>() {
+                gaming.shutdown();
+            }
             // Cooling: a game override never outlives the app.
             if let Some(cooling) = handle.try_state::<Arc<control::cooling::CoolingController>>() {
                 cooling.shutdown();
