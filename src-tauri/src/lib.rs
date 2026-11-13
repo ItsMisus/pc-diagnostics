@@ -96,6 +96,12 @@ pub fn run() {
                 ))),
                 Arc::clone(&store),
             )));
+            let performance = Arc::new(control::performance::PerformanceController::system(
+                Arc::clone(&store),
+            ));
+            performance.resume();
+            performance.start_watcher(control::performance::SUPPLY_POLL);
+            app.manage(Arc::clone(&performance));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -132,6 +138,12 @@ pub fn run() {
             commands::cooling::save_cooling_profile,
             commands::cooling::delete_cooling_profile,
             commands::cooling::restore_cooling,
+            commands::performance::get_performance_state,
+            commands::performance::apply_performance_profile,
+            commands::performance::save_performance_profile,
+            commands::performance::delete_performance_profile,
+            commands::performance::restore_performance_original,
+            commands::performance::open_power_settings,
         ])
         .build(tauri::generate_context!())
         .expect("failed to build PC Diagnostics");
@@ -147,6 +159,11 @@ pub fn run() {
                 cooling.shutdown();
             }
             tracing::info!("samplers stopped");
+            if let Some(performance) =
+                handle.try_state::<Arc<control::performance::PerformanceController>>()
+            {
+                performance.shutdown();
+            }
         }
     });
 }

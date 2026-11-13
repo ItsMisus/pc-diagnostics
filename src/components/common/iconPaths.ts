@@ -133,6 +133,9 @@ export const ICON_PATHS = {
   sliders: `${circle(10, 4.5, 1.25)}${circle(5.5, 8, 1.25)}${circle(9, 11.5, 1.25)}M2.5 4.5h6.25M11.25 4.5h2.25M2.5 8h1.75M6.75 8h6.75M2.5 11.5h5.25M10.25 11.5h3.25`,
   snowflake: "M8 1.75v12.5M2.6 4.9l10.8 6.2M2.6 11.1l10.8-6.2M6.25 2.75L8 4.25l1.75-1.5M6.25 13.25L8 11.75l1.75 1.5",
   undo: "M3.75 6.25h6.5a3.25 3.25 0 0 1 0 6.5H6.5M6.25 3.5L3.5 6.25 6.25 9",
+  // Performance center: Silent and Balanced profiles
+  leaf: "M3 13.25C3 7 6.5 3 13.25 2.75 13.25 9.5 9.25 13.25 3 13.25zM3 13.25l5.75-5.75",
+  balance: "M8 2.25v11.5M5.25 13.75h5.5M3.25 4.25h9.5M3.25 4.25L1.5 8.75M3.25 4.25L5 8.75M1.5 8.75h3.5a1.75 1.75 0 0 1-3.5 0zM12.75 4.25L11 8.75M12.75 4.25l1.75 4.5M11 8.75h3.5a1.75 1.75 0 0 1-3.5 0z",
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;
