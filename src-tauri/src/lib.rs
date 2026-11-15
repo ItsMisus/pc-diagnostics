@@ -110,6 +110,18 @@ pub fn run() {
                 &store,
             )));
             app.manage(Arc::clone(&lighting));
+            // Lights the user left on an app effect come back; HID enumeration stays off the
+            // startup path.
+            {
+                let lighting = Arc::clone(&lighting);
+                let lang = app.state::<AppState>().language();
+                if let Err(e) = std::thread::Builder::new()
+                    .name("lighting-resume".into())
+                    .spawn(move || lighting.resume(lang))
+                {
+                    tracing::warn!(error = %e, "lighting resume not started");
+                }
+            }
 
             // Gaming: library, game profiles and game mode. A game profile links one profile
             // of each center below (`ProfileDomain`).

@@ -15,6 +15,8 @@ use models::{AppError, ErrorCode};
 pub mod epic;
 pub mod icns;
 pub mod macapps;
+#[cfg(target_os = "macos")]
+pub mod spotlight;
 pub mod steam;
 pub mod vdf;
 #[cfg(windows)]
@@ -172,14 +174,15 @@ pub fn scan_library() -> LibraryScan {
                 .bundle_id
                 .clone()
                 .unwrap_or_else(|| app.bundle.to_string_lossy().into_owned());
+            let usage = spotlight::bundle_usage(&app.bundle);
             scan.games.push(ScannedGame {
                 id: format!("macApp:{source_id}"),
                 title: app.title(),
                 source: GameSource::MacApp,
                 source_id,
                 install_path: Some(app.bundle.clone()),
-                size_bytes: None,
-                last_played_ms: None,
+                size_bytes: usage.size_bytes,
+                last_played_ms: usage.last_used_ms,
                 art: ArtPaths {
                     icon: app.icon_path(),
                     ..ArtPaths::default()
@@ -216,6 +219,14 @@ pub fn scan_library() -> LibraryScan {
     }
 
     scan
+}
+
+/// Stand-in for `spotlight::BundleUsage` where Spotlight does not exist.
+#[cfg(not(target_os = "macos"))]
+#[derive(Default)]
+struct MacUsage {
+    size_bytes: Option<u64>,
+    last_used_ms: Option<u64>,
 }
 
 /// FNV-1a 64: a short stable id for a path (manual entries).
@@ -270,6 +281,10 @@ pub fn manual_game(path: &Path) -> Result<ScannedGame, AppError> {
             .name
             .clone()
             .unwrap_or_else(|| macapps::bundle_stem(&path));
+        #[cfg(target_os = "macos")]
+        let usage = spotlight::bundle_usage(&path);
+        #[cfg(not(target_os = "macos"))]
+        let usage = MacUsage::default();
         return Ok(ScannedGame {
             id: manual_id(&path),
             title,
@@ -279,8 +294,8 @@ pub fn manual_game(path: &Path) -> Result<ScannedGame, AppError> {
                 .clone()
                 .unwrap_or_else(|| path.to_string_lossy().into_owned()),
             install_path: Some(path.clone()),
-            size_bytes: None,
-            last_played_ms: None,
+            size_bytes: usage.size_bytes,
+            last_played_ms: usage.last_used_ms,
             art: ArtPaths {
                 icon: macapps::icon_path(&path, &info),
                 ..ArtPaths::default()

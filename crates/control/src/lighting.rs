@@ -7,8 +7,10 @@
 //!
 //! Documents (`DocumentStore`):
 //! - `lighting.profiles`: the user's profiles.
-//! - `lighting.selection`: the selected profile id (shown on the page; never applied at
-//!   startup: lights change only on a user action or a game override).
+//! - `lighting.selection`: the selected profile id (shown on the page).
+//! - `lighting.active`: the setup the user last applied (profile or edited setup, not a
+//!   preview nor a game override). `resume` puts it back once at start, so lights left on
+//!   an app effect come back after a restart; "Ripristina" clears it.
 //! - `lighting.original`: what each device showed before the app first changed it, saved
 //!   before that change; "Ripristina" puts it back (also after a restart) and clears it.
 //!
@@ -41,6 +43,7 @@ use engine::{Engine, Program, Target};
 pub const PROFILES_KEY: &str = "lighting.profiles";
 pub const SELECTION_KEY: &str = "lighting.selection";
 pub const ORIGINAL_KEY: &str = "lighting.original";
+pub const ACTIVE_KEY: &str = "lighting.active";
 /// Most user profiles kept.
 pub const MAX_USER_PROFILES: usize = 32;
 
@@ -87,6 +90,14 @@ impl LightingBackend for SystemLighting {
 #[serde(rename_all = "camelCase")]
 struct StoredSelection {
     selected: Option<String>,
+}
+
+/// The user's own applied setup, kept for `resume`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredActive {
+    setup: LightingSetup,
+    profile_id: Option<String>,
 }
 
 type Original = BTreeMap<String, LightingSnapshot>;
@@ -443,6 +454,55 @@ impl LightingController {
         Ok(())
     }
 
+    /// Records the user's own applied setup (in memory and for `resume`).
+    fn set_user(
+        &self,
+        inner: &mut Inner,
+        setup: LightingSetup,
+        profile_id: Option<String>,
+    ) -> Result<(), AppError> {
+        save_json(
+            &*self.store,
+            ACTIVE_KEY,
+            &StoredActive {
+                setup: setup.clone(),
+                profile_id: profile_id.clone(),
+            },
+        )?;
+        inner.user = Some((setup, profile_id));
+        Ok(())
+    }
+
+    /// Re-applies the setup the user left active (called once at start, off the UI path).
+    /// No-op without one; a device that is gone or refuses is logged, nothing else changes.
+    pub fn resume(&self, lang: Language) {
+        let Ok(Some(raw)) = self.store.load(ACTIVE_KEY) else {
+            return;
+        };
+        let Ok(active) = serde_json::from_str::<StoredActive>(&raw) else {
+            tracing::warn!("stored lighting setup unreadable, not resumed");
+            return;
+        };
+        // A deleted profile keeps its look but no longer names the setup.
+        let profile_id = active
+            .profile_id
+            .filter(|id| self.profiles(lang).iter().any(|p| &p.id == id));
+        let mut inner = match self.lock() {
+            Ok(i) => i,
+            Err(e) => {
+                tracing::warn!(error = %e.message, "lighting resume skipped");
+                return;
+            }
+        };
+        if inner.applied.is_some() || inner.game.is_some() {
+            return; // the user or a game got there first
+        }
+        match self.put(&mut inner, &active.setup, profile_id.clone(), lang) {
+            Ok(()) => inner.user = Some((active.setup, profile_id)),
+            Err(e) => tracing::warn!(error = %e.message, "lighting not resumed"),
+        }
+    }
+
     fn select(&self, id: Option<String>) -> Result<(), AppError> {
         save_json(
             &*self.store,
@@ -457,7 +517,7 @@ impl LightingController {
         let setup = setup_of(&profile);
         let mut inner = self.lock()?;
         self.put(&mut inner, &setup, Some(profile.id.clone()), lang)?;
-        inner.user = Some((setup, Some(profile.id.clone())));
+        self.set_user(&mut inner, setup, Some(profile.id.clone()))?;
         self.select(Some(profile.id))?;
         Ok(self.compose(&mut inner, lang))
     }
@@ -470,7 +530,7 @@ impl LightingController {
     ) -> Result<LightingState, AppError> {
         let mut inner = self.lock()?;
         self.put(&mut inner, &setup, None, lang)?;
-        inner.user = Some((setup, None));
+        self.set_user(&mut inner, setup, None)?;
         self.select(None)?;
         Ok(self.compose(&mut inner, lang))
     }
@@ -503,7 +563,7 @@ impl LightingController {
         };
         self.put(&mut inner, &setup, applied.profile_id.clone(), lang)?;
         if inner.game.is_none() {
-            inner.user = Some((setup, applied.profile_id));
+            self.set_user(&mut inner, setup, applied.profile_id)?;
         }
         Ok(self.compose(&mut inner, lang))
     }
@@ -638,6 +698,8 @@ impl LightingController {
     pub fn restore(&self, lang: Language) -> Result<LightingState, AppError> {
         let mut inner = self.lock()?;
         self.devices(&mut inner, lang);
+        // Forgotten first: even a partly failed restore must not come back at the next start.
+        self.store.delete(ACTIVE_KEY)?;
         self.restore_devices(&mut inner)?;
         inner.user = None;
         inner.game = None;

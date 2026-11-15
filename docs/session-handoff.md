@@ -1,4 +1,4 @@
-# Session handoff (2026-11-13)
+# Session handoff (2026-11-15)
 
 Read this first in a new session. User is Italian: reply in Italian. Standing consent:
 never ask before acting. Use worktree subagents with strict file ownership; the
@@ -6,6 +6,10 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
 `src/components` and `src/i18n/index.ts`.
 
 ## Control centers (2026-11-13, branch `feat/control-centers`, current focus)
+
+- 2026-11-15: lighting setup resumed at start (`lighting.active`), Spotlight size / last use
+  for macOS game apps, reduced-motion code review. Left on macOS: a LampArray device test
+  (no device) and a live look with "Reduce motion" on.
 
 - Performance, Cooling, Lighting and Gaming (sidebar after Overview). Spec rules, code layout
   and what each OS allows: `docs/control-centers.md`; status and open items: `docs/roadmap.md`

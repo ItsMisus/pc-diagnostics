@@ -202,20 +202,29 @@ Four sections that change settings on request (design and rules: `docs/control-c
   Mac keyboard backlight (CoreBrightness, brightness only, verified round trip), seven
   effects, picker, profiles, multi-device sync, restore. Vendor RGB protocols are listed as
   recognised but not controllable. LampArray on macOS is tested only against Microsoft's
-  reference descriptor (no device here).
+  reference descriptor (no device here). The setup the user last applied comes back at the
+  next start (`lighting.active`, cleared by "Ripristina"; previews and game overrides are not
+  stored); verified on the M5 Air keyboard backlight (2026-11-15, ignored test
+  `system_resume_round_trip`: 0.61 → 0.37 resumed → 0.61 restored).
 - **Gaming**: Steam / Epic / macOS game apps / GOG (Windows, read only) / manual entries,
   local covers, search, sort, launch through the launcher URL, game mode (detects the running
   game), per-game profile linking Performance, Cooling and Lighting (`ProfileDomain`),
   restore when the game ends. Library verified on this Mac (Geometry Dash, Minecraft
-  Launcher, Roblox); no game was launched by the tests.
+  Launcher, Roblox); no game was launched by the tests. macOS game apps (and manual `.app`
+  entries) get size on disk and last use from Spotlight (`kMDItemPhysicalSize`,
+  `kMDItemLastUsedDate`); both stay empty on a volume Spotlight does not index (values
+  matched `mdls` on 2026-11-15).
 - Checks on 2026-11-13 after merging the four centers: `npm run check` (Rust fmt, clippy,
   tests; web typecheck, 526 tests, build) and the Windows clippy for models, platform and
   control: all pass. Visual QA in the running app (dark and light) of the four pages.
 
+- Reduced motion (2026-11-15, code review of every animation of the four pages): 3D stages
+  stop continuous rendering and the turntable, fans and the core pulse hold still, Lighting
+  previews show a still frame, game cards drop the tilt, CSS animations are zeroed globally.
+  Not yet watched live with the macOS setting on.
+
 Open: Windows run of the four centers (only CI compiles/tests them), a LampArray device test
-on macOS, re-applying a lighting profile left active at startup, Gaming art for Epic/GOG,
-size and last-played for macOS game apps, reduced-motion pass of the new pages on a Mac with
-the system setting on.
+on macOS (needs a device), Gaming art for Epic/GOG, a live look with "Reduce motion" on.
 
 ## Out of scope for v1 (by design)
 

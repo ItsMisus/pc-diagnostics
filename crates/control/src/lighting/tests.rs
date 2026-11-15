@@ -322,7 +322,7 @@ fn original_survives_a_restart() {
     let s = c2.state(L).expect("state");
     assert!(s.can_restore);
     assert_eq!(s.selected.as_deref(), Some("builtin.static"));
-    assert!(s.applied.is_none(), "nothing re-applied at startup");
+    assert!(s.applied.is_none(), "nothing re-applied before resume");
     c2.restore(L).expect("restore");
     assert!(
         fake.restored
@@ -330,6 +330,72 @@ fn original_survives_a_restart() {
             .expect("lock")
             .contains(&"a".to_owned())
     );
+}
+
+#[test]
+fn resume_puts_back_what_the_user_left_on() {
+    let (fake, store, c) = controller(vec![rgb_device("a", 1)]);
+    let red = LightingColor::rgb(200, 0, 0);
+    c.apply_setup(setup(LightingEffect::Static { color: red }), L)
+        .expect("apply");
+    c.set_brightness(100, L).expect("brightness");
+    c.shutdown();
+    drop(c);
+    fake.writes.lock().expect("lock").clear();
+
+    let c2 = LightingController::new(fake.clone(), store.clone());
+    c2.resume(L);
+    let s = c2.state(L).expect("state");
+    let applied = s.applied.expect("resumed");
+    assert_eq!(applied.setup.brightness, 100);
+    assert_eq!(applied.profile_id, None);
+    assert_eq!(
+        fake.writes_for("a"),
+        vec![(LightingFrame::Colors(vec![red]), true)]
+    );
+
+    // A game override on top, cleared, goes back to the resumed setup (not to the original).
+    c2.apply_game_override("builtin.off").expect("game");
+    fake.restored.lock().expect("lock").clear();
+    c2.clear_game_override().expect("clear");
+    assert!(fake.restored.lock().expect("lock").is_empty());
+    assert_eq!(
+        fake.writes_for("a").last().expect("write").0,
+        LightingFrame::Colors(vec![red])
+    );
+}
+
+#[test]
+fn resume_skips_previews_restores_and_deleted_profiles() {
+    // Nothing applied: nothing written.
+    let (fake, store, c) = controller(vec![rgb_device("a", 1)]);
+    c.resume(L);
+    assert!(fake.writes.lock().expect("lock").is_empty());
+
+    // A preview is not the user's setup.
+    c.preview_setup(setup(LightingEffect::Off), L)
+        .expect("preview");
+    assert!(store.load(ACTIVE_KEY).expect("load").is_none());
+
+    // "Ripristina" forgets it.
+    c.apply_profile("builtin.static", L).expect("apply");
+    assert!(store.load(ACTIVE_KEY).expect("load").is_some());
+    c.restore(L).expect("restore");
+    assert!(store.load(ACTIVE_KEY).expect("load").is_none());
+
+    // A deleted user profile comes back as a plain setup.
+    let s = c
+        .save_profile(None, "Mio", setup(LightingEffect::Off), L)
+        .expect("save");
+    let id = s.selected.expect("selected");
+    c.apply_profile(&id, L).expect("apply");
+    c.delete_profile(&id, L).expect("delete");
+    drop(c);
+    let c2 = LightingController::new(fake.clone(), store);
+    c2.resume(L);
+    let applied = c2.state(L).expect("state").applied.expect("resumed");
+    assert_eq!(applied.profile_id, None);
+    assert_eq!(applied.setup.effect, LightingEffect::Off);
 }
 
 #[test]
@@ -468,4 +534,41 @@ fn profile_refs_mark_color_profiles_not_applicable_on_white_lights() {
     assert!(get("builtin.static") && get("builtin.breathing") && get("builtin.off"));
     assert!(!get("builtin.rainbow") && !get("builtin.wave"));
     assert_eq!(refs[0].name, "Static");
+}
+
+/// Real devices: apply, "restart", resume, read back, then "Ripristina" (run with `--ignored`
+/// on a Mac with a keyboard backlight; it changes the backlight for a moment).
+#[test]
+#[ignore = "drives this computer's lights"]
+fn system_resume_round_trip() {
+    let backend: Arc<dyn LightingBackend> =
+        Arc::new(platform::control::lighting::SystemLighting::new());
+    let store = Arc::new(MemoryStore::default());
+    let c = LightingController::new(backend.clone(), store.clone());
+    let Some(dev) = c
+        .state(L)
+        .expect("state")
+        .devices
+        .into_iter()
+        .find(|d| d.controllable())
+    else {
+        println!("no controllable device");
+        return;
+    };
+    let before = backend.snapshot(&dev.id).expect("snapshot");
+    let mut s = setup(LightingEffect::Static {
+        color: LightingColor::rgb(255, 255, 255),
+    });
+    s.brightness = 37;
+    c.apply_setup(s, L).expect("apply");
+    c.shutdown();
+    drop(c);
+    let c2 = LightingController::new(backend.clone(), store);
+    c2.resume(L);
+    let after_resume = backend.snapshot(&dev.id).expect("snapshot");
+    println!("before {before:?}\nafter resume {after_resume:?}");
+    assert!(c2.state(L).expect("state").applied.is_some());
+    c2.restore(L).expect("restore");
+    let restored = backend.snapshot(&dev.id).expect("snapshot");
+    println!("restored {restored:?}");
 }
