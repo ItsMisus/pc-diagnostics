@@ -13,6 +13,8 @@ pub struct EpicManifest {
     pub install_size: Option<u64>,
     pub catalog_namespace: Option<String>,
     pub catalog_item_id: Option<String>,
+    /// Relative to `install_location` (`\\` on Windows, `/` on macOS).
+    pub launch_executable: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -24,6 +26,7 @@ struct RawItem {
     install_size: Option<u64>,
     catalog_namespace: Option<String>,
     catalog_item_id: Option<String>,
+    launch_executable: Option<String>,
     #[serde(default)]
     app_categories: Vec<String>,
     #[serde(rename = "bIsIncompleteInstall", default)]
@@ -58,6 +61,7 @@ pub fn parse_item(json: &str) -> Option<EpicManifest> {
         install_size: raw.install_size.filter(|&s| s > 0),
         catalog_namespace: raw.catalog_namespace.filter(|s| !s.is_empty()),
         catalog_item_id: raw.catalog_item_id.filter(|s| !s.is_empty()),
+        launch_executable: raw.launch_executable.filter(|s| !s.trim().is_empty()),
     })
 }
 
@@ -74,6 +78,37 @@ pub fn launch_url(m: &EpicManifest) -> String {
         _ => encode(&m.app_name),
     };
     format!("com.epicgames.launcher://apps/{target}?action=launch&silent=true")
+}
+
+/// The `.app` bundle of a macOS install: the one `LaunchExecutable` points into, else the
+/// only bundle at the top of the install folder. `None` on Windows installs.
+pub fn app_bundle(m: &EpicManifest) -> Option<PathBuf> {
+    if let Some(exe) = &m.launch_executable {
+        let mut at = m.install_location.clone();
+        for part in exe
+            .split(['/', '\\'])
+            .filter(|p| !p.is_empty() && *p != ".")
+        {
+            if part == ".." {
+                return None;
+            }
+            at.push(part);
+            if is_app(&at) {
+                return at.is_dir().then_some(at);
+            }
+        }
+    }
+    let mut apps = std::fs::read_dir(&m.install_location)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| is_app(p) && p.is_dir());
+    let first = apps.next()?;
+    apps.next().is_none().then_some(first)
+}
+
+fn is_app(p: &Path) -> bool {
+    p.extension().is_some_and(|x| x.eq_ignore_ascii_case("app"))
 }
 
 /// Percent-encodes everything but unreserved URL characters.
@@ -158,6 +193,10 @@ mod tests {
             launch_url(&m),
             "com.epicgames.launcher://apps/9773aa1aa54f4f7b80e44bef04986cea%3A530145df28a24424923f5828cc9031a1%3ASugar?action=launch&silent=true"
         );
+        assert_eq!(
+            m.launch_executable.as_deref(),
+            Some("Binaries\\Win64\\RocketLeague.exe")
+        );
         let bare = EpicManifest {
             catalog_namespace: None,
             ..m
@@ -166,6 +205,35 @@ mod tests {
             launch_url(&bare),
             "com.epicgames.launcher://apps/Sugar?action=launch&silent=true"
         );
+    }
+
+    #[test]
+    fn finds_the_app_bundle_of_a_mac_install() {
+        let dir = std::env::temp_dir().join(format!("epic-bundle-{}", std::process::id()));
+        let bundle = dir.join("FortniteGame/Binaries/Mac/Fortnite.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).expect("mkdir");
+        let mut m = parse_item(ITEM).expect("item");
+        m.install_location = dir.clone();
+
+        m.launch_executable = Some("FortniteGame/Binaries/Mac/Fortnite.app".into());
+        assert_eq!(app_bundle(&m), Some(bundle.clone()));
+        m.launch_executable =
+            Some("FortniteGame/Binaries/Mac/Fortnite.app/Contents/MacOS/x".into());
+        assert_eq!(app_bundle(&m), Some(bundle.clone()));
+        m.launch_executable = Some("../elsewhere/Other.app".into());
+        assert_eq!(app_bundle(&m), None);
+
+        // No usable LaunchExecutable: the single bundle at the top of the folder.
+        let top = dir.join("Game.app");
+        std::fs::create_dir_all(&top).expect("mkdir");
+        m.launch_executable = None;
+        assert_eq!(app_bundle(&m), Some(top));
+        std::fs::create_dir_all(dir.join("Second.app")).expect("mkdir");
+        assert_eq!(app_bundle(&m), None);
+
+        m.launch_executable = Some("Binaries\\Win64\\RocketLeague.exe".into());
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(app_bundle(&m), None);
     }
 
     #[test]

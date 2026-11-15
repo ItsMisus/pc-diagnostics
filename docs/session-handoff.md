@@ -8,8 +8,10 @@ orchestrator owns `crates/models`, `src-tauri/src/commands` (shared wiring), `sr
 ## Control centers (2026-11-13, branch `feat/control-centers`, current focus)
 
 - 2026-11-15: lighting setup resumed at start (`lighting.active`), Spotlight size / last use
-  for macOS game apps, reduced-motion code review. Left on macOS: a LampArray device test
-  (no device) and a live look with "Reduce motion" on.
+  for macOS game apps, reduced-motion code review; local art for Epic (`.app` icon on macOS)
+  and GOG (`goggame-<id>.ico` on Windows), unit-tested only. Left on macOS: a LampArray
+  device test (no device), an Epic install to check the art on, and a live look with
+  "Reduce motion" on (window must stay visible: WKWebView pauses rAF when it is covered).
 
 - Performance, Cooling, Lighting and Gaming (sidebar after Overview). Spec rules, code layout
   and what each OS allows: `docs/control-centers.md`; status and open items: `docs/roadmap.md`

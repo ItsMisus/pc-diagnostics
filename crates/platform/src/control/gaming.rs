@@ -2,7 +2,9 @@
 //!
 //! - Library: Steam (`steam`), Epic (`epic`), macOS game apps (`macapps`), GOG on Windows
 //!   (registry read), and user-picked apps / executables ([`manual_game`]).
-//! - Art from the launchers' local caches and app icons ([`read_art`]); nothing is fetched.
+//! - Art from the launchers' local caches and app icons ([`read_art`]): Steam's library cache,
+//!   the `.app` icon of macOS apps (Epic installs included), GOG's `goggame-<id>.ico`.
+//!   Nothing is fetched.
 //! - Launch of library entries only ([`launch`]): launcher URLs with a fixed scheme, an app
 //!   bundle through `/usr/bin/open -a`, an executable without a shell.
 //! - Running executables for game detection ([`SystemProcessLister`]).
@@ -14,6 +16,7 @@ use models::{AppError, ErrorCode};
 
 pub mod epic;
 pub mod icns;
+pub mod ico;
 pub mod macapps;
 #[cfg(target_os = "macos")]
 pub mod spotlight;
@@ -143,15 +146,19 @@ pub fn scan_library() -> LibraryScan {
     });
     if let Some(dir) = epic_dir.filter(|_| epic_found) {
         for m in epic::scan_games(&dir) {
+            let mac = epic_mac_app(&m);
             scan.games.push(ScannedGame {
                 id: format!("epic:{}", m.app_name),
                 title: m.display_name.clone(),
                 source: GameSource::Epic,
                 source_id: m.app_name.clone(),
                 install_path: Some(m.install_location.clone()),
-                size_bytes: m.install_size,
-                last_played_ms: None,
-                art: ArtPaths::default(),
+                size_bytes: m.install_size.or(mac.size_bytes),
+                last_played_ms: mac.last_used_ms,
+                art: ArtPaths {
+                    icon: mac.icon,
+                    ..ArtPaths::default()
+                },
                 launch: Some(LaunchTarget::Url(epic::launch_url(&m))),
                 detect: Some(MatchRule::UnderDir(m.install_location.clone())),
             });
@@ -211,7 +218,11 @@ pub fn scan_library() -> LibraryScan {
                 install_path: Some(g.path.clone()),
                 size_bytes: None,
                 last_played_ms: None,
-                art: ArtPaths::default(),
+                art: ArtPaths {
+                    icon: Some(g.path.join(format!("goggame-{}.ico", g.id)))
+                        .filter(|p| p.is_file()),
+                    ..ArtPaths::default()
+                },
                 launch: Some(LaunchTarget::Executable(g.exe.clone())),
                 detect: Some(MatchRule::UnderDir(g.path)),
             });
@@ -219,6 +230,30 @@ pub fn scan_library() -> LibraryScan {
     }
 
     scan
+}
+
+/// What the `.app` bundle of an Epic install adds on macOS: its icon, and size and last use
+/// from Spotlight. Empty on Windows.
+#[derive(Default)]
+struct EpicMacApp {
+    icon: Option<PathBuf>,
+    size_bytes: Option<u64>,
+    last_used_ms: Option<u64>,
+}
+
+fn epic_mac_app(m: &epic::EpicManifest) -> EpicMacApp {
+    #[cfg(target_os = "macos")]
+    if let Some(bundle) = epic::app_bundle(m) {
+        let usage = spotlight::bundle_usage(&bundle);
+        return EpicMacApp {
+            icon: macapps::read_bundle(&bundle).and_then(|i| macapps::icon_path(&bundle, &i)),
+            size_bytes: usage.size_bytes,
+            last_used_ms: usage.last_used_ms,
+        };
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = m;
+    EpicMacApp::default()
 }
 
 /// Stand-in for `spotlight::BundleUsage` where Spotlight does not exist.
@@ -345,13 +380,15 @@ pub fn missing_manual_game(path: &Path, title: &str) -> ScannedGame {
     }
 }
 
-/// Image bytes and MIME type of one art file (`.icns`: its largest PNG).
+/// Image bytes and MIME type of one art file (`.icns` / `.ico`: its largest PNG).
 pub fn read_art(path: &Path, kind: GameArtKind) -> Option<(Vec<u8>, &'static str)> {
     let meta = std::fs::metadata(path).ok()?;
-    let is_icns = path
+    let ext = path
         .extension()
-        .is_some_and(|e| e.eq_ignore_ascii_case("icns"));
-    let cap = if is_icns {
+        .map(|e| e.to_string_lossy().to_ascii_lowercase());
+    let is_icns = ext.as_deref() == Some("icns");
+    let is_ico = ext.as_deref() == Some("ico");
+    let cap = if is_icns || is_ico {
         4 * ART_MAX_BYTES
     } else {
         ART_MAX_BYTES
@@ -362,6 +399,8 @@ pub fn read_art(path: &Path, kind: GameArtKind) -> Option<(Vec<u8>, &'static str
     let bytes = std::fs::read(path).ok()?;
     let bytes = if kind == GameArtKind::Icon && is_icns {
         icns::largest_png(&bytes, ART_MAX_BYTES)?.to_vec()
+    } else if kind == GameArtKind::Icon && is_ico {
+        ico::largest_png(&bytes, ART_MAX_BYTES)?.to_vec()
     } else {
         bytes
     };
@@ -710,6 +749,20 @@ mod tests {
         assert_eq!(image_mime(&[0xFF, 0xD8, 0xFF, 0xE0]), Some("image/jpeg"));
         assert_eq!(image_mime(b"\x89PNG\r\n\x1a\nxx"), Some("image/png"));
         assert_eq!(image_mime(b"<svg"), None);
+    }
+
+    #[test]
+    fn read_art_takes_the_png_out_of_an_ico() {
+        let png = b"\x89PNG\r\n\x1a\npixels".to_vec();
+        let mut file = vec![0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 32, 0];
+        file.extend_from_slice(&u32::try_from(png.len()).expect("len").to_le_bytes());
+        file.extend_from_slice(&22u32.to_le_bytes());
+        file.extend_from_slice(&png);
+        let path = std::env::temp_dir().join(format!("goggame-{}.ico", std::process::id()));
+        std::fs::write(&path, &file).expect("write");
+        let art = read_art(&path, GameArtKind::Icon);
+        std::fs::remove_file(&path).ok();
+        assert_eq!(art, Some((png, "image/png")));
     }
 
     #[test]

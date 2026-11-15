@@ -214,6 +214,12 @@ Four sections that change settings on request (design and rules: `docs/control-c
   entries) get size on disk and last use from Spotlight (`kMDItemPhysicalSize`,
   `kMDItemLastUsedDate`); both stay empty on a volume Spotlight does not index (values
   matched `mdls` on 2026-11-15).
+  Art for Epic and GOG (2026-11-15), still local only: an Epic install on macOS gets the icon
+  of its `.app` (the bundle `LaunchExecutable` points into, else the single bundle at the top
+  of the install folder) plus Spotlight last use, and size when the manifest has none; a GOG
+  install on Windows gets the icon from its `goggame-<id>.ico` (largest PNG entry). Epic on
+  Windows has no local art (its launcher cache is a browser cache). Not checked against a
+  real Epic or GOG install: neither launcher is on this Mac; covered by unit tests.
 - Checks on 2026-11-13 after merging the four centers: `npm run check` (Rust fmt, clippy,
   tests; web typecheck, 526 tests, build) and the Windows clippy for models, platform and
   control: all pass. Visual QA in the running app (dark and light) of the four pages.
@@ -224,7 +230,7 @@ Four sections that change settings on request (design and rules: `docs/control-c
   Not yet watched live with the macOS setting on.
 
 Open: Windows run of the four centers (only CI compiles/tests them), a LampArray device test
-on macOS (needs a device), Gaming art for Epic/GOG, a live look with "Reduce motion" on.
+on macOS (needs a device), an Epic/GOG install to check their art on, a live look with "Reduce motion" on.
 
 ## Out of scope for v1 (by design)
 
