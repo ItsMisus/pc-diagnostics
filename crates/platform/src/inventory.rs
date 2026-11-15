@@ -173,9 +173,26 @@ fn volumes() -> Vec<VolumeInfo> {
             return Vec::new();
         }
     };
+    // macOS: only what the user sees as drives; mounted installer images (`.dmg`) and
+    // hidden system mounts such as Recovery are not volumes of this computer.
+    #[cfg(target_os = "macos")]
+    let mac_listed = crate::macos::bench_env::listed_volumes();
     disks
         .iter()
         .filter(|d| is_listed_volume(&d.mount_point().to_string_lossy()))
+        .filter(|d| {
+            #[cfg(target_os = "macos")]
+            {
+                mac_listed
+                    .iter()
+                    .any(|m| std::path::Path::new(m) == d.mount_point())
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                let _ = d;
+                true
+            }
+        })
         .map(|d| VolumeInfo {
             mount_point: d.mount_point().to_string_lossy().into_owned(),
             label: non_empty(Some(d.name().to_string_lossy().into_owned())),
@@ -251,6 +268,35 @@ mod tests {
                 .iter()
                 .all(|v| !v.mount_point.starts_with("/System/Volumes/"))
         );
+        // Mounted disk images (installers opened from Downloads) are not drives.
+        let images = std::process::Command::new("/usr/bin/hdiutil")
+            .arg("info")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+            .unwrap_or_default();
+        for v in &inv.volumes {
+            let tab = format!("\t{}\n", v.mount_point);
+            assert!(
+                !images.contains(&tab),
+                "disk image listed: {}",
+                v.mount_point
+            );
+        }
+        assert!(
+            inv.volumes
+                .iter()
+                .all(|v| v.mount_point != "/Volumes/Recovery")
+        );
+        if let Some(disks) = inv.physical_disks.value() {
+            for d in disks {
+                assert!(
+                    !images.contains(&format!("/dev/{}\t", d.id))
+                        && !images.contains(&format!("/dev/{}s", d.id)),
+                    "disk image listed as a disk: {}",
+                    d.id
+                );
+            }
+        }
         if crate::macos::physical_apple_silicon() {
             assert_eq!(inv.cpu.vendor.as_deref(), Some("Apple"));
             let m = *inv.cpu.max_mhz.value().expect("rated max MHz");
