@@ -170,6 +170,33 @@ pub fn fixed_volumes() -> Vec<String> {
     out
 }
 
+/// Mount points of the volumes the user would recognise as drives (what Finder shows under
+/// "Locations", disk images aside): local, browsable, block-device-backed mounts, read-only
+/// ones included (a read-only USB stick is still a drive). Left out: hidden system mounts
+/// (Recovery, Preboot, VM, …) and mounted disk images — an installer `.dmg` opened from
+/// Downloads is a file on another volume, not a disk. A mount whose I/O Kit media cannot be
+/// inspected is kept (better shown than silently hidden).
+pub fn listed_volumes() -> Vec<String> {
+    let mut out: Vec<String> = mounts()
+        .into_iter()
+        .filter(is_listed)
+        .filter(|m| m.on == "/" || !attachment(&m.from).is_some_and(|a| a.disk_image))
+        .map(|m| m.on)
+        .collect();
+    out.sort_by(|a, b| (a != "/").cmp(&(b != "/")).then_with(|| a.cmp(b)));
+    out.dedup();
+    out
+}
+
+/// Pure part of [`listed_volumes`]: like [`is_candidate`] but read-only mounts stay.
+pub(crate) fn is_listed(m: &Mount) -> bool {
+    let flags = i64::from(m.flags);
+    flags & i64::from(libc::MNT_LOCAL) != 0
+        && flags & i64::from(libc::MNT_DONTBROWSE) == 0
+        && bsd_name(&m.from).is_some()
+        && m.on.starts_with('/')
+}
+
 /// `/` (the booted system volume group), when it is mounted locally.
 pub fn system_volume() -> Option<String> {
     let st = statfs("/").ok()?;
@@ -377,6 +404,18 @@ mod tests {
         assert!(!is_candidate(&m("/Volumes/share", "//u@nas/share", 0)));
         assert!(!is_candidate(&m("/dev", "devfs", local | hidden)));
         assert!(!is_candidate(&m("/Volumes/x", "map auto_home", local)));
+        // Listed volumes keep read-only drives but never hidden system mounts.
+        assert!(is_listed(&m(
+            "/Volumes/Installer",
+            "/dev/disk6s1",
+            local | ro
+        )));
+        assert!(!is_listed(&m(
+            "/Volumes/Recovery",
+            "/dev/disk3s3",
+            local | hidden
+        )));
+        assert!(!is_listed(&m("/Volumes/share", "//u@nas/share", 0)));
         assert_eq!(bsd_name("/dev/disk3s5"), Some("disk3s5"));
         assert_eq!(bsd_name("/dev/../disk3"), None);
         assert_eq!(whole_disk("/dev/disk3s1s1"), Some("disk3"));

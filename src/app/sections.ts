@@ -4,6 +4,10 @@ import type { Platform } from "@/types/generated/Platform";
 
 export type SectionId =
   | "overview"
+  | "performance"
+  | "cooling"
+  | "lighting"
+  | "gaming"
   | "hardware"
   | "benchmarks"
   | "processes"
@@ -17,11 +21,18 @@ export interface Section {
   icon: IconName;
   /** Platforms the section exists on; absent = every platform. */
   platforms?: readonly Platform[];
+  /** Sidebar group: "control" (the four control centers) or the default monitoring tools. */
+  group?: "control";
 }
 
 /** Every section, in sidebar order. Use `visibleSections` for what the current platform shows. */
 export const SECTIONS: readonly Section[] = [
   { id: "overview", icon: "overview" },
+  // Control centers: they change settings (on request only); the sections below observe.
+  { id: "performance", icon: "gauge", group: "control" },
+  { id: "cooling", icon: "fan", group: "control" },
+  { id: "lighting", icon: "bulb", group: "control" },
+  { id: "gaming", icon: "gamepad", group: "control" },
   { id: "hardware", icon: "hardware" },
   { id: "benchmarks", icon: "benchmarks" },
   { id: "processes", icon: "processes" },
@@ -42,8 +53,9 @@ const cache = new Map<Platform, readonly Section[]>();
 
 /**
  * Sections shown on `platform`, in sidebar order. The keyboard shortcut of a section is its
- * position in this list (Ctrl+1…8 on Windows; ⌘1…7 on macOS, where Drivers is absent), so
- * the sidebar tooltips and the shortcuts always agree. Stable array per platform.
+ * position in this list (Ctrl+1…9 on Windows; ⌘1…9 on macOS, where Drivers is absent), so
+ * the sidebar tooltips and the shortcuts always agree; sections past the ninth have none.
+ * Stable array per platform.
  */
 export function visibleSections(platform: Platform): readonly Section[] {
   let list = cache.get(platform);

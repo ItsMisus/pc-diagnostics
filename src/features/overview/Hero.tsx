@@ -8,6 +8,7 @@ import { Skeleton, SkeletonLines } from "@/components/common/Skeleton";
 import { StateView } from "@/components/common/StateView";
 import type { Tone } from "@/components/common/StatusBadge";
 import { useBench } from "@/features/benchmarks/benchStore";
+import { airflowFor, useCoolingKind } from "@/features/cooling/useCoolingKind";
 import { DeviceShapePicker, SHAPE_ICON } from "@/features/device/DeviceShapePicker";
 import { DEVICE_SHAPES, type DeviceShapeResolution } from "@/features/device/formFactor";
 import { useDeviceShape } from "@/features/device/useDeviceShape";
@@ -143,6 +144,7 @@ const CHIP_SLOT: Record<ChipId, DeviceIndicator["slot"]> = {
  */
 function StageWithChips({ kind, paused }: { kind: DeviceShape; paused: boolean }) {
   const { data } = useInventoryData();
+  const airflow = airflowFor(useCoolingKind());
   const gpuId = useMemo(() => (data ? (primaryGpu(data.gpus)?.id ?? null) : null), [data]);
   // A failed or stalled connection keeps its last sample: no chips then, so no stale value looks live.
   const key = useLive((s) =>
@@ -155,7 +157,7 @@ function StageWithChips({ kind, paused }: { kind: DeviceShape; paused: boolean }
         : [],
     [key, gpuId],
   );
-  return <DeviceStage kind={kind} paused={paused} indicators={indicators} aspectRatio={null} className="absolute! inset-3 rounded-xl" />;
+  return <DeviceStage kind={kind} paused={paused} spin airflow={airflow} indicators={indicators} aspectRatio={null} className="absolute! inset-3 rounded-xl" />;
 }
 
 const CHIP_ICON: Record<ChipId, IconName> = { cpu: "cpu", ram: "memory", gpu: "gpu", cpuTemp: "temperature" };
@@ -242,6 +244,48 @@ function Identity() {
         </dl>
       )}
       <ShapeRow formFactor={data.formFactor} />
+      <AirflowLegend />
+    </div>
+  );
+}
+
+/** Same hues as the particles on the stage (`device3d/scene/Airflow.tsx`). */
+const AIR_DOT = { intake: "bg-[#2f9bef]", exhaust: "bg-[#f5782e]" } as const;
+
+function AirDot({ kind }: { kind: keyof typeof AIR_DOT }) {
+  return <span aria-hidden="true" className={`inline-block h-1.5 w-3 shrink-0 rounded-full ${AIR_DOT[kind]}`} />;
+}
+
+/** What the streams around the model mean: fans' intake and exhaust, or a fanless case's heat. */
+function AirflowLegend() {
+  const t = useT("overview");
+  const kind = useCoolingKind();
+  if (kind === null) return null;
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5 text-xs">
+      <p className="flex items-center gap-1.5 text-fg-muted">
+        <Icon name="fan" size={14} className="shrink-0 text-fg-subtle" />
+        {t(kind === "fans" ? "airflowTitle_fans" : kind === "passive" ? "airflowTitle_passive" : "airflowTitle_unknown")}
+      </p>
+      {kind === "fans" && (
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-fg-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <AirDot kind="intake" />
+            {t("airflowIntake")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <AirDot kind="exhaust" />
+            {t("airflowExhaust")}
+          </span>
+        </p>
+      )}
+      {kind === "passive" && (
+        <p className="flex items-center gap-1.5 text-fg-muted">
+          <AirDot kind="exhaust" />
+          {t("airflowHeat")}
+        </p>
+      )}
+      <p className="text-fg-subtle">{t(kind === "fans" ? "airflowNote_fans" : kind === "passive" ? "airflowNote_passive" : "airflowNote_unknown")}</p>
     </div>
   );
 }

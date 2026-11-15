@@ -2,6 +2,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { initialDpr } from "../quality";
+import type { AirflowMode } from "../airflow";
 import type { DeviceKind, StageTheme } from "../types";
 import { createMaterials, MaterialsContext } from "./materials";
 import { Rig } from "./Rig";
@@ -15,6 +16,8 @@ export interface DeviceSceneProps {
   ambient: boolean;
   reducedMotion: boolean;
   extraPadX: number;
+  spin: boolean;
+  airflow: AirflowMode | null;
   /** The focusable stage element that receives pointer and keyboard input. */
   eventTarget: HTMLElement | null;
   /** The first frame is on screen. */

@@ -1,6 +1,7 @@
 import { Component, Fragment, lazy, Suspense, useEffect, useId, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { useT } from "@/i18n";
 import { useDocumentHidden, useDocumentTheme, useInView, usePrefersReducedMotion } from "./hooks";
+import type { AirflowMode } from "./airflow";
 import { stageLabels, type FallbackReason } from "./labels";
 import { isStageActive } from "./motion";
 import { extraPaddingFor } from "./presets";
@@ -38,6 +39,10 @@ export interface DeviceStageProps {
   paused?: boolean;
   /** Slow ambient float while idle (default true). Always off with reduced motion. */
   ambient?: boolean;
+  /** Turn slowly all the way round on its own (default false). Always off with reduced motion. */
+  spin?: boolean;
+  /** Draw the air around the model (`airflow.ts`): fans' intake and exhaust, or rising heat. */
+  airflow?: AirflowMode | null;
   /** Small indicators placed around the model (see `IndicatorSlot`). */
   indicators?: readonly DeviceIndicator[];
   /** CSS aspect ratio of the stage (default "4 / 3"); null fills the parent's height. */
@@ -83,6 +88,8 @@ export function DeviceStage({
   theme,
   paused = false,
   ambient = true,
+  spin = false,
+  airflow = null,
   indicators,
   aspectRatio = "4 / 3",
   className = "",
@@ -156,6 +163,8 @@ export function DeviceStage({
                 ambient={ambient}
                 reducedMotion={reducedMotion}
                 extraPadX={extraPadX}
+                spin={spin}
+                airflow={airflow}
                 eventTarget={target}
                 onReady={() => setReady(true)}
                 onContextLost={() => setFailure("contextLost")}

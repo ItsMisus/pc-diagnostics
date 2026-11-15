@@ -1,5 +1,6 @@
 import { m } from "motion/react";
-import { visibleSections } from "@/app/sections";
+import { type Section, visibleSections } from "@/app/sections";
+import { sectionShortcutKey } from "@/app/shortcuts";
 import { useAppStore } from "@/app/store";
 import { Icon } from "@/components/common/Icon";
 import { Kbd } from "@/components/common/Kbd";
@@ -14,6 +15,13 @@ import { shortcutLabel } from "@/lib/shortcuts";
 /** Row height + gap; the selection indicator slides by this step. */
 const ROW = 36;
 const GAP = 2;
+/** Hairline between sidebar groups (control centers / monitoring), margins included. */
+const DIVIDER = 9;
+
+/** Whether a divider sits above the i-th visible section: wherever the group changes. */
+function dividerBefore(sections: readonly Section[], i: number): boolean {
+  return i > 0 && sections[i]?.group !== sections[i - 1]?.group;
+}
 
 /** Widths of the floating panel (the window keeps an 8 px margin around it). */
 export const SIDEBAR_WIDTH = { expanded: 236, collapsed: 72 } as const;
@@ -46,6 +54,8 @@ export function Sidebar() {
     0,
     sections.findIndex((s) => s.id === section),
   );
+  let dividersAbove = 0;
+  for (let i = 1; i <= activeIndex; i++) if (dividerBefore(sections, i)) dividersAbove++;
 
   const labelClass = `min-w-0 truncate transition-opacity duration-200 ${collapsed ? "pointer-events-none opacity-0" : "opacity-100 delay-75"}`;
 
@@ -65,21 +75,31 @@ export function Sidebar() {
         </div>
       )}
 
-      <ul className="relative mt-1 flex flex-1 flex-col px-2.5 pb-2" style={{ gap: GAP }}>
+      <ul className="relative mt-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-2" style={{ gap: GAP }}>
         <m.li
           aria-hidden="true"
           className="satin pointer-events-none absolute inset-x-2.5 top-0 rounded-md"
           style={{ height: ROW }}
           initial={false}
-          animate={{ y: activeIndex * (ROW + GAP) }}
+          animate={{ y: activeIndex * (ROW + GAP) + dividersAbove * (DIVIDER + GAP) }}
           transition={spring.indicator}
         />
         {sections.map((s, i) => {
           const active = s.id === section;
           const label = t(`section_${s.id}`);
+          const divider = dividerBefore(sections, i);
+          const key = sectionShortcutKey(s.id, i);
           return (
             <li key={s.id} className="relative">
-              <Tooltip content={<TooltipLabel label={label} shortcut={shortcutLabel(String(i + 1), platform)} />} enabled={collapsed} className="w-full">
+              {divider && (
+                <div
+                  role="separator"
+                  aria-label={s.group === "control" ? t("groupControl") : undefined}
+                  className="mx-[13px] border-t border-line"
+                  style={{ marginTop: (DIVIDER - 1) / 2, marginBottom: (DIVIDER - 1) / 2 + GAP }}
+                />
+              )}
+              <Tooltip content={<TooltipLabel label={label} shortcut={key === null ? null : shortcutLabel(key, platform)} />} enabled={collapsed} className="w-full">
                 <button
                   type="button"
                   onClick={() => setSection(s.id)}
@@ -161,11 +181,11 @@ function ViewModeControl({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function TooltipLabel({ label, shortcut }: { label: string; shortcut: string }) {
+function TooltipLabel({ label, shortcut }: { label: string; shortcut: string | null }) {
   return (
     <span className="flex items-center gap-2">
       {label}
-      <Kbd>{shortcut}</Kbd>
+      {shortcut !== null && <Kbd>{shortcut}</Kbd>}
     </span>
   );
 }

@@ -78,6 +78,17 @@ export default {
   benchmarkRunning: "Benchmark running",
   quickActions: "Quick actions",
 
+  // Hero: the air around the 3D model.
+  airflowTitle_fans: "Airflow",
+  airflowTitle_passive: "Airflow: passive cooling",
+  airflowTitle_unknown: "Airflow not shown",
+  airflowIntake: "Cool air in",
+  airflowExhaust: "Warm air out",
+  airflowHeat: "Heat leaving the case",
+  airflowNote_fans: "The fans draw cool air in and push warm air out. The path is the usual one for this kind of computer, not a measurement.",
+  airflowNote_passive: "There are no fans: no air goes in or out. The heat moves into the case and rises with the air around it.",
+  airflowNote_unknown: "The system does not say how this computer is cooled, so no airflow is drawn.",
+
   // Hero: device model shown by the 3D stage.
   shapeTitle: "Device model",
   shape_tower: "Desktop",

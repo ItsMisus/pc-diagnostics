@@ -79,6 +79,10 @@ pub fn physical_disks() -> Result<Vec<PhysicalDiskInfo>, AppError> {
     let drivers = iokit::services_of_class(c"IOBlockStorageDriver")?;
     let mut out = Vec::new();
     for driver in drivers {
+        // Mounted disk images (`.dmg`) and other virtual devices are not drives.
+        if is_virtual(&driver) {
+            continue;
+        }
         let Some(device) = driver.parent() else {
             continue;
         };

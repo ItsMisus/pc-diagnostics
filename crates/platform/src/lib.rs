@@ -16,6 +16,7 @@
 //! - [`form_factor`]: tower / laptop / mini PC detection (part of the inventory).
 
 pub mod bench_env;
+pub mod control;
 pub mod convert;
 pub mod credentials;
 pub mod devices;

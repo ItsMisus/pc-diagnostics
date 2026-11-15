@@ -166,7 +166,7 @@ for a macOS value with a different meaning.
 | CPU live and inventory | done | Usage via sysinfo; max 4464 MHz on the M5 from the performance-cluster DVFS table in the I/O Kit device tree (same value as sysinfo). Current/limit clock NotSupported, power PermissionDenied (needs root). Temperature: hottest SoC die sensor (`PMU tdie*`) via I/O Kit HID; CPU, GPU and NPU share that die |
 | Memory live | done | Used = Activity Monitor "Memory Used", available = total − used. Paging = `vm_statistics64.pageins`/s (Mach); the high-paging rule uses 250 pages/s on macOS (16 KiB pages, same ≈ 4 MiB/s as 1000 pages/s on Windows). Commit used/limit NotSupported |
 | GPU live and inventory | done | IOAccelerator `PerformanceStatistics` utilization; ids `ioreg:<registry id>` shared by inventory, live samples and the GPU benchmark; vendor Apple (0x106B, new `GpuVendor::Apple`); Metal working-set size as shared memory; dedicated VRAM 0 (unified memory). GPU temperature NotSupported (no sensor on the M5) |
-| Storage live and inventory | done | IOBlockStorageDriver `Statistics` bytes/s (disk images excluded, list cached, rescanned every 30 ticks). Active time NotSupported (Total Time is a sum of service times, not a busy share). Volumes from sysinfo without `/System/Volumes/*`. Memory modules NotSupported. SMART/NVMe health NotImplemented |
+| Storage live and inventory | done | IOBlockStorageDriver `Statistics` bytes/s (disk images excluded, list cached, rescanned every 30 ticks). Active time NotSupported (Total Time is a sum of service times, not a busy share). Volumes from sysinfo without `/System/Volumes/*`, hidden (`nobrowse`) mounts such as Recovery, and mounted disk images: an installer `.dmg` opened from Downloads (e.g. `/Volumes/RobloxPlayerInstaller`) was listed as a drive until 2026-11-15; physical disks skip disk images too (I/O Kit `Virtual Interface`). Read-only real drives stay listed. The host test fails if any `hdiutil info` image shows up. Memory modules NotSupported. SMART/NVMe health NotImplemented |
 | App overhead | done | Core process only; WKWebView helpers are launchd XPC services (ppid 1) and cannot be attributed without private API, so the interface row is NotSupported |
 | `sample()` cost | measured | ~21 ms wall time per tick (24 serialized HID sensor reads, mostly waiting); ~1.6 ms CPU per second for the whole monitor |
 | Benchmarks | done | CPU/RAM portable (single 21 277, multi 141 623 units/s; RAM read 128 GB/s on the M5). Storage: temp file unlinked right after open, `F_NOCACHE`, `F_FULLFSYNC`, same write budget and free-space reserve (seq write 4.64 / read 6.54 GB/s on the internal SSD). GPU via Metal: 3324 GFLOP/s FP32, cancel in ~60 ms; worker exits on parent death (no job objects on macOS). No GPU temperature: the 30 s unobserved cap applies |
@@ -182,6 +182,55 @@ for a macOS value with a different meaning.
 | Developer ID signing and notarization | not done | Needs a paid Apple Developer account; until then Gatekeeper blocks the first launch of a downloaded copy |
 | Intel Macs (x86_64) / universal binary | not done | Not built or tested; would need `--target universal-apple-darwin` and an Intel test machine |
 | UI redesign (Liquid Glass) | done | Branch `feat/ui-redesign`: new tokens (pearl light / graphite dark, sparing azure accent), glass shell, every page redone, procedural 3D device on the Overview (tower / laptop / mini, lazy, WebGL fallback), form factor detected in the backend with a saved manual choice. Checked visually on the M5 in both themes; not yet seen on Windows |
+
+## Control centers (2026-11-13, branch `feat/control-centers`)
+
+Four sections that change settings on request (design and rules: `docs/control-centers.md`).
+
+- **Performance**: Silent / Balanced / High performance plus custom profiles, per power
+  source, restore of the original settings. macOS: power mode read only (needs root; button to
+  System Settings > Battery), keep-awake assertions real (verified on the M5 Air with
+  `pmset -g assertions`). Windows: power mode overlay, processor min/max, boost, display and
+  sleep timeouts per source, keep-awake: compiled only.
+- **Cooling**: detects fans / passive cooling, Auto / Silent / Balanced / custom profiles,
+  curve editor, 3D fan, tower heatsink, AIO radiator, passive chassis. macOS: SMC read only
+  (the M5 Air reports 0 fans, verified). Windows: "System cooling policy" per source (the only
+  writable control; Cooling owns it, Performance does not touch it), fans read through
+  `Win32_Fan`: compiled only. Fan curves are stored but cannot act on fans anywhere: shown as
+  unsupported.
+- **Lighting**: LampArray devices (HID usage page 0x59; Windows `Windows.Devices.Lights`),
+  Mac keyboard backlight (CoreBrightness, brightness only, verified round trip), seven
+  effects, picker, profiles, multi-device sync, restore. Vendor RGB protocols are listed as
+  recognised but not controllable. LampArray on macOS is tested only against Microsoft's
+  reference descriptor (no device here). The setup the user last applied comes back at the
+  next start (`lighting.active`, cleared by "Ripristina"; previews and game overrides are not
+  stored); verified on the M5 Air keyboard backlight (2026-11-15, ignored test
+  `system_resume_round_trip`: 0.61 → 0.37 resumed → 0.61 restored).
+- **Gaming**: Steam / Epic / macOS game apps / GOG (Windows, read only) / manual entries,
+  local covers, search, sort, launch through the launcher URL, game mode (detects the running
+  game), per-game profile linking Performance, Cooling and Lighting (`ProfileDomain`),
+  restore when the game ends. Library verified on this Mac (Geometry Dash, Minecraft
+  Launcher, Roblox); no game was launched by the tests. macOS game apps (and manual `.app`
+  entries) get size on disk and last use from Spotlight (`kMDItemPhysicalSize`,
+  `kMDItemLastUsedDate`); both stay empty on a volume Spotlight does not index (values
+  matched `mdls` on 2026-11-15).
+  Art for Epic and GOG (2026-11-15), still local only: an Epic install on macOS gets the icon
+  of its `.app` (the bundle `LaunchExecutable` points into, else the single bundle at the top
+  of the install folder) plus Spotlight last use, and size when the manifest has none; a GOG
+  install on Windows gets the icon from its `goggame-<id>.ico` (largest PNG entry). Epic on
+  Windows has no local art (its launcher cache is a browser cache). Not checked against a
+  real Epic or GOG install: neither launcher is on this Mac; covered by unit tests.
+- Checks on 2026-11-13 after merging the four centers: `npm run check` (Rust fmt, clippy,
+  tests; web typecheck, 526 tests, build) and the Windows clippy for models, platform and
+  control: all pass. Visual QA in the running app (dark and light) of the four pages.
+
+- Reduced motion (2026-11-15, code review of every animation of the four pages): 3D stages
+  stop continuous rendering and the turntable, fans and the core pulse hold still, Lighting
+  previews show a still frame, game cards drop the tilt, CSS animations are zeroed globally.
+  Not yet watched live with the macOS setting on.
+
+Open: Windows run of the four centers (only CI compiles/tests them), a LampArray device test
+on macOS (needs a device), an Epic/GOG install to check their art on, a live look with "Reduce motion" on.
 
 ## Out of scope for v1 (by design)
 

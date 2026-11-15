@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Group, PerspectiveCamera } from "three";
 import { AMBIENT_FRAME_MS, SwapAnimator, ambientPose, damp, motionPolicy } from "../motion";
 import { keyAction, OrbitController } from "../orbit";
+import { type AirflowMode, airflowBounds } from "../airflow";
 import { cameraPosition, frameFor, PRESETS } from "../presets";
 import { QualityMonitor } from "../quality";
 import type { DeviceKind, StageTheme } from "../types";
+import { Airflow } from "./Airflow";
 import { FloorShadow } from "./Studio";
 import { MODELS } from "./models";
 
@@ -16,9 +18,16 @@ export interface RigProps {
   ambient: boolean;
   reducedMotion: boolean;
   extraPadX: number;
+  /** Turn slowly all the way round on its own (off with reduced motion). */
+  spin: boolean;
+  /** The air around the model (`airflow.ts`); null draws none. */
+  airflow: AirflowMode | null;
   eventTarget: HTMLElement | null;
   onReady: () => void;
 }
+
+/** Turntable spin: one turn in 28 s. */
+const SPIN_RATE = (Math.PI * 2) / 28;
 
 /**
  * Drives everything that moves, on demand: the turntable (drag, keys, return to the hero
@@ -26,7 +35,7 @@ export interface RigProps {
  * while something changes; when only the ambient float plays it asks for 30 frames per
  * second; at rest it renders nothing (and wakes itself for the return to the hero angle).
  */
-export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, eventTarget, onReady }: RigProps) {
+export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, spin, airflow, eventTarget, onReady }: RigProps) {
   const invalidate = useThree((s) => s.invalidate);
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const gl = useThree((s) => s.gl);
@@ -34,9 +43,15 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
   const viewport = useThree((s) => s.size);
   const [shown, setShown] = useState<DeviceKind>(kind);
   const preset = PRESETS[shown];
+  const spinning = spin && !reducedMotion;
   const frame = useMemo(
-    () => frameFor(shown, viewport.width / Math.max(viewport.height, 1), { extraPadX }),
-    [shown, viewport.width, viewport.height, extraPadX],
+    () =>
+      frameFor(shown, viewport.width / Math.max(viewport.height, 1), {
+        extraPadX,
+        fullTurn: spinning,
+        ...(airflow ? { bounds: airflowBounds(shown, airflow, PRESETS[shown].size) } : {}),
+      }),
+    [shown, viewport.width, viewport.height, extraPadX, spinning, airflow],
   );
 
   const orbit = useMemo(
@@ -50,9 +65,11 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
 
   const turntable = useRef<Group>(null);
   const lift = useRef<Group>(null);
-  const live = useRef({ kind, policy, ambientT: 0, ambientW: 0, ready: false, wasContinuous: false, timer: 0, timerAt: 0, opacity: -1 });
+  const live = useRef({ kind, policy, spinning, flowing: false, spinYaw: 0, ambientT: 0, ambientW: 0, ready: false, wasContinuous: false, timer: 0, timerAt: 0, opacity: -1 });
   live.current.kind = kind;
   live.current.policy = policy;
+  live.current.spinning = spinning;
+  live.current.flowing = airflow !== null && !reducedMotion;
 
   useEffect(() => {
     orbit.setLimits({ yaw: preset.yawLimit, elevation: preset.elevationRange });
@@ -184,7 +201,8 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
     const t = turntable.current;
     const g = lift.current;
     if (t && g) {
-      t.rotation.y = preset.heroYaw + orbit.yaw + s.yaw + pose.yaw * l.ambientW;
+      if (l.spinning && !orbit.isDragging && !swap.busy) l.spinYaw = (l.spinYaw + dt * SPIN_RATE) % (Math.PI * 2);
+      t.rotation.y = preset.heroYaw + l.spinYaw + orbit.yaw + s.yaw + pose.yaw * l.ambientW;
       g.position.y = pose.y * l.ambientW;
       g.scale.setScalar(s.scale);
     }
@@ -210,7 +228,7 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
     }
 
     // Next frame: continuous while something moves, 30 fps for the ambient float, else idle.
-    const continuous = orbit.needsFrame() || swap.busy || l.kind !== shown;
+    const continuous = orbit.needsFrame() || swap.busy || l.kind !== shown || l.spinning || l.flowing;
     if (continuous) {
       if (l.wasContinuous) {
         const next = quality.push(delta * 1000);
@@ -239,6 +257,7 @@ export function Rig({ kind, theme, active, ambient, reducedMotion, extraPadX, ev
       <FloorShadow preset={preset} theme={theme} />
       <group ref={lift}>
         <Model key={shown} />
+        {airflow && <Airflow kind={shown} mode={airflow} theme={theme} moving={!reducedMotion} />}
       </group>
     </group>
   );
