@@ -16,10 +16,10 @@ Mostra solo dati reali: se un valore non si può leggere, lo segna come non disp
 
 | Sistema | Download |
 |---|---|
-| **Windows 11** (x64) | [PC.Diagnostics_1.0.0-beta.1_x64-setup.exe](https://github.com/ItsMisus/pc-diagnostics-download/releases/download/v1.0.0-beta.1/PC.Diagnostics_1.0.0-beta.1_x64-setup.exe) (77 MB) |
-| **Mac** (Apple Silicon, macOS 13.3+) | [PC.Diagnostics_1.0.0-beta.1_aarch64.dmg](https://github.com/ItsMisus/pc-diagnostics-download/releases/download/v1.0.0-beta.1/PC.Diagnostics_1.0.0-beta.1_aarch64.dmg) (111 MB) |
+| **Windows 11** (x64) | [PC.Diagnostics_1.0.0-beta.1_x64-setup.exe](https://github.com/ItsMisus/pc-diagnostics/releases/download/v1.0.0-beta.1/PC.Diagnostics_1.0.0-beta.1_x64-setup.exe) (77 MB) |
+| **Mac** (Apple Silicon, macOS 13.3+) | [PC.Diagnostics_1.0.0-beta.1_aarch64.dmg](https://github.com/ItsMisus/pc-diagnostics/releases/download/v1.0.0-beta.1/PC.Diagnostics_1.0.0-beta.1_aarch64.dmg) (111 MB) |
 
-Ogni file ha il suo SHA-256 nella pagina [Releases](https://github.com/ItsMisus/pc-diagnostics-download/releases).
+Ogni file ha il suo SHA-256 nella pagina [Releases](https://github.com/ItsMisus/pc-diagnostics/releases).
 
 ### Windows
 
@@ -39,4 +39,4 @@ macOS ricorda la scelta: dagli avvii successivi si apre normalmente.
 
 - È una **beta**: alcuni valori che esistono su Windows non esistono su macOS e restano segnati come non disponibili.
 - Windows 10 x64 dovrebbe funzionare ma non è stato testato.
-- Per segnalare un problema apri una [Issue](https://github.com/ItsMisus/pc-diagnostics-download/issues).
+- Per segnalare un problema apri una [Issue](https://github.com/ItsMisus/pc-diagnostics/issues).
